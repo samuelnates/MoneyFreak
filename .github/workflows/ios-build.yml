@@ -1,0 +1,43 @@
+name: iOS build
+
+# Por ahora solo se corre manualmente (botón "Run workflow" en la pestaña Actions de GitHub),
+# para no gastar minutos del runner macOS en cada push mientras se arma el proyecto.
+# Cuando ya tengamos firma configurada, se puede cambiar a correr automático en cada push a main.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Sincronizar el proyecto iOS de Capacitor
+        run: npx cap sync ios
+
+      # --- Compilación sin firma, solo para validar que el proyecto compila ---
+      # (para simulador, no genera un .ipa instalable en un iPhone real ni subible a App Store)
+      - name: Compilar para el simulador (validación)
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug build CODE_SIGNING_ALLOWED=NO
+
+      # --- A partir de aquí falta lo que requiere tu cuenta de Apple Developer ---
+      # Cuando tengas certificados/perfil de aprovisionamiento (o usemos fastlane match),
+      # se agrega aquí:
+      #   1. Importar el certificado de distribución (secret CERTIFICATE_P12 + su password)
+      #   2. Importar el perfil de aprovisionamiento (secret PROVISIONING_PROFILE)
+      #   3. xcodebuild archive (con firma real) -> .xcarchive
+      #   4. xcodebuild -exportArchive -> .ipa firmado
+      #   5. Subir el .ipa a TestFlight/App Store Connect (con App Store Connect API key)
