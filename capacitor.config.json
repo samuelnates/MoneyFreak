@@ -1,0 +1,9 @@
+{
+  "appId": "com.miscuentaspro.app",
+  "appName": "Money Freak",
+  "webDir": "../abuelo-inversiones-pro",
+  "server": {
+    "url": "https://www.moneyfreak.app",
+    "cleartext": false
+  }
+}

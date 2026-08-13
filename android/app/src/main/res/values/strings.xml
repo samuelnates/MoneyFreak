@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Money Freak</string>
+    <string name="title_activity_main">Money Freak</string>
+    <string name="package_name">com.miscuentaspro.app</string>
+    <string name="custom_url_scheme">com.miscuentaspro.app</string>
+    <string name="widget_registrar_gasto_label">Registrar gasto</string>
+    <string name="widget_registrar_gasto_texto">+ Registrar gasto</string>
+</resources>
