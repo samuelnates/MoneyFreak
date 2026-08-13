@@ -8,6 +8,8 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
         <string>Money Freak</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usa Face ID para confirmar tu identidad y entrar a Money Freak de forma segura.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
