@@ -3556,6 +3556,18 @@ const TRADUCCIONES = {
     'ayuda_ia.pago_deuda_registrado': 'Pago registrado',
     'ayuda_ia.cancelar_accion': 'Cancelar',
     'ayuda_ia.accion_cancelada': 'Cancelado',
+    'ayuda_ia.confirmar_cuenta': 'Confirmar',
+    'ayuda_ia.sin_saldo_inicial': 'Sin saldo inicial',
+    'ayuda_ia.cuenta_guardada': 'Cuenta guardada',
+    'ayuda_ia.confirmar_deuda': 'Confirmar',
+    'ayuda_ia.deuda_guardada': 'Deuda guardada',
+    'ayuda_ia.confirmar_bien': 'Confirmar',
+    'ayuda_ia.bien_guardado': 'Bien guardado',
+    'ayuda_ia.confirmar_accion_nueva': 'Confirmar',
+    'ayuda_ia.cantidad_acciones_prefijo': '{0} acciones',
+    'ayuda_ia.accion_guardada': '{0} agregada a tu portafolio',
+    'ayuda_ia.accion_no_encontrada': 'No encontré ese símbolo — búscalo tú mismo en el formulario para elegir el correcto.',
+    'ayuda_ia.accion_ambigua': 'Encontré varios resultados posibles para eso — búscalo tú mismo en el formulario para elegir el correcto.',
     'radiografia.regenerar_boton': 'Generar de nuevo',
     'radiografia.pedir_palabra_clave': 'Para regenerar el reporte de este mes (esto vuelve a llamar a la IA) escribe la palabra clave:',
     'radiografia.palabra_clave_incorrecta': 'Palabra clave incorrecta. No se generó un reporte nuevo.',
@@ -4408,6 +4420,18 @@ const TRADUCCIONES = {
     'ayuda_ia.pago_deuda_registrado': 'Payment logged',
     'ayuda_ia.cancelar_accion': 'Cancel',
     'ayuda_ia.accion_cancelada': 'Cancelled',
+    'ayuda_ia.confirmar_cuenta': 'Confirm',
+    'ayuda_ia.sin_saldo_inicial': 'No starting balance',
+    'ayuda_ia.cuenta_guardada': 'Account saved',
+    'ayuda_ia.confirmar_deuda': 'Confirm',
+    'ayuda_ia.deuda_guardada': 'Debt saved',
+    'ayuda_ia.confirmar_bien': 'Confirm',
+    'ayuda_ia.bien_guardado': 'Asset saved',
+    'ayuda_ia.confirmar_accion_nueva': 'Confirm',
+    'ayuda_ia.cantidad_acciones_prefijo': '{0} shares',
+    'ayuda_ia.accion_guardada': '{0} added to your portfolio',
+    'ayuda_ia.accion_no_encontrada': "Couldn't find that symbol — search for it yourself in the form to pick the right one.",
+    'ayuda_ia.accion_ambigua': 'Found several possible matches for that — search for it yourself in the form to pick the right one.',
     'ayuda_ia.gasto_abierto_formulario': 'Opened the form so you can adjust it',
     'radiografia.regenerar_boton': 'Generate again',
     'radiografia.pedir_palabra_clave': 'To regenerate this month\'s report (this calls the AI again), type the keyword:',
@@ -8031,6 +8055,10 @@ const accionesPresupuestoChat = {};
 const accionesSaldoChat = {};
 const accionesIngresoChat = {};
 const accionesPagoDeudaChat = {};
+const accionesCuentaNuevaChat = {};
+const accionesDeudaNuevaChat = {};
+const accionesBienNuevoChat = {};
+const accionesAccionNuevaChat = {};
 let idAccionGastoChatSiguiente = 1;
 
 // 'efectivo' es el valor que se le manda a la IA para representar el pago en
@@ -8078,7 +8106,7 @@ function irADestinoChat(clave){
   if(destino) destino.fn();
 }
 
-function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda){
+function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva){
   const cont = document.getElementById('ayuda-ia-conversacion');
   document.getElementById('ayuda-ia-vacio').style.display = 'none';
 
@@ -8180,13 +8208,72 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     </div>`;
   }
 
-  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${linkHtml}${horaHtml}</div>`;
+  let accionCuentaNuevaHtml = '';
+  if(accionCuentaNueva){
+    const idCuenta = idAccionGastoChatSiguiente++;
+    accionesCuentaNuevaChat[idCuenta] = accionCuentaNueva;
+    const partesCuenta = [accionCuentaNueva.nombre, nombreTipoCuenta(accionCuentaNueva.tipo_cuenta)];
+    accionCuentaNuevaHtml = `<div class="chat-accion-gasto" id="chat-accion-cuenta-nueva-${idCuenta}">
+      <div class="chat-accion-gasto-monto">${accionCuentaNueva.saldo_inicial != null ? formatoMonto(accionCuentaNueva.saldo_inicial, accionCuentaNueva.moneda) : t('ayuda_ia.sin_saldo_inicial')}</div>
+      <div class="chat-accion-gasto-detalle">${escapeHtml(partesCuenta.join(' · '))}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-cuenta-nueva-confirmar-${idCuenta}" class="chat-accion-confirmar" onclick="confirmarCuentaNuevaChat(${idCuenta})">${t('ayuda_ia.confirmar_cuenta')}</button>
+        <button type="button" id="chat-cuenta-nueva-cancelar-${idCuenta}" class="chat-accion-editar" onclick="cancelarAccionChat('cuentaNueva', ${idCuenta})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
+  let accionDeudaNuevaHtml = '';
+  if(accionDeudaNueva){
+    const idDeuda = idAccionGastoChatSiguiente++;
+    accionesDeudaNuevaChat[idDeuda] = accionDeudaNueva;
+    const partesDeuda = [accionDeudaNueva.nombre, nombreTipoDeuda(accionDeudaNueva.tipo_deuda)];
+    accionDeudaNuevaHtml = `<div class="chat-accion-gasto" id="chat-accion-deuda-nueva-${idDeuda}">
+      <div class="chat-accion-gasto-monto">${formatoMonto(accionDeudaNueva.saldo, accionDeudaNueva.moneda)}</div>
+      <div class="chat-accion-gasto-detalle">${escapeHtml(partesDeuda.join(' · '))}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-deuda-nueva-confirmar-${idDeuda}" class="chat-accion-confirmar" onclick="confirmarDeudaNuevaChat(${idDeuda})">${t('ayuda_ia.confirmar_deuda')}</button>
+        <button type="button" id="chat-deuda-nueva-cancelar-${idDeuda}" class="chat-accion-editar" onclick="cancelarAccionChat('deudaNueva', ${idDeuda})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
+  let accionBienNuevoHtml = '';
+  if(accionBienNuevo){
+    const idBien = idAccionGastoChatSiguiente++;
+    accionesBienNuevoChat[idBien] = accionBienNuevo;
+    const partesBien = [accionBienNuevo.nombre, nombreTipoBien(accionBienNuevo.tipo_bien)];
+    accionBienNuevoHtml = `<div class="chat-accion-gasto" id="chat-accion-bien-nuevo-${idBien}">
+      <div class="chat-accion-gasto-monto">${formatoMonto(accionBienNuevo.valor, accionBienNuevo.moneda)}</div>
+      <div class="chat-accion-gasto-detalle">${escapeHtml(partesBien.join(' · '))}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-bien-nuevo-confirmar-${idBien}" class="chat-accion-confirmar" onclick="confirmarBienNuevoChat(${idBien})">${t('ayuda_ia.confirmar_bien')}</button>
+        <button type="button" id="chat-bien-nuevo-cancelar-${idBien}" class="chat-accion-editar" onclick="cancelarAccionChat('bienNuevo', ${idBien})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
+  let accionAccionNuevaHtml = '';
+  if(accionAccionNueva){
+    const idAccionBolsa = idAccionGastoChatSiguiente++;
+    accionesAccionNuevaChat[idAccionBolsa] = accionAccionNueva;
+    accionAccionNuevaHtml = `<div class="chat-accion-gasto" id="chat-accion-accion-nueva-${idAccionBolsa}">
+      <div class="chat-accion-gasto-monto">${escapeHtml(accionAccionNueva.busqueda)}</div>
+      <div class="chat-accion-gasto-detalle">${tf('ayuda_ia.cantidad_acciones_prefijo', accionAccionNueva.cantidad)}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-accion-nueva-confirmar-${idAccionBolsa}" class="chat-accion-confirmar" onclick="confirmarAccionNuevaChat(${idAccionBolsa})">${t('ayuda_ia.confirmar_accion_nueva')}</button>
+        <button type="button" id="chat-accion-nueva-cancelar-${idAccionBolsa}" class="chat-accion-editar" onclick="cancelarAccionChat('accionNueva', ${idAccionBolsa})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
+  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${linkHtml}${horaHtml}</div>`;
   div.innerHTML = rol === 'asistente'
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
   cont.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  if(accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda){
+  if(accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva){
     freakyTrigger('point'); // "encontré algo para ti" — hay una propuesta en esta burbuja
   }
   return div;
@@ -8933,7 +9020,7 @@ async function preguntarSobreApp(){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva);
   }catch(e){
     console.error('Error preguntando sobre la app', e);
     escribiendo.remove();
@@ -8989,7 +9076,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva);
   }catch(e){
     console.error('Error procesando nota de voz para Freaky', e);
     escribiendo.remove();
@@ -9148,8 +9235,14 @@ function ajustarPresupuestoManual(idAccion){
 }
 
 function cancelarAccionChat(tipo, idAccion){
-  const mapas = { saldo: accionesSaldoChat, ingreso: accionesIngresoChat, pagoDeuda: accionesPagoDeudaChat };
-  const prefijos = { saldo: 'chat-accion-saldo-', ingreso: 'chat-accion-ingreso-', pagoDeuda: 'chat-accion-pago-deuda-' };
+  const mapas = {
+    saldo: accionesSaldoChat, ingreso: accionesIngresoChat, pagoDeuda: accionesPagoDeudaChat,
+    cuentaNueva: accionesCuentaNuevaChat, deudaNueva: accionesDeudaNuevaChat, bienNuevo: accionesBienNuevoChat, accionNueva: accionesAccionNuevaChat
+  };
+  const prefijos = {
+    saldo: 'chat-accion-saldo-', ingreso: 'chat-accion-ingreso-', pagoDeuda: 'chat-accion-pago-deuda-',
+    cuentaNueva: 'chat-accion-cuenta-nueva-', deudaNueva: 'chat-accion-deuda-nueva-', bienNuevo: 'chat-accion-bien-nuevo-', accionNueva: 'chat-accion-accion-nueva-'
+  };
   const mapa = mapas[tipo];
   if(mapa) delete mapa[idAccion];
   const contenedor = document.getElementById(`${prefijos[tipo]}${idAccion}`);
@@ -9299,6 +9392,203 @@ async function confirmarPagoDeudaChat(idAccion){
   }
   freakyTrigger('happy');
   delete accionesPagoDeudaChat[idAccion];
+  snapshotFreakyCache = null;
+}
+
+async function confirmarCuentaNuevaChat(idAccion){
+  const accion = accionesCuentaNuevaChat[idAccion];
+  if(!accion) return;
+  const btnConfirmar = document.getElementById(`chat-cuenta-nueva-confirmar-${idAccion}`);
+  const btnCancelar = document.getElementById(`chat-cuenta-nueva-cancelar-${idAccion}`);
+  if(btnConfirmar) btnConfirmar.disabled = true;
+  if(btnCancelar) btnCancelar.disabled = true;
+
+  if(!accion.nombre || !accion.tipo_cuenta){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('ayuda_ia.accion_incompleta'));
+    return;
+  }
+
+  const { data, error } = await sb.from('cuentas').insert({
+    nombre: accion.nombre, tipo: accion.tipo_cuenta, moneda: accion.moneda || 'MXN',
+    tasa_interes: accion.tasa_interes != null ? Number(accion.tasa_interes) : null,
+    es_liquida: true, incluir_patrimonio: true, notas: null, aportacion_mensual: null, dia_aportacion: null
+  }).select().single();
+  if(error){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('alert.error_guardar_cuenta'));
+    return;
+  }
+  if(accion.saldo_inicial != null){
+    const hoyISO = new Date().toISOString().slice(0, 10);
+    await sb.from('saldos').upsert({ cuenta_id: data.id, fecha: hoyISO, monto: Number(accion.saldo_inicial) }, { onConflict: 'cuenta_id,fecha' });
+  }
+
+  const contenedor = document.getElementById(`chat-accion-cuenta-nueva-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(t('ayuda_ia.cuenta_guardada'))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesCuentaNuevaChat[idAccion];
+  snapshotFreakyCache = null;
+}
+
+async function confirmarDeudaNuevaChat(idAccion){
+  const accion = accionesDeudaNuevaChat[idAccion];
+  if(!accion) return;
+  const btnConfirmar = document.getElementById(`chat-deuda-nueva-confirmar-${idAccion}`);
+  const btnCancelar = document.getElementById(`chat-deuda-nueva-cancelar-${idAccion}`);
+  if(btnConfirmar) btnConfirmar.disabled = true;
+  if(btnCancelar) btnCancelar.disabled = true;
+
+  if(!accion.nombre || !accion.tipo_deuda || accion.saldo == null){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('ayuda_ia.accion_incompleta'));
+    return;
+  }
+
+  const esTarjeta = accion.tipo_deuda === 'Tarjeta de crédito';
+  const camposTarjeta = esTarjeta
+    ? {
+        limite_credito: accion.limite_credito != null ? Number(accion.limite_credito) : null,
+        anualidad: accion.anualidad != null ? Number(accion.anualidad) : null,
+        cashback_pct: accion.cashback_pct != null ? Number(accion.cashback_pct) : null,
+        gasto_mensual_promedio: accion.gasto_mensual_promedio != null ? Number(accion.gasto_mensual_promedio) : null,
+        dia_corte: accion.dia_corte != null ? Number(accion.dia_corte) : null
+      }
+    : { limite_credito: null, anualidad: null, cashback_pct: null, gasto_mensual_promedio: null, dia_corte: null };
+
+  const { data, error } = await sb.from('deudas').insert({
+    nombre: accion.nombre, tipo: accion.tipo_deuda, saldo: Number(accion.saldo), moneda: accion.moneda || 'MXN',
+    tasa_interes: accion.tasa_interes != null ? Number(accion.tasa_interes) : null,
+    pago_mensual: accion.pago_mensual != null ? Number(accion.pago_mensual) : null,
+    dia_limite_pago: accion.dia_limite_pago != null ? Number(accion.dia_limite_pago) : null,
+    monto_proximo_pago: accion.monto_proximo_pago != null ? Number(accion.monto_proximo_pago) : null,
+    ...camposTarjeta
+  }).select().single();
+  if(error){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('alert.error_guardar_deuda'));
+    return;
+  }
+  await sb.from('deudas_historico').insert({ deuda_id: data.id, fecha: new Date().toISOString().slice(0,10), saldo: Number(accion.saldo) });
+
+  const contenedor = document.getElementById(`chat-accion-deuda-nueva-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(t('ayuda_ia.deuda_guardada'))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesDeudaNuevaChat[idAccion];
+  snapshotFreakyCache = null;
+}
+
+async function confirmarBienNuevoChat(idAccion){
+  const accion = accionesBienNuevoChat[idAccion];
+  if(!accion) return;
+  const btnConfirmar = document.getElementById(`chat-bien-nuevo-confirmar-${idAccion}`);
+  const btnCancelar = document.getElementById(`chat-bien-nuevo-cancelar-${idAccion}`);
+  if(btnConfirmar) btnConfirmar.disabled = true;
+  if(btnCancelar) btnCancelar.disabled = true;
+
+  if(!accion.nombre || !accion.tipo_bien || accion.valor == null){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('ayuda_ia.accion_incompleta'));
+    return;
+  }
+
+  const { data, error } = await sb.from('bienes').insert({
+    nombre: accion.nombre, tipo: accion.tipo_bien, valor: Number(accion.valor), moneda: accion.moneda || 'MXN'
+  }).select().single();
+  if(error){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('alert.error_guardar_bien'));
+    return;
+  }
+  await sb.from('bienes_historico').insert({ bien_id: data.id, fecha: new Date().toISOString().slice(0,10), valor: Number(accion.valor) });
+
+  const contenedor = document.getElementById(`chat-accion-bien-nuevo-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(t('ayuda_ia.bien_guardado'))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesBienNuevoChat[idAccion];
+  snapshotFreakyCache = null;
+}
+
+async function confirmarAccionNuevaChat(idAccion){
+  const accion = accionesAccionNuevaChat[idAccion];
+  if(!accion) return;
+  const btnConfirmar = document.getElementById(`chat-accion-nueva-confirmar-${idAccion}`);
+  const btnCancelar = document.getElementById(`chat-accion-nueva-cancelar-${idAccion}`);
+  if(btnConfirmar) btnConfirmar.disabled = true;
+  if(btnCancelar) btnCancelar.disabled = true;
+
+  if(!accion.busqueda || !(Number(accion.cantidad) > 0)){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('ayuda_ia.accion_incompleta'));
+    return;
+  }
+
+  // Nunca se guarda el símbolo que puso la IA a ciegas — se resuelve aquí con
+  // la misma búsqueda real (Twelve Data) que usa el formulario manual. Si hay
+  // más de un resultado disponible o ninguno, no se adivina: se le pide al
+  // usuario que lo busque él mismo en el formulario real.
+  let resultados = [];
+  try{
+    const resp = await fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(accion.busqueda)}&outputsize=20&apikey=${window.TWELVE_DATA_API_KEY}`);
+    const data = await resp.json();
+    const vistos = new Set();
+    (data.data || []).forEach(r => {
+      if(r.exchange === 'BMV' || vistos.has(r.symbol)) return;
+      vistos.add(r.symbol);
+      resultados.push(r);
+    });
+  }catch(e){
+    console.warn('No se pudo buscar el símbolo para la acción propuesta por Freaky', e);
+  }
+
+  const coincidenciaExacta = resultados.filter(r => r.symbol.toUpperCase() === accion.busqueda.trim().toUpperCase());
+  const candidatos = coincidenciaExacta.length === 1 ? coincidenciaExacta : resultados;
+
+  if(candidatos.length !== 1){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t(candidatos.length === 0 ? 'ayuda_ia.accion_no_encontrada' : 'ayuda_ia.accion_ambigua'));
+    return;
+  }
+  const simbolo = candidatos[0].symbol.toUpperCase();
+
+  const { data: existentes } = await sb.from('acciones').select('id, simbolo');
+  if((existentes || []).some(a => a.simbolo.toUpperCase() === simbolo)){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(tf('alert.ya_tienes_accion', simbolo));
+    return;
+  }
+
+  const { error } = await sb.from('acciones').insert({
+    simbolo, cantidad: Number(accion.cantidad), precio_manual: null, moneda_manual: null, precio_manual_fecha: null
+  });
+  if(error){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('alert.error_guardar_accion'));
+    return;
+  }
+
+  const contenedor = document.getElementById(`chat-accion-accion-nueva-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(tf('ayuda_ia.accion_guardada', simbolo))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesAccionNuevaChat[idAccion];
   snapshotFreakyCache = null;
 }
 

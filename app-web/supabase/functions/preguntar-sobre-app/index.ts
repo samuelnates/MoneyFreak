@@ -89,6 +89,48 @@ const AccionPagoDeudaSchema = z.object({
   cuenta_origen_nombre: z.string().nullable(),
 });
 
+const MONEDAS_VALIDAS = ["MXN", "USD", "EUR", "BTC"] as const;
+
+const AccionCuentaNuevaSchema = z.object({
+  tipo: z.literal("proponer_cuenta_nueva"),
+  nombre: z.string(),
+  tipo_cuenta: z.enum(["Efectivo", "Débito", "Ahorro", "Inversión", "Otra"]),
+  moneda: z.enum(MONEDAS_VALIDAS),
+  saldo_inicial: z.number().nullable(),
+  tasa_interes: z.number().nullable(),
+});
+
+const AccionDeudaNuevaSchema = z.object({
+  tipo: z.literal("proponer_deuda_nueva"),
+  nombre: z.string(),
+  tipo_deuda: z.enum(["Tarjeta de crédito", "Crédito hipotecario", "Otro"]),
+  saldo: z.number().min(0),
+  moneda: z.enum(MONEDAS_VALIDAS),
+  tasa_interes: z.number().nullable(),
+  pago_mensual: z.number().nullable(),
+  dia_limite_pago: z.number().int().min(1).max(31).nullable(),
+  monto_proximo_pago: z.number().nullable(),
+  limite_credito: z.number().nullable(),
+  anualidad: z.number().nullable(),
+  cashback_pct: z.number().nullable(),
+  gasto_mensual_promedio: z.number().nullable(),
+  dia_corte: z.number().int().min(1).max(31).nullable(),
+});
+
+const AccionBienNuevoSchema = z.object({
+  tipo: z.literal("proponer_bien_nuevo"),
+  nombre: z.string(),
+  tipo_bien: z.enum(["Inmueble", "Vehículo", "Negocio", "Otro"]),
+  valor: z.number().min(0),
+  moneda: z.enum(MONEDAS_VALIDAS),
+});
+
+const AccionAccionNuevaSchema = z.object({
+  tipo: z.literal("proponer_accion_nueva"),
+  busqueda: z.string(),
+  cantidad: z.number().positive(),
+});
+
 const RespuestaFreakySchema = z.object({
   respuesta: z.string(),
   destino: z.enum(DESTINO_KEYS as [string, ...string[]]).nullable(),
@@ -97,6 +139,10 @@ const RespuestaFreakySchema = z.object({
   accion_saldo_cuenta: AccionSaldoCuentaSchema.nullable(),
   accion_ingreso: AccionIngresoSchema.nullable(),
   accion_pago_deuda: AccionPagoDeudaSchema.nullable(),
+  accion_cuenta_nueva: AccionCuentaNuevaSchema.nullable(),
+  accion_deuda_nueva: AccionDeudaNuevaSchema.nullable(),
+  accion_bien_nuevo: AccionBienNuevoSchema.nullable(),
+  accion_accion_nueva: AccionAccionNuevaSchema.nullable(),
 });
 
 function construirSystemPrompt(
@@ -146,7 +192,7 @@ CÓMO REGISTRAR CADA COSA EN LA APP (tienes que saber explicar esto paso a paso,
    b) A mano: en Cuentas, "+" chico → "Transferencia" → tipo "Pago a una deuda" → eliges de qué cuenta sale el dinero y a cuál deuda entra. Nunca se hace escribiendo directamente el nuevo saldo de la deuda: siempre es un pago que se resta del saldo que ya tenía.
    No confundas esto con pagar un gasto normal usando la tarjeta como medio de pago — eso es lo que SUBE el saldo de la deuda, no lo baja.
 
-Si el usuario te pide ayuda para registrar algo de esto y una de las pantallas de arriba aplica, usa "destino" con la clave correcta (agregar_cuenta / agregar_deuda / agregar_bien / agregar_accion) para que le aparezca un botón y llegue directo al formulario correcto — tú no guardas cuentas, deudas, bienes ni acciones directamente (solo gastos, presupuesto, saldo de cuenta, ingresos y pagos a deuda tienen ese mecanismo, ver abajo), así que tu trabajo aquí es explicar bien y mandarlo al lugar correcto con el link.
+Si el usuario te describe una cuenta, deuda, bien o acción real que quiere registrar (no solo pregunta cómo se hace), SÍ puedes proponerlo directamente con los campos de "accion_cuenta_nueva" / "accion_deuda_nueva" / "accion_bien_nuevo" / "accion_accion_nueva" (reglas detalladas más abajo) — el usuario ve la propuesta y confirma con un botón, igual que con un gasto. Solo cuando la pregunta es puramente "¿cómo se hace?" o te falta información clave para proponerlo (ej. no dio ningún monto ni tipo), usa "destino" con la clave correcta (agregar_cuenta / agregar_deuda / agregar_bien / agregar_accion) para mandarlo al formulario real en vez de proponer algo a medias.
 
 TU CONTEXTO FINANCIERO:
 Cuando el mensaje del usuario venga acompañado de un bloque "Contexto financiero actual del usuario", son cifras reales ya calculadas por la app (patrimonio, liquidez, gastos por categoría del mes, próximos pagos, posibles anomalías) — no las inventes ni las repitas tal cual, úsalas para responder con números concretos a preguntas como "¿me alcanza?", "¿voy mejor o peor que antes?", "¿en qué me estoy pasando?". Si no viene ese bloque, responde solo con lo que sepas de forma general y aclara que no tienes sus datos a la mano en este momento. No dabas consejos de inversión especializados (comprar o vender algo específico) — quédate en el terreno de gasto, presupuesto y flujo, que es lo que tus cifras realmente soportan.
@@ -205,7 +251,41 @@ ${listaDeudas}
 ${listaCuentas}
 - Si el usuario no está describiendo un pago real a una deuda, "accion_pago_deuda" debe ser null.
 
-REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
+CUÁNDO PROPONER UNA CUENTA NUEVA (campo "accion_cuenta_nueva"):
+Si el usuario describe una cuenta real que quiere registrar (efectivo, débito, ahorro o inversión — ej. "abrí una cuenta de ahorro en Nu con $5000", "agrégame mi efectivo"), propón "accion_cuenta_nueva" con tipo "proponer_cuenta_nueva".
+- "nombre": el que dio, o uno corto y razonable si no dio uno (ej. "Efectivo" para tipo Efectivo).
+- "tipo_cuenta": EXACTAMENTE uno de "Efectivo" / "Débito" / "Ahorro" / "Inversión" / "Otra" — tu mejor estimación según lo que describe.
+- "moneda": "MXN" si no dice nada distinto, o "USD"/"EUR"/"BTC" si lo menciona.
+- "saldo_inicial": el saldo que menciona si dio uno, si no null (se puede capturar después en la app).
+- "tasa_interes": solo si la menciona explícitamente, si no null.
+- Si no está describiendo una cuenta real que quiere registrar, "accion_cuenta_nueva" debe ser null.
+
+CUÁNDO PROPONER UNA DEUDA O TARJETA NUEVA (campo "accion_deuda_nueva"):
+Si el usuario describe una deuda o tarjeta de crédito real que quiere registrar (ej. "métete mi tarjeta Santander, debo $8000, corte el 20 y pago el 5", "tengo un crédito hipotecario de $1,200,000"), propón "accion_deuda_nueva" con tipo "proponer_deuda_nueva".
+- "nombre": el que dio (ej. "Tarjeta Santander"), o uno corto y claro si no dio uno.
+- "tipo_deuda": EXACTAMENTE uno de "Tarjeta de crédito" / "Crédito hipotecario" / "Otro".
+- "saldo": lo que debe hoy — obligatorio, si no lo dice usa tu mejor estimación de lo que mencionó o deja la propuesta más incompleta, nunca inventes un número sin ninguna pista.
+- "moneda": "MXN" si no dice nada distinto.
+- "tasa_interes", "pago_mensual", "dia_limite_pago" (1-31), "monto_proximo_pago": solo si los menciona, si no null.
+- Si "tipo_deuda" es "Tarjeta de crédito" y menciona límite de crédito, anualidad, % de cashback, gasto mensual promedio o día de corte (1-31), captúralos en "limite_credito"/"anualidad"/"cashback_pct"/"gasto_mensual_promedio"/"dia_corte"; si no los menciona o el tipo no es tarjeta, todos esos van null.
+- Si no está describiendo una deuda real que quiere registrar, "accion_deuda_nueva" debe ser null.
+
+CUÁNDO PROPONER UN BIEN NUEVO (campo "accion_bien_nuevo"):
+Si el usuario describe un bien real que quiere registrar (casa, coche, negocio, etc. — ej. "tengo una casa que vale como $2,000,000", "agrega mi camioneta, vale $350,000"), propón "accion_bien_nuevo" con tipo "proponer_bien_nuevo".
+- "nombre": el que dio, o uno corto y claro (ej. "Casa", "Camioneta").
+- "tipo_bien": EXACTAMENTE uno de "Inmueble" / "Vehículo" / "Negocio" / "Otro".
+- "valor": el valor estimado que menciona — obligatorio.
+- "moneda": "MXN" si no dice nada distinto.
+- Si no está describiendo un bien real que quiere registrar, "accion_bien_nuevo" debe ser null.
+
+CUÁNDO PROPONER UNA ACCIÓN NUEVA (campo "accion_accion_nueva"):
+Si el usuario describe una compra de acciones/inversión en bolsa que quiere registrar (ej. "compré 10 acciones de Apple", "tengo 5 títulos de Femsa"), propón "accion_accion_nueva" con tipo "proponer_accion_nueva".
+- "busqueda": el nombre de la empresa o símbolo/ticker tal cual lo mencionó (ej. "Apple", "AAPL", "Femsa") — el cliente hace la búsqueda real del símbolo antes de guardar, tú NO inventas ni asumes el ticker exacto, solo pasas lo que el usuario dijo.
+- "cantidad": cuántas acciones/títulos, siempre positivo.
+- Recuérdale, en tu "respuesta", que esto no cubre símbolos directos del BMV (solo EUA y ADRs mexicanos como AMX/FMX/CX) si el nombre suena a una empresa que probablemente cotiza solo ahí.
+- Si no está describiendo una compra real de acciones que quiere registrar, "accion_accion_nueva" debe ser null.
+
+REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
 
 Pantallas válidas a las que puedes mandar un link (usa exactamente una de estas claves en "destino", o null si ninguna aplica):
 ${DESTINO_KEYS.map((k) => `- "${k}" = ${DESTINOS[k]}`).join("\n")}
@@ -406,6 +486,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Las 4 acciones de "registrar algo nuevo" no tienen nombre real que
+    // validar contra nada existente (son cosas que todavía no existen) — el
+    // único filtro es que "acción" (bolsa) siempre pasa por la búsqueda real
+    // de símbolo en el cliente antes de guardar, nunca se guarda con el
+    // símbolo que puso el modelo a ciegas.
+    const accionCuentaNueva = parsed.accion_cuenta_nueva;
+    const accionDeudaNueva = parsed.accion_deuda_nueva;
+    const accionBienNuevo = parsed.accion_bien_nuevo;
+    const accionAccionNueva = parsed.accion_accion_nueva;
+
     return jsonResponse({
       respuesta: parsed.respuesta,
       destino: parsed.destino,
@@ -414,6 +504,10 @@ Deno.serve(async (req) => {
       accion_saldo_cuenta: accionSaldoCuenta,
       accion_ingreso: accionIngreso,
       accion_pago_deuda: accionPagoDeuda,
+      accion_cuenta_nueva: accionCuentaNueva,
+      accion_deuda_nueva: accionDeudaNueva,
+      accion_bien_nuevo: accionBienNuevo,
+      accion_accion_nueva: accionAccionNueva,
       transcripcion,
     });
   } catch (e) {
