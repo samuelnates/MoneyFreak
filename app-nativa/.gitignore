@@ -1,0 +1,48 @@
+# Node
+node_modules/
+npm-debug.log
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/app/release/
+android/app/src/main/assets/public/
+
+# iOS
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+ios/App/DerivedData/
+ios/App/build/
+ios/App/App/public/
+
+# Copias del sitio web que Capacitor genera al sincronizar — la app carga el sitio en vivo (server.url),
+# no estas copias locales, así que no hace falta versionarlas (se regeneran con `npx cap sync`).
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+
+# Secrets / signing (nunca deben subirse)
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.cer
+*.p8
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# OS
+.DS_Store
+Thumbs.db

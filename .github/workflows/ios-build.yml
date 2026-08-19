@@ -19,16 +19,18 @@ jobs:
           node-version: 22
 
       - name: Instalar dependencias
+        working-directory: app-nativa
         run: npm ci
 
       - name: Sincronizar el proyecto iOS de Capacitor
+        working-directory: app-nativa
         run: npx cap sync ios
 
       # --- Compilación sin firma, solo para validar que el proyecto compila ---
       # (para simulador, no genera un .ipa instalable en un iPhone real ni subible a App Store)
       - name: Compilar para el simulador (validación)
         run: |
-          cd ios/App
+          cd app-nativa/ios/App
           xcodebuild -project App.xcodeproj -scheme App \
             -destination "generic/platform=iOS Simulator" \
             -configuration Debug build CODE_SIGNING_ALLOWED=NO
