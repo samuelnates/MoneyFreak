@@ -16,19 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Decode PNG chunks
+      - name: Decode and extract avatar package
         shell: bash
         run: |
           set -euo pipefail
-          SRC="app-web/assets/asesores-raw/.avatar-upload"
-          DEST="app-web/assets/asesores-raw"
-          find "$SRC" -type f -name '*.part' | sed -E 's/\.[0-9]{3}\.part$//' | sort -u | while read -r prefix; do
-            key="$(basename "$prefix")"
-            personaje="${key%%__*}"
-            filename="${key#*__}.png"
-            mkdir -p "$DEST/$personaje"
-            cat "${prefix}".*.part | base64 --decode > "$DEST/$personaje/$filename"
-          done
+          ROOT="app-web/assets/asesores-raw"
+          SRC="$ROOT/.avatar-upload"
+          cat "$SRC"/archive.*.part | base64 --decode > /tmp/asesores.tar.gz
+          tar -xzf /tmp/asesores.tar.gz -C "$ROOT"
 
       - name: Commit imported assets
         shell: bash
