@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Borrar mi cuenta y mis datos — Money Freak</title>
+<meta name="description" content="Cómo borrar tu cuenta y tus datos de Money Freak, desde la app o por correo.">
+<link rel="icon" type="image/svg+xml" href="app-icon/icon-1024.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#000000;
+    --superficie:#0D0D0B;
+    --borde:#232019;
+    --texto:#EDEAE2;
+    --texto-tenue:#8D8676;
+    --neg:#9C9184;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F7F5EF;
+      --superficie:#FFFFFF;
+      --borde:#E4E0D2;
+      --texto:#2A2718;
+      --texto-tenue:#6B6555;
+      --neg:#8A8067;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+    line-height:1.6;padding:32px 20px 80px;
+  }
+  .contenedor{max-width:640px;margin:0 auto;}
+  .marca{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:6px;}
+  h1{font-size:26px;margin:0 0 6px;}
+  .subtitulo{font-size:14px;color:var(--texto-tenue);margin-bottom:32px;}
+  h2{font-size:16px;margin:32px 0 8px;display:flex;align-items:center;gap:8px;}
+  .paso-num{font-family:var(--mono);font-size:12px;color:var(--texto-tenue);border:1px solid var(--borde);border-radius:100px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+  p{font-size:14px;color:var(--texto);margin:0 0 4px;}
+  ul{font-size:14px;margin:8px 0 0;padding-left:20px;}
+  li{margin-bottom:4px;}
+  .caja{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:18px 20px;margin-bottom:8px;}
+  .btn-correo{
+    display:inline-block;margin-top:14px;background:var(--texto);color:var(--bg);
+    font-family:var(--sans);font-weight:700;font-size:14px;text-decoration:none;
+    padding:14px 22px;border-radius:8px;
+  }
+  a{color:inherit;}
+  .aviso-plazo{font-family:var(--mono);font-size:12px;color:var(--texto-tenue);margin-top:24px;}
+  .volver{display:inline-block;margin-top:32px;font-family:var(--mono);font-size:13px;color:var(--texto-tenue);text-decoration:none;border-bottom:1px solid var(--borde);}
+  .volver:hover{color:var(--texto);}
+  .logo-mark{width:30px;height:30px;margin-bottom:10px;color:var(--texto);}
+  .logo-mark svg{width:100%;height:100%;display:block;}
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
+  <div class="marca">MONEY FREAK</div>
+  <h1>Borrar mi cuenta y mis datos</h1>
+  <div class="subtitulo">Puedes eliminar toda tu información financiera de Money Freak en cualquier momento. Hay dos formas de hacerlo.</div>
+
+  <h2><span class="paso-num">1</span> Desde la app (inmediato, sin esperar)</h2>
+  <div class="caja">
+    <p>Si tienes acceso a tu cuenta, es la vía más rápida:</p>
+    <ul>
+      <li>Entra a <b>Money Freak</b> e inicia sesión.</li>
+      <li>Ve a <b>Configuración y privacidad</b>.</li>
+      <li>Toca <b>"Borrar todos mis datos"</b> y confirma escribiendo "BORRAR".</li>
+    </ul>
+    <p style="margin-top:8px;">Esto borra de inmediato tus cuentas, bienes, acciones, deudas, ingresos, gastos, presupuestos y todo tu historial. Tu acceso (correo/contraseña) no se borra con esta opción — si también quieres cerrar tu cuenta de acceso, usa la opción 2.</p>
+  </div>
+
+  <h2><span class="paso-num">2</span> Por correo (si no puedes entrar a tu cuenta, o quieres cerrarla por completo)</h2>
+  <div class="caja">
+    <p>Escríbenos desde el mismo correo con el que te registraste, indicando que quieres borrar tu cuenta y todos tus datos.</p>
+    <a class="btn-correo" href="mailto:samuelnates@gmail.com?subject=Borrar%20mi%20cuenta%20de%20Money%20Freak&body=Quiero%20borrar%20mi%20cuenta%20y%20todos%20mis%20datos%20de%20Money%20Freak.%0D%0A%0D%0ACorreo%20de%20mi%20cuenta%3A%20">Escribir para solicitar el borrado</a>
+    <p style="margin-top:14px;">Vamos a eliminar:</p>
+    <ul>
+      <li>Todos tus datos financieros (cuentas, bienes, acciones, deudas, ingresos, gastos, presupuestos, historial).</li>
+      <li>Tu perfil (nombre, correo) y tu acceso a la app.</li>
+    </ul>
+  </div>
+
+  <div class="aviso-plazo">Las solicitudes por correo se atienden en un máximo de 30 días.</div>
+
+  <a class="volver" href="index.html">‹ Volver a la app</a>
+</div>
+</body>
+</html>

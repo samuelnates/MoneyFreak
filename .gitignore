@@ -1,0 +1,7 @@
+# Estado local de las CLIs — se regenera solo, no aporta nada versionado
+.wrangler/
+supabase/.temp/
+
+# Artefactos del sistema
+.DS_Store
+Thumbs.db

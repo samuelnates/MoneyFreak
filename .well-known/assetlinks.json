@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.miscuentaspro.app",
+      "sha256_cert_fingerprints": [
+        "9B:C1:DB:85:4E:17:B5:68:3A:48:3B:AF:5C:62:41:CF:B0:98:AE:9F:CB:22:6B:B4:02:2D:B0:8A:FD:A1:24:77"
+      ]
+    }
+  }
+]

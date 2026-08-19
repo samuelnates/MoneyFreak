@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732">
+  <rect width="2732" height="2732" fill="#000000"/>
+  <g transform="translate(1025,778) scale(0.684)">
+    <polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="#EDEAE2" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/>
+    <polygon points="743,299 757,415 650,370" fill="#EDEAE2"/>
+    <circle cx="240" cy="790" r="24" fill="#EDEAE2"/>
+    <circle cx="360" cy="680" r="24" fill="#EDEAE2"/>
+    <circle cx="430" cy="730" r="24" fill="#EDEAE2"/>
+    <circle cx="540" cy="560" r="24" fill="#EDEAE2"/>
+    <circle cx="610" cy="610" r="24" fill="#EDEAE2"/>
+  </g>
+  <text x="1366" y="1560" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="44" letter-spacing="14" fill="#8D8676" text-anchor="middle">MIS CUENTAS PRO</text>
+</svg>
