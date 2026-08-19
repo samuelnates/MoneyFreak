@@ -605,6 +605,16 @@
   .freaky-burbuja-proactiva-ver{background:var(--acento);color:var(--acento-texto);border:none;}
   .freaky-burbuja-proactiva-cerrar{background:none;border:1px solid var(--borde-fuerte);color:var(--texto-tenue);}
 
+  /* Punto/numerito de "tienes algo sin leer" sobre el personaje — mismo criterio
+     que el resto de la app: 0/1 nada más (máximo un aviso proactivo al día). */
+  .freaky-badge{
+    display:none;position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 4px;
+    border-radius:10px;background:var(--color-riesgo);color:#fff;
+    font-family:var(--sans);font-size:11px;font-weight:700;line-height:19px;text-align:center;
+    box-shadow:0 0 0 2px var(--bg);pointer-events:none;
+  }
+  .freaky-badge.visible{display:block;}
+
   .panel-freaky-card{
     border:1px solid var(--borde-fuerte);border-radius:10px;background:var(--superficie);
     padding:12px;margin-bottom:10px;
@@ -1115,15 +1125,17 @@
 <button type="button" class="marca-flotante" onclick="abrirPanel()" aria-label="Ir a Inicio" data-i18n-aria-label="navinf.inicio">
   <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg>
 </button>
-<button type="button" class="btn-asistente-flotante" onclick="abrirFreaky()" aria-label="Freaky">
+<button type="button" class="btn-asistente-flotante" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="3.3" rx="5.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5,13 A7,7 0 1 0 19,13 A7,7 0 1 0 5,13 Z M8.3,12.5 A1,1 0 1 0 10.3,12.5 A1,1 0 1 0 8.3,12.5 Z M13.7,12.5 A1,1 0 1 0 15.7,12.5 A1,1 0 1 0 13.7,12.5 Z"/><path d="M14,18.3 Q18.5,17 20,21.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="18.5,20.5 21.8,19.3 20.5,23.8" fill="currentColor"/></svg>
   <span>Freaky</span>
+  <span class="freaky-badge" id="freaky-badge-fallback" aria-hidden="true"></span>
 </button>
 <button type="button" class="freaky-personaje" id="freaky-personaje" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
   <img id="freaky-img-flotando" class="freaky-img" src="assets/freaky/freaky-flotando.png" alt="" style="opacity:1;">
   <img id="freaky-img-pensando" class="freaky-img" src="assets/freaky/freaky-pensando.png" alt="" style="opacity:0;">
   <img id="freaky-img-hablando" class="freaky-img" src="assets/freaky/freaky-hablando.png" alt="" style="opacity:0;">
   <img id="freaky-img-sentado" class="freaky-img" src="assets/freaky/freaky-sentado.png" alt="" style="opacity:0;">
+  <span class="freaky-badge" id="freaky-badge" aria-hidden="true"></span>
 </button>
 <div class="freaky-burbuja-proactiva" id="freaky-burbuja-proactiva" style="display:none;">
   <div class="freaky-burbuja-proactiva-texto" id="freaky-burbuja-proactiva-texto"></div>
@@ -3460,6 +3472,7 @@ const TRADUCCIONES = {
     'freaky.aviso_vence_pronto': 'Oye — se te vence {0} en {1} días.',
     'freaky.aviso_recurrente': 'Creo que gastas {0} en {1} cada mes — ¿quieres que te lo recuerde?',
     'freaky.aviso_recordarmelo': 'Sí, recuérdame',
+    'freaky.aviso_teaser': 'Necesito decirte algo 👀',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
     'ayuda_ia.vacio_titulo': '¡Hola! Soy Freaky',
     'ayuda_ia.vacio_texto': 'Pregúntame cómo usar Money Freak, o sobre tu situación financiera — ¿me alcanza?, ¿voy mejor o peor?, hasta puedo registrarte un gasto.',
@@ -4305,6 +4318,7 @@ const TRADUCCIONES = {
     'freaky.aviso_vence_pronto': 'Hey — {0} is due in {1} days.',
     'freaky.aviso_recurrente': 'I think you spend {0} on {1} every month — want me to remind you about it?',
     'freaky.aviso_recordarmelo': 'Yes, remind me',
+    'freaky.aviso_teaser': 'I need to tell you something 👀',
     'ayuda_ia.subtitulo': 'Your financial mentor',
     'ayuda_ia.vacio_titulo': "Hi! I'm Freaky",
     'ayuda_ia.vacio_texto': "Ask me how to use Money Freak, or about your financial situation — can I afford this?, am I doing better or worse?, I can even log an expense for you.",
@@ -8329,7 +8343,11 @@ function onClickFreakyPersonaje(){
       .to(el, { scale: 0.8, duration: 0.1, ease: 'power1.out' })
       .to(el, { scale: 1, duration: 0.4, ease: 'elastic.out(1.1, 0.4)' });
   }
-  abrirFreaky();
+  if(freakyAvisoProactivoPendiente){
+    entregarAvisoProactivoEnChat();
+  } else {
+    abrirFreaky();
+  }
 }
 
 function toggleFreakyVuelo(){
@@ -8352,7 +8370,11 @@ function aplicarPreferenciaFreakyVuelo(){
 // Máximo un aviso al día, y el pago urgente le gana al patrón detectado (es más
 // sensible al tiempo).
 let freakyBurbujaProactivaIntervalo = null;
-let freakyAccionProactivaActual = null;
+// {texto, destino} del aviso que Freaky todavía no ha "dicho" — nunca se
+// muestra tal cual en la burbuja/numerito, solo dentro del chat (ver
+// entregarAvisoProactivoEnChat). Se espeja en localStorage para sobrevivir
+// a una recarga de página el mismo día sin perder el numerito.
+let freakyAvisoProactivoPendiente = null;
 
 function elementoFreakyVisible(){
   return document.body.classList.contains('freaky-vuelo-desactivado')
@@ -8361,6 +8383,11 @@ function elementoFreakyVisible(){
 }
 
 async function revisarAvisoProactivoFreaky(flujo){
+  // Ya hay un aviso pendiente de una carga anterior el mismo día (el usuario
+  // no lo ha abierto todavía) — solo se restaura el numerito, sin recalcular
+  // ni volver a mostrar la burbuja (insistiría de más en cada recarga).
+  if(restaurarAvisoProactivoPendiente()) return;
+
   const hoyISO = new Date().toISOString().slice(0, 10);
   if(localStorage.getItem('freaky_aviso_proactivo_fecha') === hoyISO) return;
 
@@ -8371,11 +8398,7 @@ async function revisarAvisoProactivoFreaky(flujo){
       ? tf('freaky.aviso_vence_hoy', urgente.nombre)
       : tf('freaky.aviso_vence_pronto', urgente.nombre, urgente.diasFaltan);
     localStorage.setItem('freaky_aviso_proactivo_fecha', hoyISO);
-    // Un momento para que el personaje ya esté volando y la burbuja tenga dónde anclarse.
-    setTimeout(() => mostrarAvisoProactivoFreaky(texto, {
-      etiquetaBoton: t('freaky.aviso_ver'),
-      alConfirmar: () => irADestinoChat('flujo')
-    }), 1500);
+    guardarAvisoProactivoPendiente(texto, 'flujo');
     return;
   }
 
@@ -8383,21 +8406,57 @@ async function revisarAvisoProactivoFreaky(flujo){
   if(candidato){
     const texto = tf('freaky.aviso_recurrente', formatoMonto(candidato.monto, 'MXN'), nombreGasto(candidato.subcategoria || candidato.categoria));
     localStorage.setItem('freaky_aviso_proactivo_fecha', hoyISO);
-    setTimeout(() => mostrarAvisoProactivoFreaky(texto, {
-      etiquetaBoton: t('freaky.aviso_recordarmelo'),
-      alConfirmar: () => aceptarRecordatorioGastoRecurrente(candidato)
-    }), 1500);
+    // destino:'gastos' — ahí ya vive la tarjeta real de aceptar/descartar
+    // (mostrarSugerenciaGastoRecurrente(), dentro de abrirGastos()), no hace
+    // falta duplicar esa lógica aquí.
+    guardarAvisoProactivoPendiente(texto, 'gastos');
   }
 }
 
-function mostrarAvisoProactivoFreaky(texto, opciones){
+// Guarda el aviso real para entregarlo dentro del chat cuando el usuario lo
+// pida, y prende el numerito + la burbuja "teaser" (que nunca revela el
+// contenido, solo invita a abrir el chat).
+function guardarAvisoProactivoPendiente(texto, destino){
+  freakyAvisoProactivoPendiente = { texto, destino };
+  localStorage.setItem('freaky_aviso_proactivo_pendiente', JSON.stringify(freakyAvisoProactivoPendiente));
+  mostrarBadgeProactivoFreaky();
+  // Un momento para que el personaje ya esté volando y la burbuja tenga dónde anclarse.
+  setTimeout(mostrarBurbujaTeaserFreaky, 1500);
+}
+
+// true si ya había un pendiente de antes (recarga de página el mismo día).
+function restaurarAvisoProactivoPendiente(){
+  if(freakyAvisoProactivoPendiente){ mostrarBadgeProactivoFreaky(); return true; }
+  const guardado = localStorage.getItem('freaky_aviso_proactivo_pendiente');
+  if(!guardado) return false;
+  try{
+    freakyAvisoProactivoPendiente = JSON.parse(guardado);
+  }catch(e){
+    localStorage.removeItem('freaky_aviso_proactivo_pendiente');
+    return false;
+  }
+  mostrarBadgeProactivoFreaky();
+  return true;
+}
+
+function mostrarBadgeProactivoFreaky(){
+  document.querySelectorAll('.freaky-badge').forEach(b => { b.classList.add('visible'); b.textContent = '1'; });
+}
+
+function ocultarBadgeProactivoFreaky(){
+  document.querySelectorAll('.freaky-badge').forEach(b => b.classList.remove('visible'));
+}
+
+// Burbuja "teaser": solo invita a abrir el chat, nunca dice de qué se trata
+// — el contenido real aparece únicamente adentro, como un mensaje más de
+// Freaky (ver entregarAvisoProactivoEnChat).
+function mostrarBurbujaTeaserFreaky(){
   const burbuja = document.getElementById('freaky-burbuja-proactiva');
   const textoEl = document.getElementById('freaky-burbuja-proactiva-texto');
   const btnPrincipal = document.getElementById('freaky-burbuja-proactiva-ver');
-  if(!burbuja || !textoEl || !btnPrincipal || !elementoFreakyVisible()) return;
-  textoEl.textContent = texto;
-  btnPrincipal.textContent = opciones?.etiquetaBoton || t('freaky.aviso_ver');
-  freakyAccionProactivaActual = opciones?.alConfirmar || (() => irADestinoChat('flujo'));
+  if(!burbuja || !textoEl || !btnPrincipal || !freakyAvisoProactivoPendiente || !elementoFreakyVisible()) return;
+  textoEl.textContent = t('freaky.aviso_teaser');
+  btnPrincipal.textContent = t('freaky.aviso_ver');
   burbuja.style.display = 'block';
   freakyTrigger('alert');
   posicionarBurbujaProactivaFreaky();
@@ -8427,10 +8486,24 @@ function cerrarAvisoProactivoFreaky(){
   freakyBurbujaProactivaIntervalo = null;
 }
 
-function verAvisoProactivoFreaky(){
-  const accion = freakyAccionProactivaActual;
+// Se llama desde el botón "Ver" de la burbuja Y desde onClickFreakyPersonaje()
+// cuando hay un aviso pendiente — abre el chat y ahí, y solo ahí, aparece lo
+// que Freaky tenía que decir: un mensaje suyo normal (con su link de destino
+// si aplica, ej. "Flujo de efectivo →" / "Gastos y presupuesto →").
+async function entregarAvisoProactivoEnChat(){
+  const pendiente = freakyAvisoProactivoPendiente;
+  if(!pendiente) return;
   cerrarAvisoProactivoFreaky();
-  if(typeof accion === 'function') accion();
+  ocultarBadgeProactivoFreaky();
+  freakyAvisoProactivoPendiente = null;
+  localStorage.removeItem('freaky_aviso_proactivo_pendiente');
+  await abrirFreaky();
+  historialAyudaIA.push({ rol: 'asistente', texto: pendiente.texto });
+  agregarBurbujaChat('asistente', escapeHtml(pendiente.texto), true, pendiente.destino);
+}
+
+function verAvisoProactivoFreaky(){
+  entregarAvisoProactivoEnChat();
 }
 
 async function abrirFreaky(){
