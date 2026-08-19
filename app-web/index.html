@@ -1148,6 +1148,8 @@
   <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
   <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
   <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
+  <img id="freaky-img-saludando" class="freaky-img" alt="" style="opacity:0;">
+  <img id="freaky-img-ojos_cerrados" class="freaky-img" alt="" style="opacity:0;">
   <span class="freaky-badge" id="freaky-badge" aria-hidden="true"></span>
 </button>
 <div class="freaky-burbuja-proactiva" id="freaky-burbuja-proactiva" style="display:none;">
@@ -7977,6 +7979,10 @@ const DESTINOS_CHAT = {
   salud: { fn: () => abrirSaludFinanciera(), etiqueta: 'Salud financiera' },
   simulador: { fn: () => { ajustarPlazosSimulador(); mostrar('vista-simulador'); }, etiqueta: 'Simulador de crédito' },
   configuracion: { fn: () => mostrar('vista-privacidad'), etiqueta: 'Configuración y privacidad' },
+  agregar_cuenta: { fn: () => mostrar('vista-agregar-cuenta'), etiqueta: 'Nueva cuenta' },
+  agregar_deuda: { fn: () => mostrar('vista-agregar-deuda'), etiqueta: 'Nueva deuda' },
+  agregar_bien: { fn: () => mostrar('vista-agregar-bien'), etiqueta: 'Nuevo bien' },
+  agregar_accion: { fn: () => mostrar('vista-agregar-accion'), etiqueta: 'Nueva acción' },
 };
 
 function irADestinoChat(clave){
@@ -8120,7 +8126,7 @@ function carpetaAsesorActual(){
 // avatares del chat) — se llama cada vez que asesorActual cambia o se carga.
 function aplicarAsesorAlPersonaje(){
   const carpeta = carpetaAsesorActual();
-  ['flotando', 'pensando', 'hablando', 'sentado'].forEach(pose => {
+  ['flotando', 'pensando', 'hablando', 'sentado', 'saludando', 'ojos_cerrados'].forEach(pose => {
     const img = document.getElementById(`freaky-img-${pose}`);
     if(img) img.src = `${carpeta}/${pose}.png`;
   });
@@ -8287,12 +8293,14 @@ function iniciarVueloFreaky(){
 
   freakyVolarSiguiente();
   freakyProgramarBlinkEspontaneo();
+  // Saludo de bienvenida, una sola vez por sesión, justo después de aparecer.
+  gsap.delayedCall(1, () => freakyTrigger('wave'));
 }
 
 // Las 3 imágenes reales (flotando/pensando/hablando) viven apiladas en el
 // mismo lugar — cambiar de pose es solo un crossfade de opacidad entre ellas.
 function freakyMostrarPose(pose){
-  ['flotando', 'pensando', 'hablando', 'sentado'].forEach(p => {
+  ['flotando', 'pensando', 'hablando', 'sentado', 'saludando', 'ojos_cerrados'].forEach(p => {
     const img = document.getElementById(`freaky-img-${p}`);
     if(!img) return;
     const opacidadDestino = p === pose ? 1 : 0;
@@ -8374,11 +8382,31 @@ function freakyTrigger(nombre){
       .to(el, { scale: 1, rotation: 0, duration: 0.18, ease: 'back.out(2)' })
       .to({}, { duration: 0.6 });
   } else if(nombre === 'blink'){
-    // No existe una imagen de ojos cerrados — se aproxima con un parpadeo de
-    // opacidad. No es un parpadeo real, pero da un toque de vida sin redibujar.
-    gsap.timeline({ onComplete: () => freakyIniciarReposo(freakyEstaSentado) })
-      .to(el, { opacity: 0.55, duration: 0.07, ease: 'power1.in' })
-      .to(el, { opacity: 1, duration: 0.11, ease: 'power1.out' });
+    // Parpadeo real: crossfade rápido entre la pose actual y la imagen de
+    // ojos cerrados de cada avatar, y de vuelta — no es la animación completa
+    // de freakyMostrarPose() (0.25s por lado se ve lento para un parpadeo).
+    const poseBase = freakyHablandoActivo ? 'hablando' : (freakyEstaSentado ? 'sentado' : 'flotando');
+    const imgBase = document.getElementById(`freaky-img-${poseBase}`);
+    const imgCerrado = document.getElementById('freaky-img-ojos_cerrados');
+    if(imgBase && imgCerrado){
+      gsap.timeline({ onComplete: () => freakyIniciarReposo(freakyEstaSentado) })
+        .to(imgBase, { opacity: 0, duration: 0.06, ease: 'power1.in' })
+        .set(imgCerrado, { opacity: 1 })
+        .to({}, { duration: 0.09 })
+        .set(imgCerrado, { opacity: 0 })
+        .to(imgBase, { opacity: 1, duration: 0.08, ease: 'power1.out' });
+    } else {
+      freakyIniciarReposo(freakyEstaSentado);
+    }
+  } else if(nombre === 'wave'){
+    // Saludo de bienvenida — se usa una sola vez cuando Freaky aparece por
+    // primera vez en la sesión (ver iniciarVueloFreaky()).
+    freakyMostrarPose('saludando');
+    gsap.timeline({ onComplete: volverAlTerminar })
+      .to(el, { rotation: -8, duration: 0.15, ease: 'sine.inOut' })
+      .to(el, { rotation: 8, duration: 0.2, ease: 'sine.inOut' })
+      .to(el, { rotation: -6, duration: 0.18, ease: 'sine.inOut' })
+      .to(el, { rotation: 0, duration: 0.15, ease: 'sine.inOut' });
   }
 }
 
