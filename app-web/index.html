@@ -860,7 +860,7 @@
     background:none;border:none;padding:0;
   }
   .freaky-login-sentado{
-    display:none;position:absolute;top:-7px;left:calc(61.6% - 22px);width:44px;pointer-events:none;
+    display:none;position:absolute;width:44px;pointer-events:none;
     filter:drop-shadow(0 3px 3px rgba(0,0,0,0.32)) drop-shadow(0 8px 11px rgba(0,0,0,0.28));
   }
   .freaky-login-sentado img{display:block;width:100%;height:auto;}
@@ -8126,7 +8126,30 @@ function aplicarAsesorEnLogin(){
   if(!cacheado || !cont || !img) return;
   img.src = `${cacheado.carpeta}/sentado-recortado.png`;
   cont.style.display = 'block';
+  posicionarAvatarLogin();
 }
+
+// Antes la posición era un top/left fijo en CSS, calibrado a ojo para el
+// mascota original — al cambiar de imagen (los 3 avatares nuevos, cada uno
+// con proporciones distintas) ese número dejó de tener sentido y el
+// personaje apareció "flotando" lejos del título. Ahora se mide en vivo
+// contra la posición real de la palabra "Freak" (el <span> ya existía para
+// esto mismo desde el mascota original), así que sirve para cualquier
+// avatar sin necesidad de recalibrar a mano cada vez.
+function posicionarAvatarLogin(){
+  const cont = document.getElementById('freaky-login-sentado');
+  const span = document.getElementById('span-titulo-freak');
+  const caja = document.querySelector('.login-caja');
+  if(!cont || !span || !caja || cont.style.display === 'none') return;
+  const rectSpan = span.getBoundingClientRect();
+  const rectCaja = caja.getBoundingClientRect();
+  const tam = cont.offsetWidth || 44;
+  // Se apoya sobre la palabra, con ~30% de su alto encima de ella (como si
+  // estuviera sentado justo en el borde superior del texto).
+  cont.style.top = (rectSpan.top - rectCaja.top - tam * 0.7) + 'px';
+  cont.style.left = (rectSpan.left - rectCaja.left + rectSpan.width / 2 - tam / 2) + 'px';
+}
+window.addEventListener('resize', () => posicionarAvatarLogin());
 
 // Se asegura de que asesorActual tenga algo aplicable antes de que el
 // personaje flotante se muestre — cubre modo demo (nunca pregunta) y
