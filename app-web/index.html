@@ -8306,7 +8306,13 @@ function freakyTrigger(nombre){
       .to(el, { scale: 1, duration: 0.07, ease: 'power1.in' });
   } else if(nombre === 'happy'){
     // Doble salto de celebración — se usa al confirmar una propuesta con éxito.
-    freakyMostrarPose('hablando');
+    // Pose "flotando" (no "hablando"): en los 3 avatares es la del vuelo con
+    // puño en alto/brazos abiertos y sonrisa amplia — se lee como celebración
+    // real, a diferencia de "hablando" (mano abierta, gesto de presentar/
+    // señalar) que sigue siendo la correcta para 'point' más abajo. Antes
+    // 'point' y 'happy' usaban la misma imagen y solo se distinguían por el
+    // movimiento; ahora también se distinguen por la pose.
+    freakyMostrarPose('flotando');
     gsap.timeline({ onComplete: volverAlTerminar })
       .to(el, { y: '-=18', duration: 0.15, ease: 'power2.out' })
       .to(el, { y: '+=18', duration: 0.15, ease: 'power2.in' })
