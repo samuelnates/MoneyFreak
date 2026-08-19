@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aviso de privacidad — Money Freak</title>
+<meta name="description" content="Aviso de privacidad y aviso legal de Money Freak.">
+<link rel="icon" type="image/svg+xml" href="app-icon/icon-1024.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#000000;
+    --superficie:#0D0D0B;
+    --borde:#232019;
+    --texto:#EDEAE2;
+    --texto-tenue:#8D8676;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F7F5EF;
+      --superficie:#FFFFFF;
+      --borde:#E4E0D2;
+      --texto:#2A2718;
+      --texto-tenue:#6B6555;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+    line-height:1.6;padding:32px 20px 80px;
+  }
+  .contenedor{max-width:640px;margin:0 auto;}
+  .marca{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:6px;}
+  h1{font-size:26px;margin:0 0 6px;}
+  .fecha{font-family:var(--mono);font-size:12px;color:var(--texto-tenue);margin-bottom:32px;}
+  h2{font-size:16px;margin:32px 0 8px;}
+  p{font-size:14px;color:var(--texto);margin:0 0 4px;}
+  .caja{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:18px 20px;margin-bottom:8px;}
+  a{color:inherit;}
+  .volver{display:inline-block;margin-top:40px;font-family:var(--mono);font-size:13px;color:var(--texto-tenue);text-decoration:none;border-bottom:1px solid var(--borde);}
+  .volver:hover{color:var(--texto);}
+  .logo-mark{width:30px;height:30px;margin-bottom:10px;color:var(--texto);}
+  .logo-mark svg{width:100%;height:100%;display:block;}
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
+  <div class="marca">MONEY FREAK</div>
+  <h1>Aviso de privacidad</h1>
+  <div class="fecha">Money Freak — última actualización: agosto de 2026</div>
+
+  <h2>Aviso legal</h2>
+  <div class="caja">
+    <p>Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos, simulaciones y recomendaciones que ves (salud financiera, simulador de crédito, capacidad de pago, etc.) son estimaciones basadas en la información que tú capturas — no son garantía de resultados, tasas reales, ni de aprobación de ningún crédito. Tú eres responsable de las decisiones financieras que tomes.</p>
+  </div>
+
+  <h2>Qué datos recopilamos</h2>
+  <div class="caja">
+    <p>Tu correo y contraseña (para tu acceso) y tu nombre. Además, los datos financieros que tú decidas capturar: cuentas de inversión, bienes, acciones, deudas, tarjetas de crédito y tu ingreso mensual si lo agregas.</p>
+  </div>
+
+  <h2>Para qué los usamos</h2>
+  <div class="caja">
+    <p>Para identificarte dentro de la app y calcular tu balance general, salud financiera y simulaciones de crédito. Nunca vendemos ni compartimos tus datos financieros con terceros.</p>
+  </div>
+
+  <h2>Dónde se guardan</h2>
+  <div class="caja">
+    <p>En Supabase, con reglas de seguridad a nivel de base de datos (Row Level Security): solo tú puedes ver y editar tus propios datos, aunque otro usuario tenga su propia cuenta en esta misma app.</p>
+  </div>
+
+  <h2>Tus derechos</h2>
+  <div class="caja">
+    <p>Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración y privacidad" dentro de la app. Si no puedes acceder a tu cuenta, puedes <a href="borrar-datos.html">solicitar el borrado de tus datos aquí</a>, o escribiendo a <a href="mailto:samuelnates@gmail.com">samuelnates@gmail.com</a>.</p>
+  </div>
+
+  <a class="volver" href="index.html">‹ Volver a la app</a>
+</div>
+</body>
+</html>

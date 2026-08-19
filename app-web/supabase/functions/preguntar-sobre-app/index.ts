@@ -1,0 +1,405 @@
+// Edge Function: preguntar-sobre-app
+//
+// Freaky, el asistente conversacional de Money Freak. Responde preguntas de
+// "¿cómo uso la app?" Y, ahora, preguntas sobre la situación financiera real
+// del usuario ("¿me alcanza?", "¿voy mejor o peor?") usando el snapshot que
+// el cliente ya calcula (mismo snapshot que alimenta la radiografía mensual).
+// También puede proponer registrar un gasto descrito en la conversación —
+// la propuesta se valida aquí (igual que en procesar-solicitud-gasto) y el
+// cliente pide una confirmación explícita antes de guardar nada.
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+import OpenAI, { toFile } from "npm:openai@4";
+import { zodTextFormat } from "npm:openai@4/helpers/zod";
+import { z } from "npm:zod@3";
+import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, type MedioPagoDisponible } from "../_shared/gastos.ts";
+
+const MODEL = "gpt-5.4-mini-2026-03-17";
+const MODEL_TRANSCRIPCION = "gpt-4o-mini-transcribe";
+
+// Pantallas reales a las que Freaky puede mandar un link. Debe coincidir
+// exactamente con DESTINOS_CHAT en index.html (ahí vive qué función de
+// navegación se llama para cada clave).
+const DESTINOS: Record<string, string> = {
+  inicio: "Inicio",
+  cuentas: "Cuentas",
+  gastos: "Gastos y presupuesto",
+  presupuesto: "Editar presupuesto",
+  movimientos: "Movimientos",
+  aprobaciones: "Aprobaciones",
+  flujo: "Flujo de efectivo",
+  balance: "Balance general",
+  salud: "Salud financiera",
+  simulador: "Simulador de crédito",
+  configuracion: "Configuración y privacidad",
+};
+const DESTINO_KEYS = Object.keys(DESTINOS);
+
+type CuentaDisponible = { id: string; nombre: string };
+type DeudaDisponible = { id: string; nombre: string; saldo: number };
+type IngresoExistente = { id: string; nombre: string; monto: number };
+
+const AccionPropuestaSchema = z.object({
+  tipo: z.literal("proponer_gasto"),
+  monto_sugerido: z.number().nullable(),
+  fecha_sugerida: z.string().nullable(),
+  nota_sugerida: z.string().nullable(),
+  categoria_sugerida: z.enum(CATEGORIAS_VALIDAS as [string, ...string[]]).nullable(),
+  subcategoria_sugerida: z.string().nullable(),
+  medio_pago_sugerido: z.string().nullable(),
+  es_compra_meses: z.boolean(),
+  es_recurrente: z.boolean(),
+  meses_sugeridos: z.number().int().nullable(),
+});
+
+const CambioPresupuestoSchema = z.object({
+  categoria: z.enum(CATEGORIAS_VALIDAS as [string, ...string[]]),
+  subcategoria: z.string(),
+  monto_sugerido: z.number().min(0),
+});
+
+const AccionPresupuestoSchema = z.object({
+  tipo: z.literal("proponer_presupuesto"),
+  resumen: z.string(),
+  cambios: z.array(CambioPresupuestoSchema).min(1).max(8),
+});
+
+const AccionSaldoCuentaSchema = z.object({
+  tipo: z.literal("actualizar_saldo_cuenta"),
+  cuenta_nombre: z.string(),
+  monto_nuevo: z.number().min(0),
+});
+
+const AccionIngresoSchema = z.object({
+  tipo: z.literal("proponer_ingreso"),
+  ingreso_existente_nombre: z.string().nullable(),
+  nombre: z.string(),
+  monto: z.number().min(0),
+  dia_del_mes: z.number().int().min(1).max(31).nullable(),
+});
+
+const AccionPagoDeudaSchema = z.object({
+  tipo: z.literal("proponer_pago_deuda"),
+  deuda_nombre: z.string(),
+  monto_pago: z.number().positive(),
+  cuenta_origen_nombre: z.string().nullable(),
+});
+
+const RespuestaFreakySchema = z.object({
+  respuesta: z.string(),
+  destino: z.enum(DESTINO_KEYS as [string, ...string[]]).nullable(),
+  accion: AccionPropuestaSchema.nullable(),
+  accion_presupuesto: AccionPresupuestoSchema.nullable(),
+  accion_saldo_cuenta: AccionSaldoCuentaSchema.nullable(),
+  accion_ingreso: AccionIngresoSchema.nullable(),
+  accion_pago_deuda: AccionPagoDeudaSchema.nullable(),
+});
+
+function construirSystemPrompt(
+  mediosPago: MedioPagoDisponible[],
+  cuentas: CuentaDisponible[],
+  deudas: DeudaDisponible[],
+  ingresos: IngresoExistente[]
+): string {
+  const listaMediosPago = mediosPago.length
+    ? mediosPago.map((m) => `- "${m.valor}" = ${m.etiqueta}`).join("\n")
+    : `- "efectivo" = efectivo`;
+  const listaCuentas = cuentas.length
+    ? cuentas.map((c) => `- "${c.nombre}"`).join("\n")
+    : "(el usuario no tiene cuentas registradas todavía)";
+  const listaDeudas = deudas.length
+    ? deudas.map((d) => `- "${d.nombre}" (saldo actual: $${d.saldo})`).join("\n")
+    : "(el usuario no tiene deudas registradas todavía)";
+  const listaIngresos = ingresos.length
+    ? ingresos.map((i) => `- "${i.nombre}" (monto actual: $${i.monto})`).join("\n")
+    : "(el usuario no tiene ingresos registrados todavía)";
+
+  return `Te llamas Freaky, el mentor financiero de Money Freak, una app de finanzas personales. Puedes presentarte por tu nombre la primera vez que saludes, sin exagerar.
+
+Cómo está organizada la app:
+- El botón "+" grande y central de la barra inferior registra un gasto: al tocarlo aparecen tres opciones — escribirlo, tomarle foto a un ticket, o contarle a Freaky (eso te trae aquí, a esta conversación). Lo capturado por foto no se guarda directo, cae en "Aprobaciones" (dentro de Gastos) para revisarlo y confirmarlo antes de que cuente. La foto y el registrar gastos conmigo requieren un código de acceso (por control de costo de IA). También detectan si mencionaste que es una compra a meses o un gasto recurrente.
+- El botón "+" pequeño de la esquina inferior derecha (dentro de Cuentas) agrega Ingreso, Cuenta de inversión, Bien, Acción, Deuda o Transferencia.
+- Gastos y presupuesto: cada gasto lleva categoría y subcategoría (ej. Alimentación → Súper) y medio de pago (efectivo, una tarjeta o una cuenta). Se puede marcar como recurrente (se repite N meses) o como "compra a meses": si pagas con tarjeta, se carga el total a la tarjeta de una vez y no se crea deuda aparte; si pagas en efectivo o débito, se crea una deuda por el total que baja sola conforme se cumple cada pago. En Movimientos se puede filtrar por concepto y por medio de pago.
+- Flujo de efectivo: muestra los próximos pagos/cobros esperados y proyecta el saldo.
+- Balance / Salud financiera: patrimonio neto, liquidez, meses de cobertura, tasa de endeudamiento.
+- Radiografía financiera con IA: en Configuración. Hay una versión manual (gratis, descarga un archivo para pegar en Claude/ChatGPT/Gemini) y una automática (requiere código de acceso, genera un reporte con diagnóstico, alertas, escenarios de flujo y plan de acción, una vez al mes gratis, regenerar requiere una palabra clave).
+- Notificaciones: recordatorios para actualizar saldos, avisos de fin de mes, y recordatorios de pagos recurrentes detectados automáticamente (la app pregunta si quieres que te recuerde cuando detecta un patrón).
+- Los datos se pueden exportar completos en JSON desde Configuración.
+- A mí (Freaky) me encuentras con el botón de la esquina superior derecha, desde cualquier pantalla. Aquí mismo, en esta conversación, puedes escribirme o tocar el ícono de micrófono junto al cuadro de texto para mandarme una nota de voz — te entiendo igual que si lo escribieras, incluyendo si me describes un gasto.
+
+TU CONTEXTO FINANCIERO:
+Cuando el mensaje del usuario venga acompañado de un bloque "Contexto financiero actual del usuario", son cifras reales ya calculadas por la app (patrimonio, liquidez, gastos por categoría del mes, próximos pagos, posibles anomalías) — no las inventes ni las repitas tal cual, úsalas para responder con números concretos a preguntas como "¿me alcanza?", "¿voy mejor o peor que antes?", "¿en qué me estoy pasando?". Si no viene ese bloque, responde solo con lo que sepas de forma general y aclara que no tienes sus datos a la mano en este momento. No dabas consejos de inversión especializados (comprar o vender algo específico) — quédate en el terreno de gasto, presupuesto y flujo, que es lo que tus cifras realmente soportan.
+
+CUÁNDO PROPONER REGISTRAR UN GASTO (campo "accion"):
+Si el usuario te describe un gasto real que ya hizo y quiere que quede registrado (no un "¿qué pasaría si gastara X?" hipotético), puedes proponerlo en "accion" con tipo "proponer_gasto" — el usuario verá un resumen y tiene que confirmarlo con un botón, tú nunca guardas nada directamente. Como máximo una propuesta por turno.
+
+Categorías válidas para "categoria_sugerida" (usa exactamente uno de estos textos, o null si no aplica ninguno):
+${CATEGORIAS_VALIDAS.map((c) => `- ${c}`).join("\n")}
+
+${EJEMPLOS_CATEGORIZACION}
+
+Medios de pago válidos para "medio_pago_sugerido" (usa exactamente el "valor" entre comillas, o null si no se menciona):
+${listaMediosPago}
+
+Reglas para llenar "accion":
+- monto_sugerido: el monto que menciona. Si es un pago mensual de una compra a meses, usa el monto POR MES. null si no queda claro.
+- categoria_sugerida: no la dejes en null solo por no estar 100% seguro — da tu mejor estimación con los ejemplos de arriba. Usa null solo si de verdad no hay ninguna pista de qué se compró.
+- subcategoria_sugerida: una de la lista para esa categoría si aplica, o una descripción breve si no encaja ninguna.
+- medio_pago_sugerido: solo si coincide claramente con algo de la lista de arriba — si no, null, no adivines.
+- es_compra_meses: true solo si mencionan explícitamente pagos/plazos/MSI. es_recurrente: true si describen algo que se repite cada mes sin ser a plazos. Nunca ambos true a la vez.
+- fecha_sugerida: formato YYYY-MM-DD si mencionan una fecha específica, o null (se asume hoy).
+- Si el usuario no está describiendo un gasto real que quiere registrar, "accion" debe ser null.
+
+CUÁNDO PROPONER UN CAMBIO DE PRESUPUESTO (campo "accion_presupuesto"):
+Si el usuario te pide ayuda para ajustar su presupuesto (ej. "hazme un presupuesto más realista", "creo que me estoy pasando en X, ajústalo", "bájale a esta categoría") puedes proponer nuevos montos en "accion_presupuesto" con tipo "proponer_presupuesto" — igual que con los gastos, el usuario ve la propuesta y tiene que confirmarla con un botón, tú nunca guardas nada directamente.
+- Básate SIEMPRE en las cifras reales del bloque de contexto financiero (gasto real por categoría del mes, comparativo histórico) — nunca inventes montos. Si no tienes ese contexto, no propongas números, explica que necesitas ver sus datos primero.
+- "monto_sugerido" es el presupuesto MENSUAL en pesos para esa categoría → subcategoría (no total, no anual).
+- Cada entrada de "cambios" necesita "categoria" (una de la lista de categorías válidas de arriba) y "subcategoria" (una de las subcategorías reales de esa categoría, igual que para gastos).
+- Enfócate en las categorías de las que el usuario está hablando o donde el gasto real se aleja más de lo presupuestado — máximo 8 cambios por propuesta, no reescribas todo el catálogo de una vez si no viene al caso.
+- "resumen" es una frase corta explicando la lógica (ej. "esto refleja lo que de verdad gastaste en Alimentación los últimos 3 meses, con un poco de margen").
+- Si el usuario no está pidiendo un ajuste de presupuesto, "accion_presupuesto" debe ser null. Nunca actives "accion" y "accion_presupuesto" en el mismo turno.
+
+CUÁNDO PROPONER ACTUALIZAR EL SALDO DE UNA CUENTA (campo "accion_saldo_cuenta"):
+Si el usuario te dice cuánto tiene ahora en una cuenta (ej. "mi cuenta de BBVA ya tiene $12,500", "actualiza el saldo de mi efectivo a $3000"), propón "accion_saldo_cuenta" con tipo "actualizar_saldo_cuenta".
+- "cuenta_nombre" tiene que ser EXACTAMENTE uno de estos nombres reales del usuario (o null si no reconoces a cuál se refiere):
+${listaCuentas}
+- "monto_nuevo" es el saldo total actual que menciona, no un incremento.
+- Si el usuario no está dando un saldo actualizado de una cuenta real, "accion_saldo_cuenta" debe ser null.
+
+CUÁNDO PROPONER UN INGRESO NUEVO O ACTUALIZADO (campo "accion_ingreso"):
+Si el usuario menciona un ingreso que quiere registrar o actualizar (ej. "tengo un ingreso nuevo de sueldo por $30,000 mensuales", "mi sueldo ya no es $20,000, ahora es $22,000"), propón "accion_ingreso" con tipo "proponer_ingreso".
+- Ingresos que el usuario ya tiene registrados (si el nombre coincide EXACTAMENTE con uno de estos, es una actualización — pon ese nombre en "ingreso_existente_nombre"; si es un ingreso nuevo, "ingreso_existente_nombre" debe ser null):
+${listaIngresos}
+- "nombre" es el nombre final a usar (el existente si es actualización, o uno corto y claro si es nuevo, ej. "Sueldo", "Freelance").
+- "monto" es el monto mensual. "dia_del_mes" solo si lo menciona (1-31), si no null.
+- Solo maneja ingresos MENSUALES por ahora — si mencionan algo semestral/anual, dile que por ahora eso se configura manual en la app, y deja "accion_ingreso" en null.
+- Si no está describiendo un ingreso real, "accion_ingreso" debe ser null.
+
+CUÁNDO PROPONER UN PAGO A UNA DEUDA (campo "accion_pago_deuda"):
+Si el usuario dice que pagó/abonó dinero a una deuda (ej. "pagué $2000 a mi tarjeta BBVA", "le aboné $500 a mi crédito de auto"), propón "accion_pago_deuda" con tipo "proponer_pago_deuda". NUNCA propongas esto como "cambiar el saldo a X" — siempre es un PAGO que se resta del saldo actual, nunca inventes ni asumas el saldo resultante.
+- "deuda_nombre" tiene que ser EXACTAMENTE uno de estos nombres reales (o null si no reconoces cuál):
+${listaDeudas}
+- "monto_pago" es cuánto pagó (siempre positivo).
+- "cuenta_origen_nombre": si menciona de qué cuenta salió el dinero y coincide con una de estas, ponla aquí; si no lo menciona o no coincide, null:
+${listaCuentas}
+- Si el usuario no está describiendo un pago real a una deuda, "accion_pago_deuda" debe ser null.
+
+REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
+
+Pantallas válidas a las que puedes mandar un link (usa exactamente una de estas claves en "destino", o null si ninguna aplica):
+${DESTINO_KEYS.map((k) => `- "${k}" = ${DESTINOS[k]}`).join("\n")}
+
+REGLAS para "destino":
+- Si la pregunta es sobre CÓMO HACER algo o DÓNDE ENCONTRAR algo, y una de las pantallas de arriba es claramente el lugar correcto, pon esa clave en "destino" para que el usuario pueda ir directo con un tap.
+- Si la pregunta es general, conceptual, o ninguna pantalla de la lista aplica claramente, destino debe ser null. No inventes una clave que no esté en la lista.
+- Nunca menciones la clave interna (ej. "movimientos") en el texto de "respuesta" — el link ya muestra el nombre bonito de la pantalla, tú solo explica normalmente.
+
+Responde en español, corto y directo, como un mentor de confianza. Si preguntan algo totalmente fuera de finanzas personales o del uso de la app, di amablemente que solo puedes ayudar con eso.`;
+}
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+  });
+}
+
+function conTimeout<T>(promesa: Promise<T>, ms: number, mensaje: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(mensaje)), ms)
+  );
+  return Promise.race([promesa, timeout]);
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "method_not_allowed" }, 405);
+  }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return jsonResponse({ error: "missing_authorization" }, 401);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+
+  const { data: userData, error: userError } = await admin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return jsonResponse({ error: "invalid_session" }, 401);
+  }
+  const userId = userData.user.id;
+
+  const { data: acceso, error: accesoError } = await admin
+    .from("accesos_ia_usuarios")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (accesoError) {
+    console.error("Error verificando acceso:", accesoError);
+    return jsonResponse({ error: "access_check_failed" }, 500);
+  }
+  if (!acceso) {
+    return jsonResponse({ error: "sin_acceso" }, 403);
+  }
+
+  let body: {
+    pregunta?: string;
+    historial?: { rol: string; texto: string }[];
+    snapshot?: unknown;
+    medios_pago_disponibles?: MedioPagoDisponible[];
+    cuentas_disponibles?: CuentaDisponible[];
+    deudas_disponibles?: DeudaDisponible[];
+    ingresos_existentes?: IngresoExistente[];
+    audio_base64?: string;
+    mime_type?: string;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: "invalid_json_body" }, 400);
+  }
+  const preguntaTexto = typeof body.pregunta === "string" ? body.pregunta.trim() : "";
+  const audioBase64 = typeof body.audio_base64 === "string" ? body.audio_base64 : "";
+  if (!preguntaTexto && !audioBase64) {
+    return jsonResponse({ error: "missing_pregunta" }, 400);
+  }
+  const historial = Array.isArray(body.historial) ? body.historial.slice(-6) : [];
+  const snapshot = body.snapshot ?? null;
+  const mediosPago = Array.isArray(body.medios_pago_disponibles) ? body.medios_pago_disponibles : [];
+  const valoresValidosMedioPago = new Set(mediosPago.length ? mediosPago.map((m) => m.valor) : ["efectivo"]);
+  const cuentas = Array.isArray(body.cuentas_disponibles) ? body.cuentas_disponibles : [];
+  const deudas = Array.isArray(body.deudas_disponibles) ? body.deudas_disponibles : [];
+  const ingresos = Array.isArray(body.ingresos_existentes) ? body.ingresos_existentes : [];
+
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!openaiKey) {
+    return jsonResponse({ error: "server_misconfigured" }, 500);
+  }
+  const openai = new OpenAI({ apiKey: openaiKey });
+
+  try {
+    let pregunta = preguntaTexto;
+    let transcripcion: string | null = null;
+    if (audioBase64) {
+      const bytes = base64ToUint8Array(audioBase64);
+      const archivo = await toFile(bytes, "nota.m4a", { type: body.mime_type || "audio/webm" });
+      const transcripcionResp = await conTimeout(
+        openai.audio.transcriptions.create({ file: archivo, model: MODEL_TRANSCRIPCION }),
+        10000,
+        "openai_transcripcion_timeout_10s"
+      );
+      transcripcion = transcripcionResp.text;
+      pregunta = transcripcion;
+      if (!pregunta || !pregunta.trim()) {
+        return jsonResponse({ error: "audio_sin_texto" }, 400);
+      }
+    }
+
+    const historialTexto = historial.length
+      ? historial.map((h) =>
+          `${h.rol === "asistente" ? "Freaky" : "Usuario"}: ${String(h.texto).slice(0, 2000)}`
+        ).join("\n") + "\n\n"
+      : "";
+    const contextoFinanciero = snapshot
+      ? `Contexto financiero actual del usuario (JSON generado por la app, no lo repitas tal cual, úsalo para fundamentar tu respuesta):\n${JSON.stringify(snapshot)}\n\n`
+      : "";
+    const inputTexto = `${contextoFinanciero}${historialTexto}Nueva pregunta del usuario: "${pregunta.slice(0, 2000)}"`;
+
+    const response = await conTimeout(
+      openai.responses.parse({
+        model: MODEL,
+        store: false,
+        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos),
+        input: inputTexto,
+        text: { format: zodTextFormat(RespuestaFreakySchema, "respuesta_freaky") },
+      }),
+      audioBase64 ? 25000 : 30000,
+      "openai_respuesta_timeout"
+    );
+
+    const parsed = response.output_parsed;
+    if (!parsed) throw new Error("empty_output_parsed");
+
+    // Nunca confiar ciegamente en el medio_pago que devuelve el modelo: solo se
+    // acepta si coincide exactamente con una de las opciones reales enviadas.
+    let accion = parsed.accion;
+    if (accion) {
+      const medioValidado = accion.medio_pago_sugerido && valoresValidosMedioPago.has(accion.medio_pago_sugerido)
+        ? accion.medio_pago_sugerido
+        : null;
+      accion = { ...accion, medio_pago_sugerido: medioValidado };
+    }
+
+    // Igual de estricto con el presupuesto: cada categoria/subcategoria tiene
+    // que existir tal cual en el catálogo real, o esa línea se descarta.
+    let accionPresupuesto = parsed.accion_presupuesto;
+    if (accionPresupuesto) {
+      const cambiosValidos = accionPresupuesto.cambios.filter(
+        (c) => CATALOGO_GASTOS[c.categoria]?.includes(c.subcategoria)
+      );
+      accionPresupuesto = cambiosValidos.length > 0 ? { ...accionPresupuesto, cambios: cambiosValidos } : null;
+    }
+
+    // Mismo criterio para las 3 acciones nuevas: el nombre que devuelve el
+    // modelo tiene que coincidir exactamente con algo real que se le mandó,
+    // si no, se anula esa acción completa (nunca se guarda a ciegas).
+    let accionSaldoCuenta = parsed.accion_saldo_cuenta;
+    if (accionSaldoCuenta) {
+      const cuentaValida = cuentas.some((c) => c.nombre === accionSaldoCuenta!.cuenta_nombre);
+      accionSaldoCuenta = cuentaValida ? accionSaldoCuenta : null;
+    }
+
+    let accionIngreso = parsed.accion_ingreso;
+    if (accionIngreso && accionIngreso.ingreso_existente_nombre) {
+      const ingresoValido = ingresos.some((i) => i.nombre === accionIngreso!.ingreso_existente_nombre);
+      if (!ingresoValido) accionIngreso = { ...accionIngreso, ingreso_existente_nombre: null };
+    }
+
+    let accionPagoDeuda = parsed.accion_pago_deuda;
+    if (accionPagoDeuda) {
+      const deudaValida = deudas.some((d) => d.nombre === accionPagoDeuda!.deuda_nombre);
+      if (!deudaValida) {
+        accionPagoDeuda = null;
+      } else if (accionPagoDeuda.cuenta_origen_nombre) {
+        const cuentaValida = cuentas.some((c) => c.nombre === accionPagoDeuda!.cuenta_origen_nombre);
+        if (!cuentaValida) accionPagoDeuda = { ...accionPagoDeuda, cuenta_origen_nombre: null };
+      }
+    }
+
+    return jsonResponse({
+      respuesta: parsed.respuesta,
+      destino: parsed.destino,
+      accion,
+      accion_presupuesto: accionPresupuesto,
+      accion_saldo_cuenta: accionSaldoCuenta,
+      accion_ingreso: accionIngreso,
+      accion_pago_deuda: accionPagoDeuda,
+      transcripcion,
+    });
+  } catch (e) {
+    console.error("Error respondiendo pregunta sobre la app:", e);
+    // TODO: quitar "detail" una vez diagnosticado — es temporal, para poder
+    // ver el error real sin acceso a los logs del servidor.
+    const detail = e instanceof Error ? e.message : String(e);
+    return jsonResponse({ error: "processing_failed", detail }, 500);
+  }
+});
