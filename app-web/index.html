@@ -2091,6 +2091,11 @@
   </div>
   <button class="btn-grande secundario" style="margin-top:8px;" onclick="abrirSelectorAsesor('configuracion')" data-i18n="config.cambiar_asesor_boton">Cambiar el aspecto de Freaky</button>
 
+  <div class="campo" style="margin-top:14px;">
+    <label for="input-dias-aviso-tarjeta" data-i18n="freaky.dias_aviso_tarjeta_label">Avisarme de un pago de tarjeta con cuántos días de anticipación</label>
+    <input type="number" id="input-dias-aviso-tarjeta" min="1" max="30" step="1" placeholder="5" onchange="guardarDiasAvisoTarjeta()">
+  </div>
+
   <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
   <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
   <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
@@ -2895,6 +2900,7 @@ function mostrar(idVista){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
     if(btnDesactivar) btnDesactivar.style.display = (window.Capacitor?.isNativePlatform?.() && localStorage.getItem('biometria_activada') === '1') ? '' : 'none';
     inicializarSeccionNotificaciones();
+    cargarPreferenciaAvisoTarjeta();
   }
   document.body.classList.toggle('con-sesion', !VISTAS_SIN_SESION.includes(idVista));
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
@@ -3499,6 +3505,7 @@ const TRADUCCIONES = {
     'asesor.subtitulo': 'Es el mismo mentor de siempre — solo cambia cómo se ve.',
     'asesor.elegir': 'Elegir',
     'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
+    'freaky.dias_aviso_tarjeta_label': 'Avisarme de un pago de tarjeta con cuántos días de anticipación',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
     'ayuda_ia.vacio_titulo': '¡Hola! Soy Freaky',
     'ayuda_ia.vacio_texto': 'Pregúntame cómo usar Money Freak, o sobre tu situación financiera — ¿me alcanza?, ¿voy mejor o peor?, hasta puedo registrarte un gasto.',
@@ -4349,6 +4356,7 @@ const TRADUCCIONES = {
     'asesor.subtitulo': "It's the same mentor as always — only how it looks changes.",
     'asesor.elegir': 'Choose',
     'config.cambiar_asesor_boton': "Change Freaky's look",
+    'freaky.dias_aviso_tarjeta_label': 'Warn me about a card payment how many days in advance',
     'ayuda_ia.subtitulo': 'Your financial mentor',
     'ayuda_ia.vacio_titulo': "Hi! I'm Freaky",
     'ayuda_ia.vacio_texto': "Ask me how to use Money Freak, or about your financial situation — can I afford this?, am I doing better or worse?, I can even log an expense for you.",
@@ -7645,7 +7653,7 @@ async function ajustarSaldoDeudaPorGasto(deudaId, delta){
 async function aplicarComprasMesesVencidas(){
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data: pendientes } = await sb.from('gastos')
-    .select('id, monto, compra_meses_deuda_id')
+    .select('id, monto, moneda, fecha, compra_meses_deuda_id, cuenta_pago_id')
     .not('compra_meses_deuda_id', 'is', null)
     .eq('compra_meses_aplicado', false)
     .lte('fecha', hoyISO);
@@ -7653,6 +7661,12 @@ async function aplicarComprasMesesVencidas(){
 
   for(const g of pendientes){
     await ajustarSaldoDeudaPorGasto(g.compra_meses_deuda_id, -Number(g.monto));
+    // Bug real corregido: antes solo bajaba la deuda virtual — la cuenta real
+    // (débito/efectivo) nunca se enteraba de que esa cuota ya se cobró, así
+    // que su saldo quedaba inflado mes tras mes. Ahora también se resta.
+    if(g.cuenta_pago_id){
+      await aplicarAjusteGasto({ monto: g.monto, moneda: g.moneda, fecha: g.fecha, cuenta_pago_id: g.cuenta_pago_id }, 1);
+    }
     await sb.from('gastos').update({ compra_meses_aplicado: true }).eq('id', g.id);
   }
 }
@@ -8570,6 +8584,26 @@ function elementoFreakyVisible(){
     : document.getElementById('freaky-personaje');
 }
 
+// Días de anticipación con los que Freaky avisa de un pago de tarjeta
+// próximo — configurable por el usuario en Configuración, 5 por default
+// ("para evitar cualquier error y no pagar nunca intereses", pedido explícito).
+function obtenerDiasAvisoTarjeta(){
+  const guardado = Number(localStorage.getItem('freaky_dias_aviso_tarjeta'));
+  return Number.isFinite(guardado) && guardado > 0 ? guardado : 5;
+}
+
+function guardarDiasAvisoTarjeta(){
+  const input = document.getElementById('input-dias-aviso-tarjeta');
+  const valor = Math.min(30, Math.max(1, Number(input.value) || 5));
+  input.value = valor;
+  localStorage.setItem('freaky_dias_aviso_tarjeta', String(valor));
+}
+
+function cargarPreferenciaAvisoTarjeta(){
+  const input = document.getElementById('input-dias-aviso-tarjeta');
+  if(input) input.value = obtenerDiasAvisoTarjeta();
+}
+
 async function revisarAvisoProactivoFreaky(flujo){
   // Ya hay un aviso pendiente de una carga anterior el mismo día (el usuario
   // no lo ha abierto todavía) — solo se restaura el numerito, sin recalcular
@@ -8580,7 +8614,15 @@ async function revisarAvisoProactivoFreaky(flujo){
   if(localStorage.getItem('freaky_aviso_proactivo_fecha') === hoyISO) return;
 
   const itemsConFecha = (flujo?.items || []).filter(it => it.dia != null && it.diasFaltan != null);
-  const urgente = itemsConFecha.find(it => it.diasFaltan >= 0 && it.diasFaltan <= 3);
+  // Los pagos de tarjeta usan el umbral que el usuario configuró en
+  // Configuración (default 5 días) — el resto de los pagos/deudas se quedan
+  // con el umbral genérico de 3 días de siempre.
+  const diasAvisoTarjeta = obtenerDiasAvisoTarjeta();
+  const candidatosUrgentes = itemsConFecha.filter(it => {
+    const limite = it.ref?.tipo === 'Tarjeta de crédito' ? diasAvisoTarjeta : 3;
+    return it.diasFaltan >= 0 && it.diasFaltan <= limite;
+  });
+  const urgente = candidatosUrgentes.sort((a, b) => a.diasFaltan - b.diasFaltan)[0];
   if(urgente){
     const texto = urgente.diasFaltan === 0
       ? tf('freaky.aviso_vence_hoy', urgente.nombre)
@@ -9423,7 +9465,6 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
   const esCompraMesesConTarjeta = esCompraMeses && !!deuda_pago_id;
 
   let compraMesesDeudaId = null;
-  let inicioMeses = 0;
 
   if(esCompraMeses && !esCompraMesesConTarjeta){
     // Sin tarjeta de por medio (efectivo o cuenta de débito): no hay ningún otro
@@ -9445,22 +9486,24 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
     // de una vez (así funciona un MSI real) y NO se crea ninguna deuda aparte
     // — si no, quedaría contada dos veces y se desincroniza cuando pagues la tarjeta.
     const montoTotal = Number(monto) * meses;
-    const { data: tarjeta } = await sb.from('deudas').select('dia_corte').eq('id', deuda_pago_id).maybeSingle();
-    const diaCorte = tarjeta ? tarjeta.dia_corte : null;
-    if(diaCorte != null && new Date(fecha + 'T00:00:00').getDate() > diaCorte){
-      inicioMeses = 1; // ya cerró el corte de este mes, el primer pago cae hasta el próximo periodo
-    }
     await ajustarSaldoDeudaPorGasto(deuda_pago_id, montoTotal);
   }
 
+  // Cada cuota cuenta contra el presupuesto de SU propio mes calendario a
+  // partir del día de la compra (mes 0, mes 1, mes 2...) — a propósito, sin
+  // importar el corte/fecha de pago de la tarjeta: el usuario decidió que el
+  // presupuesto ya debe sentirse comprometido desde hoy, no hasta que el
+  // banco cobre de verdad cada cuota (eso ya lo refleja el saldo de la
+  // tarjeta/deuda por separado, ver arriba).
   const hoyISO = new Date().toISOString().slice(0, 10);
   const filas = [];
-  for(let i = inicioMeses; i < inicioMeses + meses; i++){
+  for(let i = 0; i < meses; i++){
     const fechaFila = sumarMesesFecha(fecha, i);
     filas.push({
       fecha: fechaFila, categoria, subcategoria, monto: Number(monto), moneda, nota, cuenta_pago_id, deuda_pago_id,
       compra_meses_deuda_id: compraMesesDeudaId,
-      compra_meses_aplicado: compraMesesDeudaId ? fechaFila <= hoyISO : false
+      compra_meses_aplicado: compraMesesDeudaId ? fechaFila <= hoyISO : false,
+      compra_meses_tarjeta: esCompraMesesConTarjeta
     });
   }
 
@@ -9475,7 +9518,7 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
   if(!esCompraMesesConTarjeta){
     aplicarAjusteGasto({ monto: Number(monto), moneda, fecha, cuenta_pago_id, deuda_pago_id }, 1); // se resuelve en segundo plano, no bloquea la vuelta a Gastos
   }
-  if(compraMesesDeudaId && inicioMeses === 0){
+  if(compraMesesDeudaId){
     ajustarSaldoDeudaPorGasto(compraMesesDeudaId, -Number(monto)); // el pago de este mes ya se cumplió, baja la deuda de inmediato
   }
   return { ok: true, filas };
@@ -9537,6 +9580,41 @@ async function abrirEditarGasto(g){
   mostrar('vista-editar-gasto');
 }
 
+// Se llama en vez del ajuste genérico cuando el gasto que se edita/elimina
+// pertenece a una compra a meses — el ajuste correcto depende de si se pagó
+// con tarjeta (nunca se toca ese saldo, ya se cargó completo al comprar) o
+// sin tarjeta, y en ese caso, de si esta cuota específica ya "sucedió" de
+// verdad (compra_meses_aplicado) o todavía es una fecha futura.
+// gastoNuevo = null cuando se está eliminando, no editando.
+async function ajustarComprasMesesPorEdicion(gastoViejo, gastoNuevo){
+  if(gastoViejo.compra_meses_tarjeta){
+    return; // el total ya se cargó a la tarjeta el día de la compra, no se toca
+  }
+  if(!gastoViejo.compra_meses_deuda_id) return; // no es una compra a meses, no aplica
+
+  const montoViejo = Number(gastoViejo.monto);
+  const montoNuevo = gastoNuevo ? Number(gastoNuevo.monto) : 0;
+
+  if(gastoViejo.compra_meses_aplicado){
+    // Esta cuota ya había restado de la deuda virtual Y de la cuenta real —
+    // se revierten ambas, y si es edición (no eliminación), se vuelven a
+    // aplicar con el monto correcto. Mismo patrón de "revertir y reaplicar"
+    // que ya usa el flujo normal de editar un gasto cualquiera.
+    await ajustarSaldoDeudaPorGasto(gastoViejo.compra_meses_deuda_id, montoViejo);
+    await aplicarAjusteGasto({ monto: montoViejo, moneda: gastoViejo.moneda, fecha: gastoViejo.fecha, cuenta_pago_id: gastoViejo.cuenta_pago_id }, -1);
+    if(gastoNuevo){
+      await ajustarSaldoDeudaPorGasto(gastoViejo.compra_meses_deuda_id, -montoNuevo);
+      await aplicarAjusteGasto({ monto: montoNuevo, moneda: gastoNuevo.moneda, fecha: gastoNuevo.fecha, cuenta_pago_id: gastoNuevo.cuenta_pago_id }, 1);
+    }
+  } else {
+    // Todavía no sucede — el saldo pendiente de la deuda ya cuenta montoViejo
+    // como parte de lo que falta (nunca se restó). Se ajusta directo a lo que
+    // debería ser ahora. La cuenta real no se toca, ese dinero no ha salido.
+    const delta = montoNuevo - montoViejo;
+    if(delta !== 0) await ajustarSaldoDeudaPorGasto(gastoViejo.compra_meses_deuda_id, delta);
+  }
+}
+
 async function actualizarGasto(){
   const fecha = document.getElementById('input-fecha-gasto-editar').value;
   const categoria = document.getElementById('select-categoria-gasto-editar').value;
@@ -9550,17 +9628,26 @@ async function actualizarGasto(){
   const { cuenta_pago_id, deuda_pago_id } = leerMetodoPagoSeleccionado(document.getElementById('select-pago-gasto-editar'));
   if(!fecha || monto === '') return;
 
-  await aplicarAjusteGasto(gastoActual, -1);
+  const esCompraMeses = !!(gastoActual.compra_meses_deuda_id || gastoActual.compra_meses_tarjeta);
+  if(!esCompraMeses) await aplicarAjusteGasto(gastoActual, -1);
 
   const { error } = await sb.from('gastos')
     .update({ fecha, categoria, subcategoria, monto: Number(monto), moneda, nota, cuenta_pago_id, deuda_pago_id })
     .eq('id', gastoActual.id);
   if(error){
-    await aplicarAjusteGasto(gastoActual, 1);
+    if(!esCompraMeses) await aplicarAjusteGasto(gastoActual, 1);
     await mostrarAlerta(t('alert.error_actualizar'));
     return;
   }
-  aplicarAjusteGasto({ monto: Number(monto), moneda, fecha, cuenta_pago_id, deuda_pago_id }, 1); // se resuelve en segundo plano
+  if(esCompraMeses){
+    // Solo se ajusta DESPUÉS de que el update ya se guardó bien — a
+    // diferencia del flujo normal (que revierte antes por si el update
+    // falla), aquí no hace falta ese riesgo: es más simple y más seguro
+    // resolverlo una sola vez, ya confirmado que el cambio se guardó.
+    ajustarComprasMesesPorEdicion(gastoActual, { monto: Number(monto), moneda, fecha, cuenta_pago_id, deuda_pago_id }); // se resuelve en segundo plano
+  } else {
+    aplicarAjusteGasto({ monto: Number(monto), moneda, fecha, cuenta_pago_id, deuda_pago_id }, 1); // se resuelve en segundo plano
+  }
   abrirGastos();
 }
 
@@ -9573,7 +9660,12 @@ async function eliminarGasto(){
     await mostrarAlerta(t('alert.error_eliminar'));
     return;
   }
-  aplicarAjusteGasto(gastoActual, -1); // se resuelve en segundo plano
+  const esCompraMeses = !!(gastoActual.compra_meses_deuda_id || gastoActual.compra_meses_tarjeta);
+  if(esCompraMeses){
+    ajustarComprasMesesPorEdicion(gastoActual, null); // se resuelve en segundo plano
+  } else {
+    aplicarAjusteGasto(gastoActual, -1); // se resuelve en segundo plano
+  }
   abrirGastos();
 }
 
