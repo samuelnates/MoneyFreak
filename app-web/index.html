@@ -615,6 +615,15 @@
   }
   .freaky-badge.visible{display:block;}
 
+  .asesor-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:10px;}
+  @media (min-width:640px){ .asesor-grid{grid-template-columns:repeat(3,1fr);} }
+  .asesor-tarjeta{
+    border:1px solid var(--borde-fuerte);border-radius:16px;background:var(--superficie);
+    padding:20px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;
+  }
+  .asesor-tarjeta img{width:120px;height:120px;object-fit:contain;}
+  .asesor-tarjeta button{width:100%;}
+
   .panel-freaky-card{
     border:1px solid var(--borde-fuerte);border-radius:10px;background:var(--superficie);
     padding:12px;margin-bottom:10px;
@@ -847,7 +856,7 @@
     background:none;border:none;padding:0;
   }
   .freaky-login-sentado{
-    position:absolute;top:-7px;left:calc(61.6% - 22px);width:44px;pointer-events:none;
+    display:none;position:absolute;top:-7px;left:calc(61.6% - 22px);width:44px;pointer-events:none;
     filter:drop-shadow(0 3px 3px rgba(0,0,0,0.32)) drop-shadow(0 8px 11px rgba(0,0,0,0.28));
   }
   .freaky-login-sentado img{display:block;width:100%;height:auto;}
@@ -1131,10 +1140,10 @@
   <span class="freaky-badge" id="freaky-badge-fallback" aria-hidden="true"></span>
 </button>
 <button type="button" class="freaky-personaje" id="freaky-personaje" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
-  <img id="freaky-img-flotando" class="freaky-img" src="assets/freaky/freaky-flotando.png" alt="" style="opacity:1;">
-  <img id="freaky-img-pensando" class="freaky-img" src="assets/freaky/freaky-pensando.png" alt="" style="opacity:0;">
-  <img id="freaky-img-hablando" class="freaky-img" src="assets/freaky/freaky-hablando.png" alt="" style="opacity:0;">
-  <img id="freaky-img-sentado" class="freaky-img" src="assets/freaky/freaky-sentado.png" alt="" style="opacity:0;">
+  <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
+  <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
+  <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
+  <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
   <span class="freaky-badge" id="freaky-badge" aria-hidden="true"></span>
 </button>
 <div class="freaky-burbuja-proactiva" id="freaky-burbuja-proactiva" style="display:none;">
@@ -1174,7 +1183,7 @@
     <span class="blob b3"></span>
   </div>
   <div class="login-caja">
-    <div class="freaky-login-sentado" aria-hidden="true"><img src="assets/freaky/freaky-sentado-recortado.png" alt=""></div>
+    <div class="freaky-login-sentado" id="freaky-login-sentado" aria-hidden="true"><img id="freaky-login-sentado-img" alt=""></div>
     <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
     <h1>Money <span id="span-titulo-freak">Freak</span></h1>
     <p class="subtitulo" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
@@ -1315,6 +1324,14 @@
     <button type="button" class="btn-grande" id="modal-generico-btn-principal" onclick="_cerrarModalGenerico(true)"></button>
     <button type="button" class="btn-grande secundario" id="modal-generico-btn-cancelar" style="display:none;" onclick="_cerrarModalGenerico(false)"></button>
   </div>
+</div>
+
+<div id="vista-elegir-asesor" class="pantalla">
+  <div class="encabezado">
+    <h1 data-i18n="asesor.titulo">Elige a Freaky</h1>
+    <p class="subtitulo" data-i18n="asesor.subtitulo">Es el mismo mentor de siempre — solo cambia cómo se ve.</p>
+  </div>
+  <div class="asesor-grid" id="asesor-grid"></div>
 </div>
 
 <div id="vista-onboarding-rapido" class="pantalla">
@@ -2068,6 +2085,7 @@
     <input type="checkbox" id="check-freaky-vuelo-desactivado" onchange="toggleFreakyVuelo()">
     <label for="check-freaky-vuelo-desactivado" data-i18n="freaky.desactivar_vuelo_label">Volver a Freaky un botón quieto (sin volar por la pantalla)</label>
   </div>
+  <button class="btn-grande secundario" style="margin-top:8px;" onclick="abrirSelectorAsesor('configuracion')" data-i18n="config.cambiar_asesor_boton">Cambiar el aspecto de Freaky</button>
 
   <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
   <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
@@ -2097,7 +2115,7 @@
   <button type="button" class="btn-link-tenue" style="text-align:left;padding:0 0 16px;" onclick="iniciarTourGuiado()" data-i18n="ayuda_ia.iniciar_tour">Iniciar recorrido guiado</button>
 
   <div id="ayuda-ia-vacio" class="chat-vacio">
-    <div class="chat-vacio-avatar"><img src="assets/freaky/freaky-avatar.png" alt=""></div>
+    <div class="chat-vacio-avatar"><img class="freaky-avatar-dinamico" alt=""></div>
     <div class="chat-vacio-titulo" data-i18n="ayuda_ia.vacio_titulo">¡Hola! Soy Freaky</div>
     <div class="chat-vacio-texto" data-i18n="ayuda_ia.vacio_texto">Pregúntame lo que quieras sobre cómo usar Money Freak.</div>
     <div class="chat-vacio-chips">
@@ -2840,7 +2858,7 @@ let cuentasInversionData = [];
 let accionesData = [];
 let perfilFinanciero = { umbral_amarillo: 20, umbral_rojo: 35, meses_cobertura_objetivo: 3 };
 
-const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta', 'vista-aviso-legal', 'vista-olvide-contrasena', 'vista-nueva-contrasena', 'vista-onboarding-rapido'];
+const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta', 'vista-aviso-legal', 'vista-olvide-contrasena', 'vista-nueva-contrasena', 'vista-onboarding-rapido', 'vista-elegir-asesor'];
 
 let scrollGuardadoCuentas = null;
 
@@ -3473,6 +3491,10 @@ const TRADUCCIONES = {
     'freaky.aviso_recurrente': 'Creo que gastas {0} en {1} cada mes — ¿quieres que te lo recuerde?',
     'freaky.aviso_recordarmelo': 'Sí, recuérdame',
     'freaky.aviso_teaser': 'Necesito decirte algo 👀',
+    'asesor.titulo': 'Elige a Freaky',
+    'asesor.subtitulo': 'Es el mismo mentor de siempre — solo cambia cómo se ve.',
+    'asesor.elegir': 'Elegir',
+    'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
     'ayuda_ia.vacio_titulo': '¡Hola! Soy Freaky',
     'ayuda_ia.vacio_texto': 'Pregúntame cómo usar Money Freak, o sobre tu situación financiera — ¿me alcanza?, ¿voy mejor o peor?, hasta puedo registrarte un gasto.',
@@ -4319,6 +4341,10 @@ const TRADUCCIONES = {
     'freaky.aviso_recurrente': 'I think you spend {0} on {1} every month — want me to remind you about it?',
     'freaky.aviso_recordarmelo': 'Yes, remind me',
     'freaky.aviso_teaser': 'I need to tell you something 👀',
+    'asesor.titulo': 'Choose your Freaky',
+    'asesor.subtitulo': "It's the same mentor as always — only how it looks changes.",
+    'asesor.elegir': 'Choose',
+    'config.cambiar_asesor_boton': "Change Freaky's look",
     'ayuda_ia.subtitulo': 'Your financial mentor',
     'ayuda_ia.vacio_titulo': "Hi! I'm Freaky",
     'ayuda_ia.vacio_texto': "Ask me how to use Money Freak, or about your financial situation — can I afford this?, am I doing better or worse?, I can even log an expense for you.",
@@ -4880,6 +4906,7 @@ async function init(){
     mostrar('config-faltante');
     return;
   }
+  aplicarAsesorEnLogin();
   sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
     auth: { flowType: 'pkce' },
     global: { fetch: (url, options = {}) => fetch(url, { ...options, cache: 'no-store' }) }
@@ -5121,6 +5148,10 @@ async function debeMostrarOnboardingRapido(){
 }
 
 async function entrarAlPanelConOnboarding(){
+  if(await debeMostrarSelectorAsesor()){
+    abrirSelectorAsesor('login');
+    return;
+  }
   if(await debeMostrarOnboardingRapido()){
     mostrar('vista-onboarding-rapido');
     document.getElementById('onb-config-inicial').style.display = localStorage.getItem('terminos_aceptados') === '1' ? 'none' : 'block';
@@ -5168,7 +5199,7 @@ function agregarBurbujaOnboarding(rol, textoEscapado){
   const div = document.createElement('div');
   div.className = `chat-mensaje ${rol}${agrupado ? ' agrupado' : ''}`;
   const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div></div>`;
-  div.innerHTML = rol === 'asistente' ? `<div class="chat-avatar">${AVATAR_FREAKY_SVG}</div>${columna}` : columna;
+  div.innerHTML = rol === 'asistente' ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}` : columna;
   cont.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
   return div;
@@ -6242,6 +6273,7 @@ async function abrirPanel(){
     calcularScoreMoneyFreak(b, s, g)
   ]);
   actualizarCacheInsightNotificacion(insights);
+  asegurarAsesorCargado();
   aplicarPreferenciaFreakyVuelo();
   iniciarVueloFreaky();
   revisarAvisoProactivoFreaky(f);
@@ -6294,7 +6326,7 @@ async function abrirPanel(){
   cont.innerHTML = `
     <div class="panel-freaky-card">
       <button type="button" class="panel-freaky-encabezado" onclick="abrirFreaky()">
-        <div class="panel-freaky-avatar"><img src="assets/freaky/freaky-avatar.png" alt=""></div>
+        <div class="panel-freaky-avatar"><img src="${carpetaAsesorActual()}/avatar.png" alt=""></div>
         <div class="panel-freaky-texto">
           <div class="panel-freaky-titulo">${t('panel.freaky_titulo')}</div>
           <div class="panel-freaky-sub">${t('panel.freaky_sub')}</div>
@@ -7906,7 +7938,9 @@ function medioPagoDesdeValorChat(valorIA){
   return { cuenta_pago_id: tipo === 'cuenta' ? id : null, deuda_pago_id: tipo === 'deuda' ? id : null };
 }
 
-const AVATAR_FREAKY_SVG = '<img src="assets/freaky/freaky-avatar.png" alt="">';
+function avatarFreakyImgHtml(){
+  return `<img src="${carpetaAsesorActual()}/avatar.png" alt="">`;
+}
 
 function horaChatCorta(){
   return new Date().toLocaleTimeString(document.documentElement.lang === 'en' ? 'en-US' : 'es-MX', { hour: 'numeric', minute: '2-digit' });
@@ -8036,7 +8070,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
 
   const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${linkHtml}${horaHtml}</div>`;
   div.innerHTML = rol === 'asistente'
-    ? `<div class="chat-avatar">${AVATAR_FREAKY_SVG}</div>${columna}`
+    ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
   cont.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -8044,6 +8078,122 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     freakyTrigger('point'); // "encontré algo para ti" — hay una propuesta en esta burbuja
   }
   return div;
+}
+
+// ===== Freaky: avatares seleccionables (mismo mentor/IA, solo cambia el diseño) =====
+// Los 3 "asesores" son puramente visuales — misma personalidad, mismo backend
+// (preguntar-sobre-app no sabe ni le importa cuál está eligiendo el usuario).
+const ASESORES = [
+  { id: 'avatar1', carpeta: 'assets/asesores/avatar1' },
+  { id: 'avatar2', carpeta: 'assets/asesores/avatar2' },
+  { id: 'avatar3', carpeta: 'assets/asesores/avatar3' },
+];
+let asesorActual = null; // {id, carpeta} — null hasta que se aplica uno (elegido o cacheado)
+let asesorSelectorOrigen = 'login'; // 'login' = sigue el flujo normal de entrada; 'configuracion' = solo cambia y regresa
+
+function obtenerAsesorPorId(id){
+  return ASESORES.find(a => a.id === id) || null;
+}
+function carpetaAsesorActual(){
+  return (asesorActual || ASESORES[0]).carpeta;
+}
+
+// Aplica asesorActual a todo lo que ya esté en el DOM (personaje flotante,
+// avatares del chat) — se llama cada vez que asesorActual cambia o se carga.
+function aplicarAsesorAlPersonaje(){
+  const carpeta = carpetaAsesorActual();
+  ['flotando', 'pensando', 'hablando', 'sentado'].forEach(pose => {
+    const img = document.getElementById(`freaky-img-${pose}`);
+    if(img) img.src = `${carpeta}/${pose}.png`;
+  });
+  document.querySelectorAll('.freaky-avatar-dinamico').forEach(img => {
+    img.src = `${carpeta}/avatar.png`;
+  });
+}
+
+// Se llama al cargar la pantalla de login (antes de cualquier sesión) — si ya
+// hay una elección cacheada en este dispositivo, muestra a Freaky sentado
+// junto al título; si no, se queda oculto (pedido explícito del usuario: nada
+// de Freaky en el login hasta que el usuario haya elegido el suyo).
+function aplicarAsesorEnLogin(){
+  const cacheado = obtenerAsesorPorId(localStorage.getItem('asesor_actual_id'));
+  const cont = document.getElementById('freaky-login-sentado');
+  const img = document.getElementById('freaky-login-sentado-img');
+  if(!cacheado || !cont || !img) return;
+  img.src = `${cacheado.carpeta}/sentado-recortado.png`;
+  cont.style.display = 'block';
+}
+
+// Se asegura de que asesorActual tenga algo aplicable antes de que el
+// personaje flotante se muestre — cubre modo demo (nunca pregunta) y
+// cualquier ruta que no haya pasado por debeMostrarSelectorAsesor().
+function asegurarAsesorCargado(){
+  if(asesorActual){ aplicarAsesorAlPersonaje(); return; }
+  const cacheado = !modoDemo ? obtenerAsesorPorId(localStorage.getItem('asesor_actual_id')) : null;
+  asesorActual = cacheado || ASESORES[0];
+  aplicarAsesorAlPersonaje();
+}
+
+// Solo se llama desde entrarAlPanelConOnboarding() (login/registro real, o
+// sesión restaurada) — nunca en modo demo. true = todavía no eligió, hay que
+// mostrar vista-elegir-asesor antes de seguir.
+async function debeMostrarSelectorAsesor(){
+  if(modoDemo) return false;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('avatar_asesor').maybeSingle();
+    const asesor = data?.avatar_asesor ? obtenerAsesorPorId(data.avatar_asesor) : null;
+    if(!asesor) return true;
+    asesorActual = asesor;
+    localStorage.setItem('asesor_actual_id', asesor.id);
+    aplicarAsesorAlPersonaje();
+    return false;
+  }catch(e){
+    // Probablemente falta correr la migración de avatar_asesor todavía — no
+    // bloqueamos el login por esto, asegurarAsesorCargado() pondrá un default
+    // más adelante para que el personaje no se vea roto.
+    console.warn('No se pudo leer avatar_asesor (¿ya corriste la migración?)', e);
+    return false;
+  }
+}
+
+function abrirSelectorAsesor(origen){
+  asesorSelectorOrigen = origen || 'login';
+  renderSelectorAsesor();
+  mostrar('vista-elegir-asesor');
+}
+
+function renderSelectorAsesor(){
+  const cont = document.getElementById('asesor-grid');
+  if(!cont) return;
+  cont.innerHTML = ASESORES.map(a => `
+    <div class="asesor-tarjeta">
+      <img src="${a.carpeta}/avatar.png" alt="">
+      <button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>
+    </div>
+  `).join('');
+}
+
+async function elegirAsesor(id){
+  const asesor = obtenerAsesorPorId(id);
+  if(!asesor) return;
+  asesorActual = asesor;
+  localStorage.setItem('asesor_actual_id', id);
+  aplicarAsesorAlPersonaje();
+  if(!modoDemo){
+    try{
+      await sb.from('perfil_financiero').upsert({
+        avatar_asesor: id,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }catch(e){
+      console.warn('No se pudo guardar el avatar elegido (¿ya corriste la migración?)', e);
+    }
+  }
+  if(asesorSelectorOrigen === 'configuracion'){
+    mostrar('vista-privacidad');
+  } else {
+    entrarAlPanelConOnboarding();
+  }
 }
 
 // ===== Freaky: personaje volador (GSAP) =====
