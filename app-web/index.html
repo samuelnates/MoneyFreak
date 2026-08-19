@@ -2890,7 +2890,7 @@ function mostrar(idVista){
   if(idVista === 'vista-cuentas-acciones') cargarAcciones();
   if(idVista === 'vista-cuentas-deudas') cargarDeudas();
   if(idVista === 'vista-cuentas-transferencias') cargarTransferencias();
-  if(idVista === 'vista-login') actualizarVisibilidadBotonBiometrico();
+  if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
   if(idVista === 'vista-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
     if(btnDesactivar) btnDesactivar.style.display = (window.Capacitor?.isNativePlatform?.() && localStorage.getItem('biometria_activada') === '1') ? '' : 'none';
@@ -8126,7 +8126,10 @@ function aplicarAsesorEnLogin(){
   if(!cacheado || !cont || !img) return;
   img.src = `${cacheado.carpeta}/sentado-recortado.png`;
   cont.style.display = 'block';
-  posicionarAvatarLogin();
+  // No se posiciona aquí: en este punto (llamado desde init(), antes de
+  // decidir si hay sesión) vista-login todavía puede estar display:none, y
+  // medir contra un elemento oculto da 0×0 en todo — lo real pasa en
+  // mostrar('vista-login'), que es cuando el layout ya existe de verdad.
 }
 
 // Antes la posición era un top/left fijo en CSS, calibrado a ojo para el
@@ -8135,7 +8138,9 @@ function aplicarAsesorEnLogin(){
 // personaje apareció "flotando" lejos del título. Ahora se mide en vivo
 // contra la posición real de la palabra "Freak" (el <span> ya existía para
 // esto mismo desde el mascota original), así que sirve para cualquier
-// avatar sin necesidad de recalibrar a mano cada vez.
+// avatar sin necesidad de recalibrar a mano cada vez. Se llama desde
+// mostrar('vista-login') — nunca antes, o el cálculo mide una pantalla
+// todavía oculta (0×0) y el personaje termina pegado al origen.
 function posicionarAvatarLogin(){
   const cont = document.getElementById('freaky-login-sentado');
   const span = document.getElementById('span-titulo-freak');
