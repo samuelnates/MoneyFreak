@@ -45,6 +45,17 @@
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-08-19/20 (parte 3) — Nueva 5ta señal del Score Money Freak: "Constancia".** Idea del usuario ("el 80% de que la app funcione depende del compromiso del usuario, calificamos también su disciplina?"). Antes de codificar se propuso el diseño completo por chat contra varios casos límite (usuario nuevo, usuario que gasta poco de verdad, usuario que registra en lote una vez por semana, usuario de vacaciones, riesgo de "hacer trampa" abriendo la app sin hacer nada) — el usuario aprobó ese diseño explícitamente ("asicontruyelo") antes de tocar código.
+  - **Nueva función `calcularConstanciaMoneyFreak()`**, 0-100 o `null`, combinada con el mismo promedio simple que ya usan las otras 4 señales (`liquidez`/`endeudamiento`/`presupuesto`/`tendencia`) en `calcularScoreMoneyFreak()` — con esta ya son 5.
+    - **Actividad real (60%)**: ventana móvil de 28 días (4 semanas), cuenta como "semana con actividad" cualquier semana con al menos un gasto, una actualización de saldo (tabla `saldos`) o un pago a deuda (`transferencias` tipo `pago_deuda`) — **por semana, no por día**, a propósito, para no castigar a quien registra todo en lote un día a la semana en vez de a diario.
+    - **Frescura de saldos (40%)**: de las cuentas marcadas "incluir en patrimonio", qué % tiene su saldo actualizado en esos mismos 28 días.
+    - **`null` si el usuario tiene menos de 14 días desde su primera acción real** (gasto, saldo o pago) — igual que ya hacen liquidez/endeudamiento cuando falta info, para no castigar a alguien recién registrado desde el día 1.
+    - Solo cuentan las semanas que ya "empezaron" desde la primera actividad del usuario (no penaliza semanas de antes de que existiera la cuenta).
+    - A propósito **no** cuenta simplemente "abrir la app" — solo acciones con datos reales de por medio, para que no sea fácil de fingir sin aportar nada.
+  - **Nueva columna `score_historico.constancia`** (migración `20260820010000_score_constancia.sql`, sin correr todavía) — se guarda junto con las otras 4 en el mismo `upsert` de `abrirPanel()`.
+  - **UI**: nueva fila "Constancia" en el desglose de `vista-score` (después de Tendencia), textos del tour/instructivo actualizados de "4 señales" a "5 señales", i18n ES/EN completo.
+  - Verificado con `node --check` sobre los `<script>` (sin errores de sintaxis). **No verificado en navegador real, no desplegado el cambio de Edge Function (no aplica aquí, es solo cliente + SQL), migración `20260820010000_score_constancia.sql` sin correr por el usuario todavía.**
+
 - **2026-08-19/20 (parte 2) — Migración de compras a meses confirmada corrida por el usuario + desplegada. Además: 2 poses nuevas por avatar (saludando/ojos cerrados) integradas a las animaciones, y Freaky ampliado para saber guiar/registrar cuentas, tarjetas, deudas, bienes y acciones, no solo gastos.**
   - **Poses nuevas `saludando`/`ojos_cerrados` (las 6 imágenes que faltaban, subidas por el usuario como ZIP a `app-web/assets/asesores/MoneyFreak_6_imagenes_nuevas.zip`, 1254×1254 con transparencia real):** procesadas con Pillow igual que `sentado-recortado` (recorte al bounding box real + ~3% de margen uniforme + reescalado a 320×320) y guardadas como `avatar{1,2,3}/saludando.png` y `avatar{1,2,3}/ojos_cerrados.png`. El ZIP se borró del repo tras extraerlo (ya no hace falta, son 4.3MB). Integradas de verdad, no solo copiadas al disco:
     - `freakyMostrarPose()` y `aplicarAsesorAlPersonaje()` ahora conocen las 6 poses (antes 4).

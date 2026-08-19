@@ -3252,7 +3252,7 @@ const TRADUCCIONES = {
     'salud.recomendacion': 'Recomendación',
     'salud.detalle_titulo': 'Desglose y umbrales',
     'salud.detalle_sub': 'Cobertura, endeudamiento y umbrales',
-    'score.instructivo_1': 'Un número de 0 a 100 que resume qué tan sano está tu dinero hoy, combinando 4 señales que ya calculamos en otras partes de la app.',
+    'score.instructivo_1': 'Un número de 0 a 100 que resume qué tan sano está tu dinero hoy, combinando 5 señales que ya calculamos en otras partes de la app.',
     'score.instructivo_2': 'Se guarda un registro cada vez que abres Inicio, así puedes ver si va subiendo o bajando con el tiempo — igual que un score crediticio, pero de tus finanzas completas.',
     'score.sin_datos_general': 'Aún no hay suficientes datos para calcular tu score. Agrega tus cuentas, ingresos y un presupuesto para empezar a verlo.',
     'score.desglose_titulo': 'Desglose',
@@ -3264,6 +3264,8 @@ const TRADUCCIONES = {
     'score.presupuesto_explica': 'Si tu ritmo de gasto de este mes va a terminar dentro o fuera de tu presupuesto.',
     'score.tendencia': 'Tendencia',
     'score.tendencia_explica': 'Si tu patrimonio neto lleva varios meses subiendo o bajando seguido.',
+    'score.constancia': 'Constancia',
+    'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
     'flujo.liquido_disponible': 'Líquido disponible ahora',
     'flujo.sin_movimientos': 'Aún no tienes pagos ni aportaciones con fecha registrada. Agrega el día límite de pago en tus deudas, o el día de aportación en tus cuentas, para ver aquí tu flujo de efectivo del mes.',
     'flujo.sin_fecha': 'Sin fecha registrada',
@@ -3316,7 +3318,7 @@ const TRADUCCIONES = {
     'tour.p1.titulo': 'Bienvenido a tu app Pro',
     'tour.p1.texto': 'Este recorrido rápido te muestra las herramientas principales. Puedes salir cuando quieras con "Saltar tour".',
     'tour.pscore.titulo': 'Tu Score Money Freak',
-    'tour.pscore.texto': 'Un número de 0 a 100 que resume tu salud financiera completa — combina tu liquidez, deudas, presupuesto y tendencia de patrimonio. Se actualiza cada vez que abres la app, para que veas si vas mejorando.',
+    'tour.pscore.texto': 'Un número de 0 a 100 que resume tu salud financiera completa — combina tu liquidez, deudas, presupuesto, tendencia de patrimonio y qué tan constante eres registrando información. Se actualiza cada vez que abres la app, para que veas si vas mejorando.',
     'tour.p2.titulo': 'Tus cuentas, bienes, acciones y deudas',
     'tour.p2.texto': 'Todo lo que tienes y debes se administra desde aquí, con un botón para agregar cada tipo.',
     'tour.pgastos.titulo': 'Gastos y presupuesto',
@@ -4103,7 +4105,7 @@ const TRADUCCIONES = {
     'salud.recomendacion': 'Recommendation',
     'salud.detalle_titulo': 'Breakdown and thresholds',
     'salud.detalle_sub': 'Coverage, debt ratio and thresholds',
-    'score.instructivo_1': 'A number from 0 to 100 that sums up how healthy your money is today, combining 4 signals we already calculate elsewhere in the app.',
+    'score.instructivo_1': 'A number from 0 to 100 that sums up how healthy your money is today, combining 5 signals we already calculate elsewhere in the app.',
     'score.instructivo_2': 'A record is saved every time you open Home, so you can see whether it\'s trending up or down over time — like a credit score, but for your whole financial picture.',
     'score.sin_datos_general': 'Not enough data yet to calculate your score. Add your accounts, income, and a budget to start seeing it.',
     'score.desglose_titulo': 'Breakdown',
@@ -4115,6 +4117,8 @@ const TRADUCCIONES = {
     'score.presupuesto_explica': 'Whether this month\'s spending pace is on track to land within or outside your budget.',
     'score.tendencia': 'Trend',
     'score.tendencia_explica': 'Whether your net worth has been rising or falling for several months in a row.',
+    'score.constancia': 'Consistency',
+    'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
     'flujo.liquido_disponible': 'Liquid available now',
     'flujo.sin_movimientos': "You don't have any payments or contributions with a date yet. Add the due date on your debts, or the contribution day on your accounts, to see your cash flow here.",
     'flujo.sin_fecha': 'No date recorded',
@@ -4167,7 +4171,7 @@ const TRADUCCIONES = {
     'tour.p1.titulo': 'Welcome to your Pro app',
     'tour.p1.texto': 'This quick tour shows you the main tools. You can leave anytime with "Skip tour".',
     'tour.pscore.titulo': 'Your Money Freak Score',
-    'tour.pscore.texto': 'A number from 0 to 100 that sums up your whole financial health — combining liquidity, debt, budget, and net worth trend. It updates every time you open the app, so you can see if you\'re improving.',
+    'tour.pscore.texto': 'A number from 0 to 100 that sums up your whole financial health — combining liquidity, debt, budget, net worth trend, and how consistently you log information. It updates every time you open the app, so you can see if you\'re improving.',
     'tour.p2.titulo': 'Your accounts, property, stocks, and debts',
     'tour.p2.texto': 'Everything you own and owe is managed from here, with a button to add each type.',
     'tour.pgastos.titulo': 'Expenses & budget',
@@ -6162,11 +6166,89 @@ function bandaScore(valor){
   return valor >= 75 ? 'saludable' : (valor >= 45 ? 'atencion' : 'riesgo');
 }
 
+// Constancia: qué tan seguido el usuario alimenta la app con información real
+// (no solo qué tan sana está su situación financiera) — pedido explícito del
+// usuario: "el 80% de que la app funcione depende del compromiso del
+// usuario". Se mide en una ventana móvil de 28 días (4 semanas) para que una
+// mejora reciente se refleje rápido y una mala racha vieja no persiga para
+// siempre, y solo cuenta acciones con datos reales de por medio (nunca solo
+// "abrir la app", eso sería fácil de fingir sin aportar nada).
+async function calcularConstanciaMoneyFreak(){
+  const hoy = new Date();
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const inicioVentana = new Date(hoy); inicioVentana.setDate(inicioVentana.getDate() - 27);
+  const desdeISO = fmt(inicioVentana);
+
+  const [
+    { data: gastosVentana }, { data: saldosVentana }, { data: pagosVentana },
+    { data: cuentasIncluidas },
+    { data: primerGasto }, { data: primerSaldo }, { data: primerPago }
+  ] = await Promise.all([
+    sb.from('gastos').select('fecha').gte('fecha', desdeISO),
+    sb.from('saldos').select('cuenta_id, fecha').gte('fecha', desdeISO),
+    sb.from('transferencias').select('fecha').eq('tipo', 'pago_deuda').gte('fecha', desdeISO),
+    sb.from('cuentas').select('id').eq('incluir_patrimonio', true),
+    sb.from('gastos').select('fecha').order('fecha', { ascending: true }).limit(1),
+    sb.from('saldos').select('fecha').order('fecha', { ascending: true }).limit(1),
+    sb.from('transferencias').select('fecha').eq('tipo', 'pago_deuda').order('fecha', { ascending: true }).limit(1)
+  ]);
+
+  // Cuenta nueva (menos de 14 días desde su primera acción real, la que sea):
+  // null, no calificar todavía — igual que liquidez/endeudamiento cuando
+  // falta info, no queremos castigar al usuario desde el día 1.
+  const primerasFechas = [primerGasto?.[0]?.fecha, primerSaldo?.[0]?.fecha, primerPago?.[0]?.fecha].filter(Boolean);
+  if(primerasFechas.length === 0) return null;
+  const primeraActividad = primerasFechas.sort()[0];
+  const [y0, m0, d0] = primeraActividad.split('-').map(Number);
+  const diasDesdeInicio = Math.floor((hoy - new Date(y0, m0 - 1, d0)) / 86400000);
+  if(diasDesdeInicio < 14) return null;
+
+  // Actividad real (60%): de hasta 4 semanas hacia atrás desde hoy, en
+  // cuántas hubo al menos un gasto, una actualización de saldo o un pago a
+  // deuda — por semana, no por día, para no castigar a quien registra todo
+  // en lote una vez a la semana en vez de a diario.
+  const fechasActivas = new Set([
+    ...(gastosVentana || []).map(x => x.fecha),
+    ...(saldosVentana || []).map(x => x.fecha),
+    ...(pagosVentana || []).map(x => x.fecha)
+  ]);
+  let semanasElegibles = 0, semanasConActividad = 0;
+  for(let i = 0; i < 4; i++){
+    const finBucket = new Date(hoy); finBucket.setDate(finBucket.getDate() - 7 * i);
+    if(fmt(finBucket) < primeraActividad) break; // semana anterior a que el usuario empezara a usar la app
+    semanasElegibles++;
+    const inicioBucket = new Date(hoy); inicioBucket.setDate(inicioBucket.getDate() - 7 * i - 6);
+    for(let d = new Date(inicioBucket); d <= finBucket; d.setDate(d.getDate() + 1)){
+      if(fechasActivas.has(fmt(d))){ semanasConActividad++; break; }
+    }
+  }
+  const actividadScore = semanasElegibles > 0 ? (semanasConActividad / semanasElegibles) * 100 : null;
+
+  // Frescura de saldos (40%): de las cuentas que cuentan para el patrimonio,
+  // qué % tiene su saldo actualizado en los últimos 28 días. Si no tiene
+  // ninguna cuenta así, este componente no aplica y el score depende 100% de
+  // la actividad de arriba.
+  let frescuraScore = null;
+  if(cuentasIncluidas && cuentasIncluidas.length > 0){
+    const cuentasConSaldoReciente = new Set((saldosVentana || []).map(x => x.cuenta_id));
+    const frescas = cuentasIncluidas.filter(c => cuentasConSaldoReciente.has(c.id)).length;
+    frescuraScore = (frescas / cuentasIncluidas.length) * 100;
+  }
+
+  if(actividadScore === null && frescuraScore === null) return null;
+  if(frescuraScore === null) return actividadScore;
+  if(actividadScore === null) return frescuraScore;
+  return actividadScore * 0.6 + frescuraScore * 0.4;
+}
+
 async function calcularScoreMoneyFreak(b, s, g){
   const hoy = new Date();
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const finesDeMes = [0, 1, 2, 3, 4].map(i => new Date(hoy.getFullYear(), hoy.getMonth() - i, 0));
-  const patrimonioPorMes = await Promise.all(finesDeMes.map(f => obtenerPatrimonioEnFecha(fmt(f))));
+  const [patrimonioPorMes, constancia] = await Promise.all([
+    Promise.all(finesDeMes.map(f => obtenerPatrimonioEnFecha(fmt(f)))),
+    calcularConstanciaMoneyFreak()
+  ]);
 
   const serieMensual = [b.patrimonioNeto, ...patrimonioPorMes];
   let racha = 0, direccionRacha = null;
@@ -6201,7 +6283,7 @@ async function calcularScoreMoneyFreak(b, s, g){
     ? null
     : (racha === 0 || direccionRacha === null ? 50 : (direccionRacha > 0 ? 50 + Math.min(racha, 5) * 10 : 50 - Math.min(racha, 5) * 10));
 
-  const subScores = { liquidez, endeudamiento, presupuesto, tendencia };
+  const subScores = { liquidez, endeudamiento, presupuesto, tendencia, constancia };
   const validos = Object.values(subScores).filter(v => v !== null);
   const general = validos.length > 0 ? Math.round(validos.reduce((a, v) => a + v, 0) / validos.length) : null;
 
@@ -6303,7 +6385,8 @@ async function abrirPanel(){
       liquidez: score.liquidez,
       endeudamiento: score.endeudamiento,
       presupuesto: score.presupuesto,
-      tendencia: score.tendencia
+      tendencia: score.tendencia,
+      constancia: score.constancia
     }, { onConflict: 'user_id,fecha' });
   }
   const finMesAnteriorScore = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
@@ -6492,6 +6575,11 @@ async function abrirScore(){
       <div class="score-fila-titulo"><span>${t('score.tendencia')}</span><span class="valor">${txtSub(score.tendencia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.tendencia)}" style="width:${score.tendencia !== null ? Math.min(score.tendencia, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.tendencia_explica')}</div>
+    </div>
+    <div class="score-fila">
+      <div class="score-fila-titulo"><span>${t('score.constancia')}</span><span class="valor">${txtSub(score.constancia)}</span></div>
+      <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.constancia)}" style="width:${score.constancia !== null ? Math.min(score.constancia, 100) : 0}%"></div></div>
+      <div class="detalle-explica">${t('score.constancia_explica')}</div>
     </div>
   `;
 
