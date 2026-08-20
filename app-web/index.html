@@ -596,12 +596,26 @@
   .freaky-personaje{
     display:none;position:fixed;left:0;top:0;z-index:8;cursor:pointer;
     width:84px;height:84px;border:none;padding:0;background:none;
+    /* La sombra vivía en cada .freaky-img (abajo) — 6 imágenes apiladas, cada
+       una con su propio filtro. Con la respiración en reposo animando este
+       botón en un loop infinito (repeat:-1, nunca para), Safari/iOS tenía que
+       re-rasterizar 6 filtros superpuestos en cada frame, y durante el
+       crossfade de pose (freakyMostrarPose) llegaban a solaparse 2 capas con
+       sombra propia a la vez — eso es el "recuadro" parpadeando que reportó
+       el usuario (bug real de renderizado, las imágenes sí son PNG
+       transparente de verdad, confirmado). Un solo filtro aquí, en el
+       contenedor, sombrea el resultado ya compuesto — 1 capa en vez de 6.
+    */
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)) drop-shadow(0 10px 14px rgba(0,0,0,0.3));
+    /* Fuerza una capa GPU propia y estable para el filtro — evita que Safari
+       lo re-rasterice por software en cada frame de la animación infinita
+       (causa raíz del parpadeo). No afecta nada visual: no hay rotación 3D. */
+    -webkit-backface-visibility:hidden;backface-visibility:hidden;
   }
   body.con-sesion:not(.freaky-vuelo-desactivado) .freaky-personaje{display:flex;}
   .freaky-img{
     position:absolute;top:0;left:0;width:100%;height:100%;
     object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;
-    filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)) drop-shadow(0 10px 14px rgba(0,0,0,0.3));
   }
   .freaky-estela{
     position:fixed;width:8px;height:8px;border-radius:50%;background:var(--acento);
