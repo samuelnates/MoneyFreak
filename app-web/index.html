@@ -8080,6 +8080,19 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ajustarLayoutTeclado);
   window.visualViewport.addEventListener('scroll', ajustarLayoutTeclado);
 }
+// Respaldo: en iOS Safari, cuando el teclado se cierra casi al mismo tiempo
+// que la pantalla se mueve por otra razón (ej. el auto-scroll al llegar la
+// respuesta de Freaky), a veces 'resize'/'scroll' de visualViewport no
+// vuelven a disparar y la barra se queda pegada en la posición de cuando el
+// teclado seguía abierto (bug real reportado por el usuario, con screenshot).
+// focusin/focusout del documento sí son confiables — se reintenta varias
+// veces con distintos retrasos porque la animación de cierre del teclado no
+// termina de inmediato, para no leer visualViewport a medio camino.
+function reconciliarLayoutTecladoConRetraso(){
+  [50, 250, 500, 900].forEach(ms => setTimeout(ajustarLayoutTeclado, ms));
+}
+document.addEventListener('focusin', reconciliarLayoutTecladoConRetraso);
+document.addEventListener('focusout', reconciliarLayoutTecladoConRetraso);
 
 let historialAyudaIA = [];
 let snapshotFreakyCache = null;
@@ -9083,6 +9096,7 @@ async function preguntarSobreApp(){
   }finally{
     btn.disabled = false;
     detenerFreakyHablando();
+    reconciliarLayoutTecladoConRetraso(); // por si el teclado se cerró justo al llegar la respuesta
   }
 }
 
@@ -9138,6 +9152,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     agregarBurbujaChat('asistente', escapeHtml(t('ayuda_ia.error') + '\n\n[debug] excepción: ' + (e && e.message ? e.message : String(e))));
   }finally{
     detenerFreakyHablando();
+    reconciliarLayoutTecladoConRetraso(); // por si el teclado se cerró justo al llegar la respuesta
   }
 }
 
