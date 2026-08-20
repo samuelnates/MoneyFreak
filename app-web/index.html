@@ -4011,6 +4011,10 @@ const TRADUCCIONES = {
     'registro.error_acepta_privacidad': 'Necesitas aceptar el Aviso de Privacidad para continuar.',
     'registro.error_correo_existente': 'Ese correo ya tiene una cuenta. Intenta iniciar sesión.',
     'registro.error_generico': 'No se pudo crear la cuenta. Intenta de nuevo.',
+    'registro.error_rate_limit': 'Se enviaron demasiados correos en poco tiempo. Espera unos minutos y vuelve a intentar.',
+    'registro.error_password_debil': 'Tu contraseña es muy débil o muy corta. Usa al menos 6 caracteres.',
+    'registro.error_correo_invalido': 'Ese correo no es válido. Revísalo e intenta de nuevo.',
+    'registro.error_conexion': 'No se pudo conectar. Revisa tu internet e intenta de nuevo.',
     'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un link para restablecer tu contraseña.',
     'recuperar.error_min_caracteres': 'La contraseña debe tener al menos 6 caracteres.',
     'recuperar.error_generico': 'No se pudo guardar. Intenta de nuevo.',
@@ -4904,6 +4908,10 @@ const TRADUCCIONES = {
     'registro.error_acepta_privacidad': 'You need to accept the Privacy Notice to continue.',
     'registro.error_correo_existente': 'That email already has an account. Try signing in.',
     'registro.error_generico': 'Could not create the account. Try again.',
+    'registro.error_rate_limit': 'Too many emails were sent in a short time. Wait a few minutes and try again.',
+    'registro.error_password_debil': 'Your password is too weak or too short. Use at least 6 characters.',
+    'registro.error_correo_invalido': 'That email is not valid. Check it and try again.',
+    'registro.error_conexion': 'Could not connect. Check your internet and try again.',
     'recuperar.mensaje_enviado': 'If that email has an account, we sent a link to reset your password.',
     'recuperar.error_min_caracteres': 'The password must be at least 6 characters.',
     'recuperar.error_generico': 'Could not save. Try again.',
@@ -5832,9 +5840,21 @@ async function crearCuenta(){
   if(turnstileWidgetIdRegistro !== null && typeof turnstile !== 'undefined') turnstile.reset(turnstileWidgetIdRegistro);
 
   if(error){
-    errDiv.textContent = error.message.includes('already registered') || error.message.includes('already exists')
-      ? t('registro.error_correo_existente')
-      : t('registro.error_generico');
+    console.error('crearCuenta signUp error:', error.status, error.code, error.message);
+    const msg = (error.message || '').toLowerCase();
+    if(msg.includes('already registered') || msg.includes('already exists') || error.code === 'user_already_exists'){
+      errDiv.textContent = t('registro.error_correo_existente');
+    } else if(error.status === 429 || error.code === 'over_email_send_rate_limit' || msg.includes('rate limit')){
+      errDiv.textContent = t('registro.error_rate_limit');
+    } else if(error.code === 'weak_password' || msg.includes('password')){
+      errDiv.textContent = t('registro.error_password_debil');
+    } else if(error.code === 'validation_failed' || msg.includes('invalid') && msg.includes('email')){
+      errDiv.textContent = t('registro.error_correo_invalido');
+    } else if(error.name === 'AuthRetryableFetchError' || msg.includes('fetch') || msg.includes('network')){
+      errDiv.textContent = t('registro.error_conexion');
+    } else {
+      errDiv.textContent = t('registro.error_generico');
+    }
     errDiv.style.display = 'block';
     return;
   }
@@ -5868,8 +5888,12 @@ async function enviarRecuperacion(){
   btn.textContent = t('recuperar.enviar');
 
   if(error){
+    console.error('enviarRecuperacion error:', error.status, error.code, error.message);
     msgDiv.className = 'aviso error';
-    msgDiv.textContent = t('recuperar.error_envio');
+    const msg = (error.message || '').toLowerCase();
+    msgDiv.textContent = (error.status === 429 || error.code === 'over_email_send_rate_limit' || msg.includes('rate limit'))
+      ? t('registro.error_rate_limit')
+      : t('recuperar.error_envio');
   } else {
     msgDiv.className = 'aviso exito';
     msgDiv.textContent = t('recuperar.mensaje_enviado');
@@ -13283,8 +13307,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 30;
+const VERSION_APP_ACTUAL = 31;
 const CHANGELOG_APP = [
+  {
+    version: 31,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'El error al crear cuenta ahora dice la razón real (correo repetido, demasiados intentos, contraseña débil, correo inválido, sin conexión) en vez de un mensaje genérico que escondía el problema real.'
+    ],
+    cambios_en: [
+      'The account creation error now shows the real reason (duplicate email, too many attempts, weak password, invalid email, no connection) instead of a generic message that hid the real problem.'
+    ]
+  },
   {
     version: 30,
     fecha: '2026-08-20',
