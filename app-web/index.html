@@ -8111,23 +8111,34 @@ function ajustarLayoutTeclado(){
   if(!vv) return;
   const tapado = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   const tecladoAbierto = tapado > 80; // umbral para no disparar con la barra de direcciones de Safari
-  if(barra) barra.style.bottom = tecladoAbierto ? `${tapado}px` : '';
+  // +46px de colchón cuando el teclado está abierto: la barra propia de
+  // Safari con "anterior/siguiente/listo" (y la fila de texto predictivo)
+  // que aparece ENCIMA del teclado no siempre queda reflejada por completo en
+  // visualViewport.height — varía por versión de iOS. Sin este margen, la
+  // barra de escritura sube justo hasta el borde que sí mide la API, pero se
+  // queda tapada por esa franja extra que no podemos medir directamente.
+  // Bug real reportado por el usuario con screenshot: seguía sin poder ver
+  // lo que escribía después del fix anterior (que sí resolvía el reposicionamiento,
+  // solo que sin este colchón no alcanzaba a despejar del todo).
+  const colchon = tecladoAbierto ? 46 : 0;
+  if(barra) barra.style.bottom = tecladoAbierto ? `${tapado + colchon}px` : '';
   document.body.classList.toggle('teclado-abierto', tecladoAbierto);
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ajustarLayoutTeclado);
   window.visualViewport.addEventListener('scroll', ajustarLayoutTeclado);
 }
-// Respaldo: en iOS Safari, cuando el teclado se cierra casi al mismo tiempo
-// que la pantalla se mueve por otra razón (ej. el auto-scroll al llegar la
-// respuesta de Freaky), a veces 'resize'/'scroll' de visualViewport no
-// vuelven a disparar y la barra se queda pegada en la posición de cuando el
-// teclado seguía abierto (bug real reportado por el usuario, con screenshot).
-// focusin/focusout del documento sí son confiables — se reintenta varias
-// veces con distintos retrasos porque la animación de cierre del teclado no
-// termina de inmediato, para no leer visualViewport a medio camino.
+// Respaldo: en iOS Safari, tanto al abrir como al cerrar el teclado, a veces
+// 'resize'/'scroll' de visualViewport no disparan de nuevo una vez que la
+// barra propia de "anterior/siguiente/listo" y el texto predictivo terminan
+// de asentarse (su altura cambia un poco después del primer evento) — la
+// barra se queda posicionada con la medida a medio camino. focusin/focusout
+// del documento sí son confiables — se reintenta varias veces con distintos
+// retrasos, incluyendo uno más tardío (1400ms) para el caso de un teclado
+// lento en terminar de asentarse, sin leer visualViewport a medio camino.
 function reconciliarLayoutTecladoConRetraso(){
-  [50, 250, 500, 900].forEach(ms => setTimeout(ajustarLayoutTeclado, ms));
+  ajustarLayoutTeclado();
+  [50, 250, 500, 900, 1400].forEach(ms => setTimeout(ajustarLayoutTeclado, ms));
 }
 document.addEventListener('focusin', reconciliarLayoutTecladoConRetraso);
 document.addEventListener('focusout', reconciliarLayoutTecladoConRetraso);
@@ -12941,8 +12952,110 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 13;
+const VERSION_APP_ACTUAL = 23;
 const CHANGELOG_APP = [
+  {
+    version: 23,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido (de nuevo, con más margen) que el teclado del iPhone tapara lo que estabas escribiendo en el chat de Freaky.'
+    ],
+    cambios_en: [
+      "Fixed (again, with more clearance) the iPhone keyboard covering what you were typing in the Freaky chat."
+    ]
+  },
+  {
+    version: 22,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que el personaje de Freaky parpadeara y se le viera un recuadro raro detrás.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's character flickering with a weird box visible behind him."
+    ]
+  },
+  {
+    version: 21,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Los umbrales de endeudamiento en Salud financiera ahora traen una recomendación (Atención 30%, Riesgo 50%, 6 meses de cobertura de liquidez) — la puedes editar a tu gusto cuando quieras.'
+    ],
+    cambios_en: [
+      "Debt thresholds in Financial Health now come with a recommendation (Attention 30%, Risk 50%, 6 months of liquidity coverage) — you can still edit them anytime."
+    ]
+  },
+  {
+    version: 20,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Freaky ya no vuela sin parar por la pantalla — ahora se sienta quieto en un lugar que no te estorbe, y solo se mueve cuando cambias de pantalla.'
+    ],
+    cambios_en: [
+      "Freaky no longer flies around non-stop — now he sits still somewhere out of your way, and only moves when you change screens."
+    ]
+  },
+  {
+    version: 19,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que la respuesta de Freaky a veces se quedara tapada por la barra de escribir.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's replies sometimes getting hidden behind the writing bar."
+    ]
+  },
+  {
+    version: 18,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'El teclado del iPhone ya no tapa el cuadro de texto al escribirle a Freaky.',
+      'Freaky ahora te puede sugerir respuestas rápidas con un tap (como "Sí"/"No") cuando te hace una pregunta corta.'
+    ],
+    cambios_en: [
+      "The iPhone keyboard no longer covers the text box when writing to Freaky.",
+      'Freaky can now suggest quick one-tap replies (like "Yes"/"No") when he asks you a short question.'
+    ]
+  },
+  {
+    version: 17,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Freaky ya puede registrar directo cuentas, deudas/tarjetas, bienes y acciones desde el chat — antes solo te explicaba y te mandaba un link.'
+    ],
+    cambios_en: [
+      "Freaky can now directly register accounts, debts/cards, assets and stocks right from the chat — before he could only explain and send you a link."
+    ]
+  },
+  {
+    version: 16,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Nueva señal "Constancia" en tu Score Money Freak: qué tan seguido alimentas la app con información real (gastos, saldos, pagos a deuda).'
+    ],
+    cambios_en: [
+      'New "Consistency" signal in your Money Freak Score: how often you keep the app fed with real information (expenses, balances, debt payments).'
+    ]
+  },
+  {
+    version: 15,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Corregidos 3 bugs reales en compras a meses, más un nuevo aviso cuando se acerca el pago de tu tarjeta.'
+    ],
+    cambios_en: [
+      "Fixed 3 real bugs in monthly installment purchases, plus a new heads-up when your card payment is coming up."
+    ]
+  },
+  {
+    version: 14,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Corregido que el personaje de Freaky apareciera descentrado y muy arriba en la pantalla de inicio de sesión.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's character appearing off-center and too high up on the login screen."
+    ]
+  },
   {
     version: 13,
     fecha: '2026-08-18',
