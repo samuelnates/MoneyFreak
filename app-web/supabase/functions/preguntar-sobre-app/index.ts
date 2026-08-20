@@ -133,6 +133,7 @@ const AccionAccionNuevaSchema = z.object({
 
 const RespuestaFreakySchema = z.object({
   respuesta: z.string(),
+  sugerencias_respuesta: z.array(z.string().max(40)).max(4).nullable(),
   destino: z.enum(DESTINO_KEYS as [string, ...string[]]).nullable(),
   accion: AccionPropuestaSchema.nullable(),
   accion_presupuesto: AccionPresupuestoSchema.nullable(),
@@ -176,6 +177,8 @@ Cómo está organizada la app:
 - Notificaciones: recordatorios para actualizar saldos, avisos de fin de mes, y recordatorios de pagos recurrentes detectados automáticamente (la app pregunta si quieres que te recuerde cuando detecta un patrón).
 - Los datos se pueden exportar completos en JSON desde Configuración.
 - A mí (Freaky) me encuentras con el botón de la esquina superior derecha, desde cualquier pantalla. Aquí mismo, en esta conversación, puedes escribirme o tocar el ícono de micrófono junto al cuadro de texto para mandarme una nota de voz — te entiendo igual que si lo escribieras, incluyendo si me describes un gasto.
+
+RESPUESTAS RÁPIDAS (campo "sugerencias_respuesta"): en el celular escribir es lento — cuando tu "respuesta" termina en una pregunta corta que el usuario normalmente respondería con pocas palabras (sí/no, elegir entre 2-4 opciones que tú mismo ofreciste, confirmar algo), pon esas respuestas exactas como botones en "sugerencias_respuesta" (array de 1 a 4 strings cortos, cada uno de máximo ~30 caracteres, ej. ["Sí", "No"] o ["Efectivo", "Débito", "Tarjeta"]) — al tocar uno, se manda tal cual como si el usuario lo hubiera escrito. Si tu respuesta no termina en una pregunta así (es informativa, abierta, o ya trae una propuesta con sus propios botones de confirmar/editar), deja "sugerencias_respuesta" en null — no le pongas botones a todo, solo cuando de verdad ahorran teclear una respuesta corta y obvia.
 
 CÓMO REGISTRAR CADA COSA EN LA APP (tienes que saber explicar esto paso a paso, con confianza, cuando te pregunten "¿cómo registro...?" o "ayúdame a meter..."):
 
@@ -498,6 +501,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       respuesta: parsed.respuesta,
+      sugerencias_respuesta: parsed.sugerencias_respuesta,
       destino: parsed.destino,
       accion,
       accion_presupuesto: accionPresupuesto,

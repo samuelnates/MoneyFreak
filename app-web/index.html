@@ -160,6 +160,16 @@
   @media (hover:hover) and (pointer:fine){
     .chat-link-destino:hover{background:var(--acento);color:var(--acento-texto);}
   }
+  .chat-sugerencias{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chat-sugerencias button{
+    background:var(--superficie);border:1px solid var(--borde-fuerte);color:var(--texto);
+    border-radius:14px;padding:7px 13px;font-family:var(--sans);font-size:12.5px;font-weight:600;
+    cursor:pointer;transition:background-color 150ms ease, transform 120ms var(--ease-out);
+  }
+  .chat-sugerencias button:active{transform:scale(0.96);}
+  @media (hover:hover) and (pointer:fine){
+    .chat-sugerencias button:hover{background:var(--acento);color:var(--acento-texto);border-color:var(--acento);}
+  }
   .chat-accion-gasto{
     margin-top:6px;border:1px solid var(--borde-fuerte);border-radius:12px;
     background:var(--superficie);padding:10px 12px;width:100%;
@@ -233,6 +243,7 @@
   .chat-btn-enviar:disabled{opacity:.5;}
   @media (max-width: 899px){
     body.con-sesion .chat-input-fija{bottom:calc(150px + env(safe-area-inset-bottom));}
+    body.con-sesion.teclado-abierto .nav-inferior-movil{display:none;}
   }
   @media (min-width: 900px){
     body.con-sesion .chat-input-fija{left:220px;}
@@ -8048,6 +8059,28 @@ async function llamarConAccesoIA(nombreFuncion, cuerpo, claves){
   return { ok: true, data };
 }
 
+// iOS Safari no reposiciona los elementos position:fixed cuando aparece el
+// teclado (se quedan pegados al fondo del "layout viewport", que no cambia
+// de tamaño, así que terminan tapados detrás del teclado) — a diferencia de
+// apps nativas como WhatsApp, donde la barra de escritura siempre sube junto
+// con el teclado. Se corrige a mano con la API real de visualViewport: mide
+// cuánto se achicó el área visible y sube la barra de chat esa misma
+// distancia; de paso oculta el nav inferior mientras el teclado está abierto
+// (no tiene sentido mostrarlo tapado a medias detrás del teclado).
+function ajustarLayoutTeclado(){
+  const vv = window.visualViewport;
+  const barra = document.getElementById('chat-input-fija');
+  if(!vv) return;
+  const tapado = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  const tecladoAbierto = tapado > 80; // umbral para no disparar con la barra de direcciones de Safari
+  if(barra) barra.style.bottom = tecladoAbierto ? `${tapado}px` : '';
+  document.body.classList.toggle('teclado-abierto', tecladoAbierto);
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', ajustarLayoutTeclado);
+  window.visualViewport.addEventListener('scroll', ajustarLayoutTeclado);
+}
+
 let historialAyudaIA = [];
 let snapshotFreakyCache = null;
 const accionesGastoChat = {};
@@ -8059,7 +8092,13 @@ const accionesCuentaNuevaChat = {};
 const accionesDeudaNuevaChat = {};
 const accionesBienNuevoChat = {};
 const accionesAccionNuevaChat = {};
+const sugerenciasChatTexto = {};
 let idAccionGastoChatSiguiente = 1;
+
+function enviarSugerenciaChat(id){
+  const texto = sugerenciasChatTexto[id];
+  if(texto) preguntarSobreAppConTexto(texto);
+}
 
 // 'efectivo' es el valor que se le manda a la IA para representar el pago en
 // efectivo (mismo patrón que procesar-solicitud-gasto), pero en los <select>
@@ -8106,7 +8145,7 @@ function irADestinoChat(clave){
   if(destino) destino.fn();
 }
 
-function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva){
+function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva, sugerenciasRespuesta){
   const cont = document.getElementById('ayuda-ia-conversacion');
   document.getElementById('ayuda-ia-vacio').style.display = 'none';
 
@@ -8267,7 +8306,22 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     </div>`;
   }
 
-  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${linkHtml}${horaHtml}</div>`;
+  // Botones de respuesta rápida (ej. "Sí"/"No") — solo tiene sentido cuando
+  // Freaky no trae ya una propuesta con sus propios botones de confirmar en
+  // esta misma burbuja, para no duplicar la decisión de dos formas distintas.
+  // El texto real se guarda en un mapa y el botón solo lleva un id numérico
+  // (nunca el texto directo en el onclick) — el texto viene de la IA y puede
+  // traer comillas u otros caracteres que romperían el atributo HTML.
+  const hayPropuesta = accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva;
+  const sugerenciasHtml = (sugerenciasRespuesta && sugerenciasRespuesta.length && !hayPropuesta)
+    ? `<div class="chat-sugerencias">${sugerenciasRespuesta.map(s => {
+        const idSugerencia = idAccionGastoChatSiguiente++;
+        sugerenciasChatTexto[idSugerencia] = s;
+        return `<button type="button" onclick="enviarSugerenciaChat(${idSugerencia})">${escapeHtml(s)}</button>`;
+      }).join('')}</div>`
+    : '';
+
+  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${linkHtml}${sugerenciasHtml}${horaHtml}</div>`;
   div.innerHTML = rol === 'asistente'
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
@@ -9020,7 +9074,7 @@ async function preguntarSobreApp(){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error preguntando sobre la app', e);
     escribiendo.remove();
@@ -9076,7 +9130,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error procesando nota de voz para Freaky', e);
     escribiendo.remove();
