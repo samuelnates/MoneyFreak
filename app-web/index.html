@@ -5240,7 +5240,21 @@ let origenAvisoLegal = 'registro';
 // visto antes de poder aceptar. Los checkboxes de registro y onboarding
 // arrancan `disabled` en el HTML — solo se habilitan aquí, al volver de
 // haberlo abierto de verdad desde ese mismo origen.
-function abrirCrearCuenta(){
+// Bug real reportado por el usuario, con capturas: alguien que YA tiene
+// cuenta (ej. entró con Google antes) terminaba viendo el formulario de
+// "Crear cuenta" pidiéndole nombre/correo otra vez — y "Volver" desde el
+// Aviso de Privacidad solo lo regresaba a esa misma pantalla equivocada,
+// reforzando la sensación de loop. La causa real no era el botón "Volver"
+// (ese sí regresa a donde el usuario realmente estaba) sino que nada
+// evitaba llegar a "Crear cuenta" teniendo ya una sesión válida. Ahora se
+// revisa la sesión real antes de mostrar el formulario — si ya existe,
+// se manda directo a la app en vez de pedir datos que ya tiene.
+async function abrirCrearCuenta(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    entrarAlPanelConOnboarding();
+    return;
+  }
   const check = document.getElementById('check-privacidad-registro');
   check.checked = false;
   check.disabled = true;
@@ -13269,8 +13283,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 29;
+const VERSION_APP_ACTUAL = 30;
 const CHANGELOG_APP = [
+  {
+    version: 30,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que un usuario ya dado de alta con Google pudiera terminar viendo el formulario de "Crear cuenta" pidiendo su nombre y correo otra vez.'
+    ],
+    cambios_en: [
+      'Fixed a user already signed up with Google being able to end up seeing the "Create account" form asking for their name and email again.'
+    ]
+  },
   {
     version: 29,
     fecha: '2026-08-20',
