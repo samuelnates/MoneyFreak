@@ -1162,6 +1162,21 @@
 </head>
 <body>
 
+<!-- Respaldo para revisores/crawlers que no ejecutan JS: toda la pantalla de
+     login (con la descripción real y el link de privacidad) vive dentro de
+     .pantalla, que por default es display:none — solo se hace visible
+     cuando el JS corre y le agrega la clase .activa. Un lector que no
+     ejecute JS (o que respete display:none al extraer texto) vería una
+     página en blanco sin esto, sin importar cuánto texto real haya en el
+     HTML. La verificación de marca de OAuth de Google seguía rechazando el
+     sitio ("no se explica el propósito de la app" / "el nombre no
+     coincide") incluso después de agregar esa descripción visible para un
+     usuario real — este es el gap que quedaba. -->
+<noscript>
+  <h1>Money Freak</h1>
+  <p>Money Freak: controla tus cuentas, bienes, deudas y salud financiera en un solo lugar, con Freaky, tu mentor financiero con IA.</p>
+  <p><a href="privacidad.html">Aviso de privacidad</a></p>
+</noscript>
 
 <nav class="sidebar-desktop">
   <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
@@ -5741,6 +5756,7 @@ async function crearCuenta(){
     errDiv.style.display = 'block';
     return;
   }
+  localStorage.setItem('terminos_aceptados', '1'); // evita repetir esto en el onboarding rápido
   const captchaToken = (window.TURNSTILE_SITE_KEY && typeof turnstile !== 'undefined' && turnstileWidgetIdRegistro !== null)
     ? turnstile.getResponse(turnstileWidgetIdRegistro)
     : undefined;
@@ -5764,16 +5780,6 @@ async function crearCuenta(){
     errDiv.style.display = 'block';
     return;
   }
-
-  // Bug real reportado por el usuario ("loop en el onboarding"): esto nunca
-  // marcaba terminos_aceptados, así que un usuario que se registró por
-  // correo (aceptó la privacidad AQUÍ, apenas unos segundos antes) volvía a
-  // ver la pantalla de "acepta el aviso de privacidad" en el onboarding
-  // rápido — porque debeMostrarOnboardingRapido() solo revisa esta bandera,
-  // sin saber que ya se aceptó desde el registro. Con el fix de forzar ver
-  // el aviso antes de aceptar (checkbox disabled hasta volver de leerlo),
-  // esa repetición además obligaba a reabrir y releer el aviso otra vez.
-  localStorage.setItem('terminos_aceptados', '1');
 
   if(data.session){
     entrarAlPanelConOnboarding();
@@ -13219,8 +13225,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 27;
+const VERSION_APP_ACTUAL = 28;
 const CHANGELOG_APP = [
+  {
+    version: 28,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Ajuste técnico para que Google reconozca mejor la app al iniciar sesión con Google (sin cambios visibles para ti).'
+    ],
+    cambios_en: [
+      'Technical tweak so Google better recognizes the app when signing in with Google (no visible change for you).'
+    ]
+  },
   {
     version: 27,
     fecha: '2026-08-20',
