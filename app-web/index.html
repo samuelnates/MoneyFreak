@@ -1774,16 +1774,19 @@
   </div>
   <div class="campo">
     <label for="input-umbral-amarillo" data-i18n="salud.umbral_amarillo_label">% de endeudamiento donde empieza "Atención"</label>
-    <input type="number" id="input-umbral-amarillo" min="0" inputmode="decimal" step="0.1" placeholder="20">
+    <input type="number" id="input-umbral-amarillo" min="0" inputmode="decimal" step="0.1" placeholder="30">
   </div>
+  <div class="aviso" data-i18n="salud.umbral_amarillo_recomendado">Recomendado: 30%. Tú decides si prefieres un límite más estricto o más flexible.</div>
   <div class="campo">
     <label for="input-umbral-rojo" data-i18n="salud.umbral_rojo_label">% de endeudamiento donde empieza "Riesgo"</label>
-    <input type="number" id="input-umbral-rojo" min="0" inputmode="decimal" step="0.1" placeholder="35">
+    <input type="number" id="input-umbral-rojo" min="0" inputmode="decimal" step="0.1" placeholder="50">
   </div>
+  <div class="aviso" data-i18n="salud.umbral_rojo_recomendado">Recomendado: 50%. Tú decides si prefieres un límite más estricto o más flexible.</div>
   <div class="campo">
     <label for="input-meses-objetivo" data-i18n="salud.meses_objetivo_label">Meses de cobertura de liquidez que quieres mantener</label>
-    <input type="number" id="input-meses-objetivo" min="0" inputmode="decimal" step="0.1" placeholder="3">
+    <input type="number" id="input-meses-objetivo" min="0" inputmode="decimal" step="0.1" placeholder="6">
   </div>
+  <div class="aviso" data-i18n="salud.meses_objetivo_recomendado">Recomendado: 6 meses. Tú decides si prefieres guardar más o menos colchón.</div>
   <button class="btn-grande secundario" onclick="mostrar('vista-salud')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
@@ -2878,7 +2881,16 @@ let graficaHistorialItem = null;
 let graficaFlujo = null;
 let cuentasInversionData = [];
 let accionesData = [];
-let perfilFinanciero = { umbral_amarillo: 20, umbral_rojo: 35, meses_cobertura_objetivo: 3 };
+// Valores recomendados por default para quien nunca ha tocado "Editar
+// umbrales" — pedido explícito del usuario, con estos 3 números. Se muestran
+// también como recomendación visible en la pantalla de edición (ver
+// vista-editar-perfil) para que el usuario sepa qué está ajustando cuando
+// los cambie, no solo un placeholder que desaparece.
+const UMBRAL_AMARILLO_RECOMENDADO = 30; // % de endeudamiento donde empieza "Atención"
+const UMBRAL_ROJO_RECOMENDADO = 50; // % de endeudamiento donde empieza "Riesgo"
+const MESES_COBERTURA_RECOMENDADO = 6; // meses de cobertura de liquidez
+
+let perfilFinanciero = { umbral_amarillo: UMBRAL_AMARILLO_RECOMENDADO, umbral_rojo: UMBRAL_ROJO_RECOMENDADO, meses_cobertura_objetivo: MESES_COBERTURA_RECOMENDADO };
 
 const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta', 'vista-aviso-legal', 'vista-olvide-contrasena', 'vista-nueva-contrasena', 'vista-onboarding-rapido', 'vista-elegir-asesor'];
 
@@ -2919,6 +2931,12 @@ function mostrar(idVista){
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
     btn.classList.toggle('activo', btn.dataset.vista === idVista);
   });
+  // Freaky ya no vuela solo por un temporizador (ver freakyIrAPerchaDePantalla) —
+  // el único momento en que debe buscar dónde sentarse es un cambio real de
+  // pantalla, así que se dispara aquí y en ningún otro lado.
+  if(idVista !== vistaAnterior && freakyVueloIniciado && document.body.classList.contains('con-sesion') && !document.body.classList.contains('freaky-vuelo-desactivado')){
+    freakyIrAPerchaDePantalla();
+  }
   reiniciarTemporizadorInactividad();
   iniciarMiniTourSiPrimeraVez(idVista);
   actualizarVisibilidadBotonTour();
@@ -3652,8 +3670,11 @@ const TRADUCCIONES = {
     'transferencia.total_registradas': '{0} registradas',
     'salud.umbrales_titulo': 'Umbrales de salud financiera',
     'salud.umbral_amarillo_label': '% de endeudamiento donde empieza "Atención"',
+    'salud.umbral_amarillo_recomendado': 'Recomendado: 30%. Tú decides si prefieres un límite más estricto o más flexible.',
     'salud.umbral_rojo_label': '% de endeudamiento donde empieza "Riesgo"',
+    'salud.umbral_rojo_recomendado': 'Recomendado: 50%. Tú decides si prefieres un límite más estricto o más flexible.',
     'salud.meses_objetivo_label': 'Meses de cobertura de liquidez que quieres mantener',
+    'salud.meses_objetivo_recomendado': 'Recomendado: 6 meses. Tú decides si prefieres guardar más o menos colchón.',
     'comun.guardar': 'Guardar',
     'comun.cancelar': 'Cancelar',
     'comun.eliminar': 'Eliminar',
@@ -4517,8 +4538,11 @@ const TRADUCCIONES = {
     'transferencia.total_registradas': '{0} logged',
     'salud.umbrales_titulo': 'Financial health thresholds',
     'salud.umbral_amarillo_label': '% debt ratio where "Attention" starts',
+    'salud.umbral_amarillo_recomendado': 'Recommended: 30%. You decide if you want a stricter or more flexible limit.',
     'salud.umbral_rojo_label': '% debt ratio where "Risk" starts',
+    'salud.umbral_rojo_recomendado': 'Recommended: 50%. You decide if you want a stricter or more flexible limit.',
     'salud.meses_objetivo_label': 'Months of liquidity coverage you want to keep',
+    'salud.meses_objetivo_recomendado': 'Recommended: 6 months. You decide if you want a bigger or smaller cushion.',
     'comun.guardar': 'Save',
     'comun.cancelar': 'Cancel',
     'comun.eliminar': 'Delete',
@@ -6164,7 +6188,7 @@ async function calcularInsightsPanel(b, s, g){
     }
   }
 
-  if(s.estadoGeneral === 'saludable' && s.mesesCobertura !== null && s.mesesCobertura >= (perfilFinanciero.meses_cobertura_objetivo || 3) * 1.5){
+  if(s.estadoGeneral === 'saludable' && s.mesesCobertura !== null && s.mesesCobertura >= (perfilFinanciero.meses_cobertura_objetivo || MESES_COBERTURA_RECOMENDADO) * 1.5){
     candidatos.push({ severidad: 'saludable', texto: tf('panel.insight_liquidez_solida', s.mesesCobertura.toFixed(1)) });
   }
 
@@ -6295,12 +6319,12 @@ async function calcularScoreMoneyFreak(b, s, g){
     racha++;
   }
 
-  const metaMeses = perfilFinanciero.meses_cobertura_objetivo || 3;
+  const metaMeses = perfilFinanciero.meses_cobertura_objetivo || MESES_COBERTURA_RECOMENDADO;
   const liquidez = s.mesesCobertura === null
     ? (s.activosLiquidos > 0 ? 100 : null)
     : Math.max(0, Math.min(100, (s.mesesCobertura / metaMeses) * 100));
 
-  const techoEndeudamiento = perfilFinanciero.umbral_rojo || 35;
+  const techoEndeudamiento = perfilFinanciero.umbral_rojo || UMBRAL_ROJO_RECOMENDADO;
   const endeudamiento = s.tasaEndeudamiento === null
     ? null
     : Math.max(0, Math.min(100, 100 - (s.tasaEndeudamiento / techoEndeudamiento) * 100));
@@ -8549,7 +8573,7 @@ function iniciarVueloFreaky(){
     return; // posición fija, sin vuelo ni movimiento secundario
   }
 
-  freakyVolarSiguiente();
+  freakyIrAPerchaDePantalla();
   freakyProgramarBlinkEspontaneo();
   // Saludo de bienvenida, una sola vez por sesión, justo después de aparecer.
   gsap.delayedCall(1, () => freakyTrigger('wave'));
@@ -8747,11 +8771,26 @@ function freakyDejarEstela(el){
 
 let freakyEstaSentado = false;
 
-function freakyVolarSiguiente(){
+// Antes esto se reprogramaba solo con gsap.delayedCall() al terminar cada
+// vuelo, así que Freaky nunca dejaba de moverse en toda la sesión (cada
+// 3-10s, sin importar si el usuario seguía en la misma pantalla) — pedido
+// explícito del usuario ("me está mareando... ya me volvió loco") de que
+// pare. Ahora es una función de una sola vez: busca dónde sentarse EN LA
+// PANTALLA ACTUAL y se queda ahí quieto hasta que mostrar() la vuelva a
+// llamar por un cambio real de pantalla (ver mostrar()) — nunca por un
+// temporizador. Siempre prefiere una percha real si existe (antes solo el
+// 75% de las veces) — un lugar fijo y a propósito, no flotar al azar, es
+// justo lo que se pidió ("busque un lugar para sentarse... que no estorbe").
+function freakyIrAPerchaDePantalla(){
   const el = document.getElementById('freaky-personaje');
-  if(!el || document.hidden){
-    // La pestaña está en segundo plano: no gastamos ciclos, reintenta en un momento.
-    gsap.delayedCall(2, freakyVolarSiguiente);
+  // mostrar() llama esto en cada cambio de pantalla sin saber si GSAP cargó
+  // (freakyVueloIniciado ya queda en true aunque falte, ver iniciarVueloFreaky) —
+  // sin este guard, cada navegación tiraría un error real.
+  if(!el || typeof gsap === 'undefined') return;
+  if(document.hidden){
+    // La pestaña está en segundo plano: reintenta en un momento en vez de
+    // medir un layout que nadie está viendo.
+    gsap.delayedCall(2, freakyIrAPerchaDePantalla);
     return;
   }
   freakyDetenerReposo();
@@ -8759,10 +8798,9 @@ function freakyVolarSiguiente(){
   if(!freakyHablandoActivo) freakyMostrarPose('flotando'); // despega: si estaba sentado, vuelve a la pose de vuelo
 
   const perchas = freakyEncontrarPerchas();
-  // La mayoría de las veces busca dónde sentarse de verdad; de vez en cuando
-  // sigue volando a un punto libre, para que no se sienta clavado siempre en
-  // los mismos 3-4 lugares.
-  const aterrizaEnPercha = perchas.length > 0 && Math.random() < 0.75;
+  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el chrome
+  // fijo global siempre cuenta) se conforma con un punto libre de la zona seguro.
+  const aterrizaEnPercha = perchas.length > 0;
   let destinoX, destinoY;
   if(aterrizaEnPercha){
     const p = perchas[Math.floor(Math.random() * perchas.length)];
@@ -8786,8 +8824,8 @@ function freakyVolarSiguiente(){
       freakyEstaSentado = aterrizaEnPercha;
       freakyIniciarReposo(aterrizaEnPercha);
       if(aterrizaEnPercha && !freakyHablandoActivo) freakyMostrarPose('sentado');
-      const espera = aterrizaEnPercha ? (3 + Math.random() * 4) : (1 + Math.random() * 3);
-      gsap.delayedCall(espera, freakyVolarSiguiente);
+      // Sin reprogramar el siguiente vuelo: se queda aquí hasta el próximo
+      // cambio de pantalla real.
     }
   });
   tl.to(el, { scaleX: 0.88, scaleY: 1.16, duration: 0.18, ease: 'power1.out' }, 0)
@@ -11136,9 +11174,9 @@ async function cargarPerfilFinanciero(){
     const { data } = await sb.from('perfil_financiero').select('*').maybeSingle();
     if(data){
       perfilFinanciero = {
-        umbral_amarillo: data.umbral_amarillo != null ? Number(data.umbral_amarillo) : 20,
-        umbral_rojo: data.umbral_rojo != null ? Number(data.umbral_rojo) : 35,
-        meses_cobertura_objetivo: data.meses_cobertura_objetivo != null ? Number(data.meses_cobertura_objetivo) : 3
+        umbral_amarillo: data.umbral_amarillo != null ? Number(data.umbral_amarillo) : UMBRAL_AMARILLO_RECOMENDADO,
+        umbral_rojo: data.umbral_rojo != null ? Number(data.umbral_rojo) : UMBRAL_ROJO_RECOMENDADO,
+        meses_cobertura_objetivo: data.meses_cobertura_objetivo != null ? Number(data.meses_cobertura_objetivo) : MESES_COBERTURA_RECOMENDADO
       };
     }
   }catch(e){
@@ -11754,9 +11792,9 @@ function precargarPerfil(){
 }
 
 async function guardarPerfil(){
-  const umbralAmarillo = Number(document.getElementById('input-umbral-amarillo').value) || 20;
-  const umbralRojo = Number(document.getElementById('input-umbral-rojo').value) || 35;
-  const mesesObjetivo = Number(document.getElementById('input-meses-objetivo').value) || 3;
+  const umbralAmarillo = Number(document.getElementById('input-umbral-amarillo').value) || UMBRAL_AMARILLO_RECOMENDADO;
+  const umbralRojo = Number(document.getElementById('input-umbral-rojo').value) || UMBRAL_ROJO_RECOMENDADO;
+  const mesesObjetivo = Number(document.getElementById('input-meses-objetivo').value) || MESES_COBERTURA_RECOMENDADO;
 
   const { error } = await sb.from('perfil_financiero').upsert({
     umbral_amarillo: umbralAmarillo,
