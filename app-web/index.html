@@ -613,6 +613,26 @@
     -webkit-backface-visibility:hidden;backface-visibility:hidden;
   }
   body.con-sesion:not(.freaky-vuelo-desactivado) .freaky-personaje{display:flex;}
+  /* El contenedor de arriba (.freaky-personaje) es el que GSAP mueve de un
+     lado a otro de la pantalla (x/y) durante los vuelos, y el que usan los
+     gestos de un solo disparo (freakyTrigger). La respiración/balanceo en
+     reposo vivía en el MISMO elemento como un tween de GSAP en loop infinito
+     (repeat:-1, nunca paraba) — desde que Freaky dejó de volar sin parar
+     (ver freakyIrAPerchaDePantalla) pasa casi todo el tiempo en reposo, así
+     que ese tween corría de forma continua durante sesiones enteras, y el
+     usuario lo reportó como parpadeo persistente. Se separa en un
+     contenedor propio (.freaky-cuerpo) que anima con @keyframes de CSS en
+     vez de JS — el navegador compone esto de forma mucho más estable que un
+     tween que reescribe el transform en cada frame para siempre — sin tocar
+     el transform del contenedor externo, que sigue siendo 100% de GSAP.
+  */
+  .freaky-cuerpo{position:relative;width:100%;height:100%;}
+  @media (prefers-reduced-motion: no-preference){
+    .freaky-cuerpo.freaky-reposo-flotando{animation:freaky-respirar 1.4s ease-in-out infinite;}
+    .freaky-cuerpo.freaky-reposo-sentado{animation:freaky-balanceo 3.6s ease-in-out infinite;}
+  }
+  @keyframes freaky-respirar{0%,100%{transform:scale(1,1) translateY(0);}50%{transform:scale(1.01,0.99) translateY(-5px);}}
+  @keyframes freaky-balanceo{0%,100%{transform:rotate(0deg) translateY(0);}50%{transform:rotate(-3deg) translateY(2px);}}
   .freaky-img{
     position:absolute;top:0;left:0;width:100%;height:100%;
     object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;
@@ -1169,12 +1189,14 @@
   <span class="freaky-badge" id="freaky-badge-fallback" aria-hidden="true"></span>
 </button>
 <button type="button" class="freaky-personaje" id="freaky-personaje" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
-  <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
-  <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-saludando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-ojos_cerrados" class="freaky-img" alt="" style="opacity:0;">
+  <div class="freaky-cuerpo" id="freaky-cuerpo">
+    <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
+    <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-saludando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-ojos_cerrados" class="freaky-img" alt="" style="opacity:0;">
+  </div>
   <span class="freaky-badge" id="freaky-badge" aria-hidden="true"></span>
 </button>
 <div class="freaky-burbuja-proactiva" id="freaky-burbuja-proactiva" style="display:none;">
@@ -8619,20 +8641,23 @@ function freakyMostrarPose(pose){
   });
 }
 
-let freakyIdleTween = null;
+// Antes esto era un tween de GSAP con repeat:-1 sobre #freaky-personaje —
+// nunca paraba, y desde que Freaky dejó de volar sin parar (se queda quieto
+// la mayoría del tiempo, ver freakyIrAPerchaDePantalla) ese tween corría sin
+// interrupción durante sesiones enteras, reportado como parpadeo. Ahora solo
+// alterna clases CSS sobre el contenedor interno (.freaky-cuerpo, ver CSS)
+// — la animación real vive en @keyframes, el navegador la compone aparte
+// del transform de posición que sigue controlando GSAP en el contenedor
+// externo, sin escribir estilos en cada frame desde JS.
 function freakyIniciarReposo(sentado){
-  const el = document.getElementById('freaky-personaje');
-  if(!el) return;
-  freakyIdleTween = sentado
-    // Sentado: casi sin rebote vertical (se vería como si flotara sobre la
-    // repisa en vez de estar apoyado en ella) — solo un balanceo chico.
-    ? gsap.to(el, { rotation: -3, y: '+=2', duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut' })
-    // Respiración: escala X/Y opuestas + un dejo hacia arriba, 0.7s de ida
-    // y 0.7s de vuelta (ciclo de 1.4s) — casi imperceptible, orgánico.
-    : gsap.to(el, { scaleX: 1.01, scaleY: 0.99, y: '-=5', duration: 0.7, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+  const cuerpo = document.getElementById('freaky-cuerpo');
+  if(!cuerpo) return;
+  cuerpo.classList.remove('freaky-reposo-flotando', 'freaky-reposo-sentado');
+  cuerpo.classList.add(sentado ? 'freaky-reposo-sentado' : 'freaky-reposo-flotando');
 }
 function freakyDetenerReposo(){
-  if(freakyIdleTween){ freakyIdleTween.kill(); freakyIdleTween = null; }
+  const cuerpo = document.getElementById('freaky-cuerpo');
+  if(cuerpo) cuerpo.classList.remove('freaky-reposo-flotando', 'freaky-reposo-sentado');
 }
 
 // ===== Freaky: gestos cortos (equivalentes a los triggers de una State
@@ -8723,61 +8748,64 @@ function freakyProgramarBlinkEspontaneo(){
   if(freakyReducedMotion) return;
   const espera = 4000 + Math.random() * 5000;
   setTimeout(() => {
-    if(!document.hidden && !freakyHablandoActivo && freakyIdleTween){
+    const cuerpo = document.getElementById('freaky-cuerpo');
+    const enReposo = cuerpo && (cuerpo.classList.contains('freaky-reposo-flotando') || cuerpo.classList.contains('freaky-reposo-sentado'));
+    if(!document.hidden && !freakyHablandoActivo && enReposo){
       freakyTrigger('blink');
     }
     freakyProgramarBlinkEspontaneo();
   }, espera);
 }
 
-// Busca "muebles" reales donde Freaky se pueda sentar en vez de quedarse
-// flotando en el aire: primero el chrome fijo que existe en cualquier
-// pantalla con sesión (el logo de Inicio, el botón de configuración, el FAB
-// de "+" de la barra inferior), y de la pantalla activa, tarjetas y el botón
-// de volver. Todo medido con getBoundingClientRect() en vivo, así que se
-// ajusta solo si el usuario hizo scroll o cambió de pantalla.
+// Busca "muebles" reales donde Freaky se pueda quedar, restringido a
+// elementos genuinamente position:fixed — el logo de Inicio (marca-flotante),
+// el botón de configuración y el FAB de "+" de la barra inferior. ANTES
+// también entraban .panel-tarjeta y .btn-volver, pero esos viven en el flujo
+// normal de la pantalla (se mueven con el scroll) mientras que Freaky es
+// position:fixed (nunca se mueve con el scroll) — si aterrizaba sobre una
+// tarjeta y el usuario después hacía scroll, Freaky se quedaba flotando en
+// el aire, en el punto de la pantalla donde ESA TARJETA ESTUVO, no donde
+// está ahora: por eso terminaba "en lugares donde ni siquiera está" y el
+// rastro de vuelo llevaba a un punto sin sentido (bug real reportado por el
+// usuario). Con solo chrome fijo, la posición medida con
+// getBoundingClientRect() sigue siendo válida sin importar cuánto scrollee
+// el usuario en esa pantalla — nunca se desincroniza.
 function freakyEncontrarPerchas(){
   const el = document.getElementById('freaky-personaje');
   const tam = el ? (el.offsetWidth || 74) : 74;
-  const pantallaActiva = document.querySelector('.pantalla.activa');
   const candidatosSel = [
-    { sel: '.marca-flotante', raiz: document },
-    { sel: '.btn-config-flotante', raiz: document },
-    { sel: '.nav-inferior-fab', raiz: document },
-    { sel: '.panel-tarjeta', raiz: pantallaActiva },
-    { sel: '.btn-volver', raiz: pantallaActiva },
+    // El logo es el único de donde Freaky CUELGA (agarrado del borde de
+    // abajo) en vez de sentarse encima — pedido explícito del usuario. No
+    // hay una pose de "colgando" en el set de artes (flotando/pensando/
+    // hablando/sentado/saludando/ojos_cerrados) — se usa "flotando" como la
+    // aproximación menos rara: no implica que esté parado sobre algo.
+    { sel: '.marca-flotante', tipo: 'colgar' },
+    { sel: '.btn-config-flotante', tipo: 'sentar' },
+    { sel: '.nav-inferior-fab', tipo: 'sentar' },
   ];
 
-  const rects = [];
-  candidatosSel.forEach(({ sel, raiz }) => {
-    if(!raiz) return;
-    raiz.querySelectorAll(sel).forEach(cand => {
-      // offsetParent no sirve aquí: los botones fijos (marca-flotante,
-      // btn-config-flotante) son position:fixed, y esos SIEMPRE reportan
-      // offsetParent null aunque estén visibles — no es una señal de oculto.
-      // Un rect de tamaño 0 (display:none, o un ancestro oculto) ya se filtra solo abajo.
+  const perchas = [];
+  candidatosSel.forEach(({ sel, tipo }) => {
+    document.querySelectorAll(sel).forEach(cand => {
+      // offsetParent no sirve aquí: al ser position:fixed, siempre reporta
+      // offsetParent null aunque el botón esté visible — no es señal de
+      // oculto. Un rect de tamaño 0 (display:none, o ancestro oculto) ya se
+      // filtra abajo con el chequeo de ancho/alto.
       const r = cand.getBoundingClientRect();
       if(r.width < 18 || r.height < 18) return;
-      // No deja que se salga de la pantalla visible por ningún lado (el
-      // margen contra la barra de estado se aplica después, al calcular el
-      // punto de aterrizaje — el logo mismo puede estar más arriba que eso).
       if(r.bottom > window.innerHeight - 4 || r.left < 0 || r.right > window.innerWidth) return;
-      rects.push(r);
+      const x = r.left + r.width / 2 - tam / 2;
+      const y = tipo === 'colgar'
+        ? r.bottom - tam * 0.22 // cuelga hacia abajo, agarrado del borde inferior
+        : r.top - tam * 0.72;   // sentado encima, apoyado en el borde superior
+      perchas.push({
+        tipo,
+        x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
+        y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
+      });
     });
   });
-
-  return rects.map(r => {
-    // Botones chicos (círculos de 44-60px): se sienta centrado arriba.
-    // Tarjetas/elementos más anchos: se sienta en la esquina superior derecha,
-    // como colgado del borde, que se lee más natural que estar centrado.
-    const chico = r.width < 70 && r.height < 70;
-    const x = chico ? (r.left + r.width / 2 - tam / 2) : (r.right - tam * 0.6);
-    const y = chico ? (r.top - tam * 0.72) : (r.top - tam * 0.62);
-    return {
-      x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
-      y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
-    };
-  });
+  return perchas;
 }
 
 let freakyUltimaEstela = 0;
@@ -8823,13 +8851,13 @@ function freakyIrAPerchaDePantalla(){
   if(!freakyHablandoActivo) freakyMostrarPose('flotando'); // despega: si estaba sentado, vuelve a la pose de vuelo
 
   const perchas = freakyEncontrarPerchas();
-  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el chrome
-  // fijo global siempre cuenta) se conforma con un punto libre de la zona seguro.
-  const aterrizaEnPercha = perchas.length > 0;
+  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el logo,
+  // el botón de configuración y el "+" son chrome global, casi siempre
+  // presentes) se conforma con un punto libre de la zona segura.
+  const percha = perchas.length > 0 ? perchas[Math.floor(Math.random() * perchas.length)] : null;
   let destinoX, destinoY;
-  if(aterrizaEnPercha){
-    const p = perchas[Math.floor(Math.random() * perchas.length)];
-    destinoX = p.x; destinoY = p.y;
+  if(percha){
+    destinoX = percha.x; destinoY = percha.y;
   } else {
     const zona = freakyZonaSegura();
     destinoX = zona.left + Math.random() * (zona.right - zona.left);
@@ -8846,9 +8874,13 @@ function freakyIrAPerchaDePantalla(){
   const tl = gsap.timeline({
     onUpdate: () => freakyDejarEstela(el),
     onComplete: () => {
-      freakyEstaSentado = aterrizaEnPercha;
-      freakyIniciarReposo(aterrizaEnPercha);
-      if(aterrizaEnPercha && !freakyHablandoActivo) freakyMostrarPose('sentado');
+      // 'sentar' → pose sentado, quieto encima. 'colgar' o sin percha (punto
+      // libre) → pose flotando, colgando/flotando debajo o en el aire — en
+      // ningún caso parado sobre nada que no sea real.
+      const sentado = percha ? percha.tipo === 'sentar' : false;
+      freakyEstaSentado = sentado;
+      freakyIniciarReposo(sentado);
+      if(!freakyHablandoActivo) freakyMostrarPose(sentado ? 'sentado' : 'flotando');
       // Sin reprogramar el siguiente vuelo: se queda aquí hasta el próximo
       // cambio de pantalla real.
     }
@@ -12952,8 +12984,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 23;
+const VERSION_APP_ACTUAL = 24;
 const CHANGELOG_APP = [
+  {
+    version: 24,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Rediseño completo de dónde y cómo se mueve Freaky: ahora solo se posa en cosas que de verdad no se mueven (el logo, el botón de configuración, el "+"), del logo se cuelga en vez de sentarse encima, y su respiración en reposo ya no debería parpadear.'
+    ],
+    cambios_en: [
+      "Complete redesign of where and how Freaky moves: he now only lands on things that truly never move (the logo, the settings button, the \"+\"), hangs from the logo instead of sitting on it, and his idle breathing shouldn't flicker anymore."
+    ]
+  },
   {
     version: 23,
     fecha: '2026-08-20',
