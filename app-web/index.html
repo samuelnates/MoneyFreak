@@ -5437,9 +5437,51 @@ async function reprogramarNotificaciones(){
   if(notifications.length > 0) await LN.schedule({ notifications });
 }
 
+// Bug real reportado por el usuario ("loop en el onboarding... garantizamos
+// que el usuario no confíe"): esto vivía en localStorage, exclusivo del
+// navegador/dispositivo donde se puso — pero el link de confirmación de
+// correo siempre carga la página desde cero, a veces en un navegador
+// distinto al que hizo el registro (común en celular: el correo se abre en
+// la app de Mail, que usa su propio navegador in-app, con su propio
+// localStorage vacío). En ese contexto nuevo, el aviso se pedía otra vez
+// aunque ya se hubiera aceptado segundos antes. Se mueve a la base de datos
+// (perfil_financiero.terminos_aceptados_en), igual que avatar_asesor —
+// sobrevive el cambio de navegador porque la verdad vive del lado del
+// servidor, no en el dispositivo.
+let terminosAceptadosCache = null;
+async function terminosYaAceptados(){
+  if(terminosAceptadosCache !== null) return terminosAceptadosCache;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('terminos_aceptados_en').maybeSingle();
+    if(data?.terminos_aceptados_en){
+      terminosAceptadosCache = true;
+      return true;
+    }
+    // Si se registró por correo, crearCuenta() ya exigió el checkbox marcado
+    // (y antes de eso, haber abierto y leído el aviso de verdad) antes de
+    // poder crear la cuenta — no hay que volver a preguntar solo porque esta
+    // sesión nunca vio ese momento.
+    const { data: { user } } = await sb.auth.getUser();
+    if(user?.app_metadata?.provider === 'email'){
+      marcarTerminosAceptados();
+      return true;
+    }
+    terminosAceptadosCache = false;
+    return false;
+  }catch(e){
+    console.warn('No se pudo revisar terminos_aceptados_en (¿ya corriste la migración?)', e);
+    return false;
+  }
+}
+function marcarTerminosAceptados(){
+  terminosAceptadosCache = true;
+  sb.from('perfil_financiero').upsert({ terminos_aceptados_en: new Date().toISOString() }, { onConflict: 'user_id' })
+    .then(({ error }) => { if(error) console.warn('No se pudo guardar terminos_aceptados_en (¿ya corriste la migración?)', error); });
+}
+
 async function debeMostrarOnboardingRapido(){
   if(modoDemo) return false;
-  if(localStorage.getItem('terminos_aceptados') !== '1') return true;
+  if(!(await terminosYaAceptados())) return true;
   if(localStorage.getItem('onboarding_rapido_omitido') === '1') return false;
   try{
     const [{ count: cIngresos }, { count: cCuentas }, { count: cDeudas }] = await Promise.all([
@@ -5460,7 +5502,7 @@ async function entrarAlPanelConOnboarding(){
   }
   if(await debeMostrarOnboardingRapido()){
     mostrar('vista-onboarding-rapido');
-    const faltaAceptar = localStorage.getItem('terminos_aceptados') !== '1';
+    const faltaAceptar = !(await terminosYaAceptados()); // ya cacheado, no repite la consulta
     document.getElementById('onb-config-inicial').style.display = faltaAceptar ? 'block' : 'none';
     if(faltaAceptar){
       const check = document.getElementById('check-privacidad-onb');
@@ -5484,7 +5526,7 @@ function validarConfigInicialOnboarding(){
     mostrarAlerta(t('registro.error_acepta_privacidad'));
     return false;
   }
-  localStorage.setItem('terminos_aceptados', '1');
+  marcarTerminosAceptados();
   bloque.style.display = 'none';
   return true;
 }
@@ -5756,7 +5798,9 @@ async function crearCuenta(){
     errDiv.style.display = 'block';
     return;
   }
-  localStorage.setItem('terminos_aceptados', '1'); // evita repetir esto en el onboarding rápido
+  // Ya no se marca aquí con localStorage (ver terminosYaAceptados) — se
+  // detecta solo por el proveedor ('email') la primera vez que el usuario
+  // confirma su correo y entra, sin importar en qué navegador lo haga.
   const captchaToken = (window.TURNSTILE_SITE_KEY && typeof turnstile !== 'undefined' && turnstileWidgetIdRegistro !== null)
     ? turnstile.getResponse(turnstileWidgetIdRegistro)
     : undefined;
@@ -13225,8 +13269,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 28;
+const VERSION_APP_ACTUAL = 29;
 const CHANGELOG_APP = [
+  {
+    version: 29,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido de fondo el loop de "vuelve a pedir aceptar términos" al confirmar tu correo en un dispositivo o navegador distinto al que usaste para registrarte.',
+      'Corregido que "volver" a veces regresara al formulario de crear cuenta como si no te hubieras registrado.'
+    ],
+    cambios_en: [
+      'Properly fixed the "asks you to accept terms again" loop when confirming your email on a different device or browser than the one you signed up with.',
+      'Fixed "back" sometimes returning to the sign-up form as if you had never registered.'
+    ]
+  },
   {
     version: 28,
     fecha: '2026-08-20',
@@ -13647,6 +13703,23 @@ inicializarIdioma();
 init();
 inicializarGestosSwipe();
 inicializarChequeoVersion();
+
+// Bug real reportado por el usuario ("loop en el onboarding... cuando le
+// das volver te regresa al formulario de crear cuenta"): el navegador
+// puede restaurar una página entera desde su caché de "atrás/adelante"
+// (bfcache) en vez de recargarla — en Safari/iOS es agresivo con esto. Si
+// eso pasa justo después de confirmar el correo o elegir el avatar, el
+// usuario ve la última pantalla que quedó visible ANTES de navegar (ej. el
+// formulario de registro ya usado), completamente desconectada del estado
+// real de la sesión. Se vuelve a revisar la sesión real cada vez que esto
+// pasa, en vez de confiar en lo que haya quedado en pantalla.
+window.addEventListener('pageshow', (event) => {
+  if(!event.persisted || !sb) return;
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if(session) entrarAlPanelConOnboarding();
+    else mostrar('vista-login');
+  });
+});
 </script>
 </body>
 </html>
