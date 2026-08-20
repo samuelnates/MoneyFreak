@@ -941,9 +941,9 @@
   .login-caja .logo-mark{width:46px;height:46px;margin-bottom:12px;}
   .logo-mark svg{width:100%;height:100%;display:block;}
   .login-caja h1{margin-bottom:6px;font-size:22px;}
-  .login-caja .subtitulo{margin-bottom:18px;}
+  .login-caja .subtitulo{margin-bottom:32px;}
   .login-features{
-    list-style:none;margin:0 0 28px;padding:0;text-align:left;
+    list-style:none;margin:28px 0 20px;padding:0;text-align:left;
     display:flex;flex-direction:column;gap:8px;
   }
   .login-features li{
@@ -1269,14 +1269,6 @@
     <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
     <h1>Money <span id="span-titulo-freak">Freak</span></h1>
     <p class="subtitulo" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
-    <!-- Google rechazó la verificación de marca de OAuth porque "tu página
-         principal no puede ser solo una pantalla de login" — necesita
-         explicar qué hace la app de verdad, no un tagline de 5 palabras. -->
-    <ul class="login-features" aria-label="Qué hace Money Freak">
-      <li data-i18n="login.feature_1">Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.</li>
-      <li data-i18n="login.feature_2">Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.</li>
-      <li data-i18n="login.feature_3">Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.</li>
-    </ul>
     <button type="button" class="btn-grande" id="btn-login-biometrico" style="display:none;margin-bottom:14px;" onclick="iniciarSesionBiometrico()" data-i18n="login.entrar_face_id">Entrar con Face ID</button>
     <form onsubmit="event.preventDefault(); iniciarSesion();">
       <div class="campo">
@@ -1301,6 +1293,17 @@
     </button>
     <button class="btn-grande secundario" onclick="abrirCrearCuenta()" data-i18n="login.crear_cuenta">Crear cuenta</button>
     <button class="btn-link-tenue" onclick="verMuestra()" data-i18n="login.ver_muestra">¿Quieres ver un ejemplo primero?</button>
+    <!-- Bajado hasta acá (pedido del usuario, "no me gustó dónde lo
+         pusiste, que no estorbe") — antes vivía arriba del formulario y
+         empujaba el login hacia abajo. Sigue cumpliendo lo que pidió Google
+         (que la página principal describa la funcionalidad de la app),
+         solo que ya no compite con el login por la atención de quien solo
+         quiere entrar. -->
+    <ul class="login-features" aria-label="Qué hace Money Freak">
+      <li data-i18n="login.feature_1">Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.</li>
+      <li data-i18n="login.feature_2">Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.</li>
+      <li data-i18n="login.feature_3">Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.</li>
+    </ul>
     <!-- La verificación de marca de Google exige que la política de
          privacidad esté enlazada de forma visible en la página principal
          misma, no solo registrada en la config de OAuth. Antes privacidad.html
