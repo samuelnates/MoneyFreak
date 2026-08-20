@@ -671,6 +671,13 @@
     padding:20px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;
   }
   .asesor-tarjeta img{width:120px;height:120px;object-fit:contain;}
+  .asesor-tarjeta-titulo{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--texto);}
+  .asesor-tarjeta-desc{font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue);line-height:1.5;}
+  .asesor-tarjeta-habilidad{
+    font-family:var(--sans);font-size:11px;color:var(--texto-tenue);line-height:1.4;
+    background:var(--bg);border:1px solid var(--borde);border-radius:10px;padding:8px 10px;
+  }
+  .asesor-tarjeta-habilidad b{color:var(--texto);font-weight:600;}
   .asesor-tarjeta button{width:100%;}
 
   .panel-freaky-card{
@@ -802,6 +809,7 @@
     border:solid var(--acento-texto);border-width:0 2px 2px 0;transform:rotate(45deg);
   }
   .check-fila input[type=checkbox]:focus-visible{outline:2px solid var(--texto-tenue);outline-offset:2px;}
+  .check-fila input[type=checkbox]:disabled{opacity:.35;cursor:not-allowed;}
   .check-fila label{margin-bottom:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--texto);font-weight:400;}
   .fila-filtros{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .fila-filtros select{flex:1;min-width:150px;min-height:44px;margin-bottom:0;font-size:13.5px;padding:10px 4px;}
@@ -1075,7 +1083,7 @@
     /* Pantallas de contenido (dashboards): más anchas que un formulario, no una columna angosta perdida en medio de la pantalla */
     .pantalla{max-width:720px;}
     #vista-inicio, #vista-balance, #vista-salud, #vista-flujo, #vista-simulador, #vista-cuentas, #vista-score{max-width:920px;}
-    #vista-privacidad{max-width:760px;}
+    #vista-config-general, #vista-seguridad-privacidad, #vista-reportes{max-width:760px;}
 
     .panel-grid{
       display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;
@@ -1262,7 +1270,7 @@
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M21.35 11.1h-9.17v2.98h5.4c-.23 1.4-1.63 4.1-5.4 4.1-3.25 0-5.9-2.7-5.9-6s2.65-6 5.9-6c1.85 0 3.09.79 3.8 1.47l2.6-2.5C16.9 3.6 14.6 2.6 12.18 2.6 6.98 2.6 2.78 6.8 2.78 12s4.2 9.4 9.4 9.4c5.4 0 9-3.8 9-9.15 0-.62-.07-1.09-.17-1.15Z"/></svg>
       <span data-i18n="login.google">Continuar con Google</span>
     </button>
-    <button class="btn-grande secundario" onclick="mostrar('vista-crear-cuenta')" data-i18n="login.crear_cuenta">Crear cuenta</button>
+    <button class="btn-grande secundario" onclick="abrirCrearCuenta()" data-i18n="login.crear_cuenta">Crear cuenta</button>
     <button class="btn-link-tenue" onclick="verMuestra()" data-i18n="login.ver_muestra">¿Quieres ver un ejemplo primero?</button>
   </div>
 </div>
@@ -1299,9 +1307,10 @@
     <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
   </div>
   <div class="check-fila">
-    <input type="checkbox" id="check-privacidad-registro">
+    <input type="checkbox" id="check-privacidad-registro" disabled>
     <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
   </div>
+  <div class="aviso" id="aviso-lee-primero-registro" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
   <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
   <div id="registro-error" class="aviso" style="display:none;"></div>
   <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
@@ -1406,9 +1415,10 @@
       <button type="button" data-tema="dark" onclick="elegirTemaOnboarding('dark')">Oscuro</button>
     </div>
     <div class="check-fila">
-      <input type="checkbox" id="check-privacidad-onb">
+      <input type="checkbox" id="check-privacidad-onb" disabled>
       <label for="check-privacidad-onb" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
     </div>
+    <div class="aviso" id="aviso-lee-primero-onb" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
   </div>
 
@@ -2086,7 +2096,20 @@
 <div id="vista-privacidad" class="pantalla">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-inicio')">‹</button>
-    <h1 data-i18n="sidebar.configuracion">Configuración y privacidad</h1>
+    <h1 data-i18n="sidebar.configuracion">Configuración</h1>
+  </div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-config-general')" data-i18n="config.menu_general_boton">Configuración general</button>
+  <div class="aviso" data-i18n="config.menu_general_desc">Idioma, tema, notificaciones, y cómo se comporta Freaky.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-seguridad-privacidad')" data-i18n="config.menu_seguridad_boton">Seguridad y privacidad</button>
+  <div class="aviso" data-i18n="config.menu_seguridad_desc">Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-reportes')" data-i18n="config.menu_reportes_boton">Reportes</button>
+  <div class="aviso" data-i18n="config.menu_reportes_desc">Radiografía financiera con IA, para analizar tus finanzas a fondo.</div>
+</div>
+
+<div id="vista-config-general" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_general_boton">Configuración general</h1>
   </div>
   <h2 data-i18n="idioma.label">Idioma</h2>
   <div class="rango-botones selector-idioma" id="selector-idioma">
@@ -2101,13 +2124,6 @@
     <button type="button" data-tema="dark" onclick="cambiarTema('dark')">Oscuro</button>
   </div>
   <div class="aviso" data-i18n="config.apariencia_aviso">Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.</div>
-
-  <h2 data-i18n="config.proteccion_h2">Cómo protegemos tu información</h2>
-  <div class="aviso" data-i18n="config.proteccion_aviso1">Tus datos están aislados por usuario a nivel de base de datos (Row Level Security) — ni siquiera otro usuario con su propia cuenta en esta misma app puede ver tus cuentas, bienes o deudas. No es solo la pantalla la que lo oculta, es la base de datos la que lo bloquea.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso2">Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso3">No vendemos ni compartimos tu información financiera con nadie. Los únicos servicios externos que se consultan son cotizaciones públicas de acciones y tipos de cambio — nunca reciben tus datos personales, solo símbolos de acciones y monedas.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso4">Tu sesión se cierra sola después de 15 minutos sin actividad, para proteger tu información si dejas el dispositivo abierto o lo compartes con alguien más.</div>
-  <button class="btn-grande secundario btn-escritura" id="btn-desactivar-biometria" style="display:none;" onclick="desactivarBiometria()" data-i18n="privacidad.desactivar_biometria">Desactivar Face ID / huella</button>
 
   <div id="seccion-notificaciones" style="display:none;">
     <h2 data-i18n="notif.titulo">Notificaciones</h2>
@@ -2147,11 +2163,19 @@
     <label for="input-dias-aviso-tarjeta" data-i18n="freaky.dias_aviso_tarjeta_label">Avisarme de un pago de tarjeta con cuántos días de anticipación</label>
     <input type="number" id="input-dias-aviso-tarjeta" min="1" max="30" step="1" placeholder="5" onchange="guardarDiasAvisoTarjeta()">
   </div>
+</div>
 
-  <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
-  <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
-  <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
-  <button class="btn-grande secundario" id="btn-radiografia-auto" onclick="generarRadiografiaAutomatica(false)" data-i18n="config.radiografia_boton_auto" style="margin-top:8px;">Generar automáticamente (beta interna)</button>
+<div id="vista-seguridad-privacidad" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_seguridad_boton">Seguridad y privacidad</h1>
+  </div>
+  <h2 id="seccion-proteccion-datos" data-i18n="config.proteccion_h2">Cómo protegemos tu información</h2>
+  <div class="aviso" data-i18n="config.proteccion_aviso1">Tus datos están aislados por usuario a nivel de base de datos (Row Level Security) — ni siquiera otro usuario con su propia cuenta en esta misma app puede ver tus cuentas, bienes o deudas. No es solo la pantalla la que lo oculta, es la base de datos la que lo bloquea.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso2">Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso3">No vendemos ni compartimos tu información financiera con nadie. Los únicos servicios externos que se consultan son cotizaciones públicas de acciones y tipos de cambio — nunca reciben tus datos personales, solo símbolos de acciones y monedas.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso4">Tu sesión se cierra sola después de 15 minutos sin actividad, para proteger tu información si dejas el dispositivo abierto o lo compartes con alguien más.</div>
+  <button class="btn-grande secundario btn-escritura" id="btn-desactivar-biometria" style="display:none;" onclick="desactivarBiometria()" data-i18n="privacidad.desactivar_biometria">Desactivar Face ID / huella</button>
 
   <h2 data-i18n="config.control_datos_h2">Control sobre tus datos</h2>
   <button class="btn-grande secundario" onclick="exportarMisDatos()" data-i18n="config.descargar_datos">Descargar todos mis datos (JSON)</button>
@@ -2161,6 +2185,17 @@
   <h2 data-i18n="legal.aviso_legal_h2">Aviso legal</h2>
   <div class="aviso" data-i18n="config.aviso_legal_corto">Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos y simulaciones son estimaciones, no garantía de resultados.</div>
   <button class="btn-grande secundario" onclick="abrirAvisoLegal('privacidad')" data-i18n="config.ver_aviso_completo">Ver aviso completo</button>
+</div>
+
+<div id="vista-reportes" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_reportes_boton">Reportes</h1>
+  </div>
+  <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
+  <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
+  <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
+  <button class="btn-grande secundario" id="btn-radiografia-auto" onclick="generarRadiografiaAutomatica(false)" data-i18n="config.radiografia_boton_auto" style="margin-top:8px;">Generar automáticamente (beta interna)</button>
 </div>
 
 <div id="vista-ayuda-ia" class="pantalla pantalla-chat">
@@ -2201,7 +2236,7 @@
 
 <div id="vista-radiografia-resultado" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <button class="btn-volver" onclick="mostrar('vista-reportes')">‹</button>
     <h1 data-i18n="radiografia.resultado_titulo">Tu radiografía financiera</h1>
   </div>
   <div id="radiografia-resultado-contenido"></div>
@@ -2957,9 +2992,11 @@ function mostrar(idVista){
   if(idVista === 'vista-cuentas-deudas') cargarDeudas();
   if(idVista === 'vista-cuentas-transferencias') cargarTransferencias();
   if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
-  if(idVista === 'vista-privacidad'){
+  if(idVista === 'vista-seguridad-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
     if(btnDesactivar) btnDesactivar.style.display = (window.Capacitor?.isNativePlatform?.() && localStorage.getItem('biometria_activada') === '1') ? '' : 'none';
+  }
+  if(idVista === 'vista-config-general'){
     inicializarSeccionNotificaciones();
     cargarPreferenciaAvisoTarjeta();
   }
@@ -3165,7 +3202,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Flujo de efectivo',
     'sidebar.gastos': 'Gastos y presupuesto',
     'sidebar.simulador': 'Simulador de crédito',
-    'sidebar.configuracion': 'Configuración y privacidad',
+    'sidebar.configuracion': 'Configuración',
     'sidebar.salir': 'Salir',
     'sidebar.salir_muestra': 'Salir de la muestra',
     'panel.score.titulo': 'Score Money Freak',
@@ -3215,7 +3252,7 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Hoy corta tu tarjeta {0} — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'panel.insight_corte_proximo': 'Tu tarjeta {0} corta en {1} días — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'onboarding_rapido.titulo': 'Antes de empezar',
-    'onboarding_rapido.subtitulo': '5 números para darte una primera evaluación en menos de un minuto. Después puedes afinar todo con detalle.',
+    'onboarding_rapido.subtitulo': '5 números para saber cómo vas, en menos de un minuto. Luego afinas todo con calma.',
     'onboarding_rapido.aviso_config_inicial': 'Confirma esto antes de seguir.',
     'onboarding_rapido.ingreso_label': 'Ingreso mensual aproximado',
     'onboarding_rapido.liquido_label': 'Dinero líquido (cuentas, efectivo)',
@@ -3223,8 +3260,8 @@ const TRADUCCIONES = {
     'onboarding_rapido.gastos_label': 'Gastos mensuales aproximados',
     'onboarding_rapido.ahorro_label': 'Ahorro e inversión (lo que ya tienes guardado)',
     'onboarding_rapido.ver_evaluacion': 'Ver mi primera evaluación',
-    'onboarding_rapido.chat_intro_1': '¡Hola! Soy Freaky, tu mentor financiero. Te voy a ayudar a llevar el control de tu dinero: puedo avisarte si te alcanza el mes, registrar tus gastos con solo describírtelos, y ayudarte a navegar la app cuando lo necesites.',
-    'onboarding_rapido.chat_intro_2': 'Para empezar bien, te voy a pedir 5 números — nada exacto, solo un estimado. Vamos.',
+    'onboarding_rapido.chat_intro_1': 'Hola, soy Freaky. De aquí en adelante te echo la mano con tu dinero: te aviso si te alcanza el mes, anoto tus gastos nomás contándomelos, y si te pierdes en la app, aquí ando.',
+    'onboarding_rapido.chat_intro_2': 'Para arrancar te voy a pedir 5 números — nada exacto, nomás un estimado. Vamos.',
     'onboarding_rapido.chat_p_ingreso': '¿Cuánto es tu ingreso mensual aproximado?',
     'onboarding_rapido.chat_p_liquido': '¿Cuánto dinero líquido tienes hoy (cuentas, efectivo)?',
     'onboarding_rapido.chat_p_deuda': '¿Cuánto debes en total, sumando todo?',
@@ -3396,8 +3433,10 @@ const TRADUCCIONES = {
     'tour.p5.texto': 'Aquí ves tu saldo líquido proyectado día a día, sumando tu sueldo y restando tus pagos y aportaciones — para saber con tiempo si vas a llegar bien de efectivo.',
     'tour.p6.titulo': 'Simulador de crédito',
     'tour.p6.texto': 'Antes de pedir un crédito, simula el pago mensual real (con seguro y comisión incluidos) y si te conviene según tus finanzas actuales.',
-    'tour.p7.titulo': 'Configuración y privacidad',
-    'tour.p7.texto': 'Aquí puedes cambiar el tema claro/oscuro de la app, y tus datos están aislados y protegidos por usuario — puedes exportarlos o borrarlos por completo cuando quieras.',
+    'tour.p7.titulo': 'Configuración general',
+    'tour.p7.texto': 'Aquí cambias el idioma, el tema claro/oscuro, tus notificaciones, y cómo se comporta Freaky.',
+    'tour.p7b.titulo': 'Seguridad y privacidad',
+    'tour.p7b.texto': 'Tus datos están aislados y protegidos por usuario — puedes exportarlos o borrarlos por completo cuando quieras.',
     'tour.pfreaky.titulo': 'Freaky, tu asistente',
     'tour.pfreaky.texto': 'Este botón (arriba a la derecha) te lleva con Freaky en cualquier pantalla — tu mentor financiero. Pregúntale cómo usar la app, cómo vas de dinero, o pídele que repita este recorrido.',
     'tour.p8.titulo': 'Eso es todo',
@@ -3503,6 +3542,7 @@ const TRADUCCIONES = {
     'comun.confirmar': 'Confirmar',
     'tour.ver_aria': 'Ver tour guiado',
     'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
+    'registro.lee_primero': 'Ábrelo y léelo — el check se activa solo cuando regreses.',
     'legal.titulo': 'Aviso de privacidad',
     'legal.aviso_legal_h2': 'Aviso legal',
     'legal.aviso_legal_texto': 'Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos, simulaciones y recomendaciones que ves (salud financiera, simulador de crédito, capacidad de pago, etc.) son estimaciones basadas en la información que tú capturas — no son garantía de resultados, tasas reales, ni de aprobación de ningún crédito. Tú eres responsable de las decisiones financieras que tomes.',
@@ -3520,6 +3560,12 @@ const TRADUCCIONES = {
     'recuperar.nueva_label': 'Escribe tu nueva contraseña',
     'recuperar.guardar': 'Guardar contraseña',
     'login.modal_privacidad_texto': 'Tus datos financieros son privados. Solo tú puedes verlos.',
+    'config.menu_general_boton': 'Configuración general',
+    'config.menu_general_desc': 'Idioma, tema, notificaciones, y cómo se comporta Freaky.',
+    'config.menu_seguridad_boton': 'Seguridad y privacidad',
+    'config.menu_seguridad_desc': 'Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.',
+    'config.menu_reportes_boton': 'Reportes',
+    'config.menu_reportes_desc': 'Radiografía financiera con IA, para analizar tus finanzas a fondo.',
     'config.apariencia_h2': 'Apariencia',
     'config.apariencia_aviso': 'Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.',
     'config.proteccion_h2': 'Cómo protegemos tu información',
@@ -3571,8 +3617,17 @@ const TRADUCCIONES = {
     'freaky.aviso_recordarmelo': 'Sí, recuérdame',
     'freaky.aviso_teaser': 'Necesito decirte algo 👀',
     'asesor.titulo': 'Elige a Freaky',
-    'asesor.subtitulo': 'Es el mismo mentor de siempre — solo cambia cómo se ve.',
+    'asesor.subtitulo': 'Mismo cerebro, distinta onda — elige con quién te cae mejor hablar de dinero.',
     'asesor.elegir': 'Elegir',
+    'asesor.avatar1.nombre': 'El Sabio',
+    'asesor.avatar1.desc': 'Con la calma de quien ya vio de todo. Te explica las cosas con paciencia, sin apuros y sin hacerte sentir mal por tus números.',
+    'asesor.avatar1.habilidad': '<b>Habilidad especial:</b> convierte cualquier cifra fea en una explicación que sí entiendes.',
+    'asesor.avatar2.nombre': 'La Estratega',
+    'asesor.avatar2.desc': 'Directa y al grano. No te da vueltas: te dice justo dónde se te está yendo el dinero.',
+    'asesor.avatar2.habilidad': '<b>Habilidad especial:</b> detecta patrones raros en tus gastos antes que tú.',
+    'asesor.avatar3.nombre': 'El Cómplice',
+    'asesor.avatar3.desc': 'El que te anima cuando las cosas se ponen pesadas. Celebra contigo cada logro, por chico que sea.',
+    'asesor.avatar3.habilidad': '<b>Habilidad especial:</b> hace que hablar de dinero se sienta menos pesado.',
     'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
     'freaky.dias_aviso_tarjeta_label': 'Avisarme de un pago de tarjeta con cuántos días de anticipación',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
@@ -4033,7 +4088,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Cash flow',
     'sidebar.gastos': 'Expenses & budget',
     'sidebar.simulador': 'Credit simulator',
-    'sidebar.configuracion': 'Settings & privacy',
+    'sidebar.configuracion': 'Settings',
     'sidebar.salir': 'Sign out',
     'sidebar.salir_muestra': 'Exit sample',
     'panel.score.titulo': 'Money Freak Score',
@@ -4083,7 +4138,7 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Your {0} card closes today — check your statement and log your next payment to avoid interest.',
     'panel.insight_corte_proximo': 'Your {0} card closes in {1} days — check your statement and log your next payment to avoid interest.',
     'onboarding_rapido.titulo': 'Before you start',
-    'onboarding_rapido.subtitulo': "5 numbers to get a first evaluation in under a minute. You can fine-tune everything in detail afterward.",
+    'onboarding_rapido.subtitulo': "5 numbers to see where you stand, in under a minute. Fine-tune everything later, no rush.",
     'onboarding_rapido.aviso_config_inicial': 'Confirm this before continuing.',
     'onboarding_rapido.ingreso_label': 'Approximate monthly income',
     'onboarding_rapido.liquido_label': 'Liquid money (accounts, cash)',
@@ -4091,8 +4146,8 @@ const TRADUCCIONES = {
     'onboarding_rapido.gastos_label': 'Approximate monthly expenses',
     'onboarding_rapido.ahorro_label': 'Savings & investments (what you already have saved)',
     'onboarding_rapido.ver_evaluacion': 'See my first evaluation',
-    'onboarding_rapido.chat_intro_1': "Hi! I'm Freaky, your financial mentor. I'll help you stay on top of your money: I can tell you if you can afford your month, log your expenses just by you describing them, and help you find your way around the app whenever you need.",
-    'onboarding_rapido.chat_intro_2': "To get started, I'll ask you for 5 numbers — nothing exact, just a rough estimate. Let's go.",
+    'onboarding_rapido.chat_intro_1': "Hi, I'm Freaky. From here on I've got your back with your money: I'll give you a heads-up if your month's tight, log expenses just by you telling me about them, and if you ever get lost in the app, I'm right here.",
+    'onboarding_rapido.chat_intro_2': "To kick things off I'll ask you for 5 numbers — nothing exact, just a rough guess. Let's go.",
     'onboarding_rapido.chat_p_ingreso': "What's your approximate monthly income?",
     'onboarding_rapido.chat_p_liquido': 'How much liquid money do you have today (accounts, cash)?',
     'onboarding_rapido.chat_p_deuda': 'How much do you owe in total, adding everything up?',
@@ -4264,8 +4319,10 @@ const TRADUCCIONES = {
     'tour.p5.texto': 'Here you see your projected liquid balance day by day, adding your income and subtracting your payments and contributions — so you know ahead of time if you\'ll have enough cash.',
     'tour.p6.titulo': 'Credit simulator',
     'tour.p6.texto': 'Before applying for a loan, simulate the real monthly payment (insurance and fees included) and whether it makes sense given your current finances.',
-    'tour.p7.titulo': 'Settings & privacy',
-    'tour.p7.texto': 'Here you can change the app\'s light/dark theme, and your data is isolated and protected per user — you can export or delete it completely whenever you want.',
+    'tour.p7.titulo': 'General settings',
+    'tour.p7.texto': "Here you change the language, light/dark theme, your notifications, and how Freaky behaves.",
+    'tour.p7b.titulo': 'Security & privacy',
+    'tour.p7b.texto': "Your data is isolated and protected per user — you can export or delete it completely whenever you want.",
     'tour.pfreaky.titulo': 'Freaky, your assistant',
     'tour.pfreaky.texto': "This button (top-right) takes you to Freaky from any screen — your financial mentor. Ask how to use the app, how your money's doing, or have it repeat this tour.",
     'tour.p8.titulo': "That's it",
@@ -4371,6 +4428,7 @@ const TRADUCCIONES = {
     'comun.confirmar': 'Confirm',
     'tour.ver_aria': 'View guided tour',
     'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
+    'registro.lee_primero': "Open it and read it — the checkbox unlocks once you come back.",
     'legal.titulo': 'Privacy notice',
     'legal.aviso_legal_h2': 'Legal notice',
     'legal.aviso_legal_texto': 'This app is a personal financial organization tool. It is not financial, investment, tax, or legal advice, and does not replace the opinion of a certified professional. The calculations, simulations, and recommendations you see (financial health, credit simulator, payment capacity, etc.) are estimates based on the information you enter — they are not a guarantee of results, real rates, or loan approval. You are responsible for the financial decisions you make.',
@@ -4388,6 +4446,12 @@ const TRADUCCIONES = {
     'recuperar.nueva_label': 'Enter your new password',
     'recuperar.guardar': 'Save password',
     'login.modal_privacidad_texto': 'Your financial data is private. Only you can see it.',
+    'config.menu_general_boton': 'General settings',
+    'config.menu_general_desc': 'Language, theme, notifications, and how Freaky behaves.',
+    'config.menu_seguridad_boton': 'Security & privacy',
+    'config.menu_seguridad_desc': 'How we protect your information, Face ID/fingerprint, and full control over your data.',
+    'config.menu_reportes_boton': 'Reports',
+    'config.menu_reportes_desc': 'AI financial X-ray, for a deep analysis of your finances.',
     'config.apariencia_h2': 'Appearance',
     'config.apariencia_aviso': 'Automatic follows your phone or computer setting, just like other apps.',
     'config.proteccion_h2': 'How we protect your information',
@@ -4439,8 +4503,17 @@ const TRADUCCIONES = {
     'freaky.aviso_recordarmelo': 'Yes, remind me',
     'freaky.aviso_teaser': 'I need to tell you something 👀',
     'asesor.titulo': 'Choose your Freaky',
-    'asesor.subtitulo': "It's the same mentor as always — only how it looks changes.",
+    'asesor.subtitulo': "Same brain, different vibe — pick whoever you'd rather talk money with.",
     'asesor.elegir': 'Choose',
+    'asesor.avatar1.nombre': 'The Sage',
+    'asesor.avatar1.desc': "Calm like someone who's seen it all. He explains things patiently, no rushing, no judging your numbers.",
+    'asesor.avatar1.habilidad': '<b>Special ability:</b> turns any ugly number into an explanation you actually get.',
+    'asesor.avatar2.nombre': 'The Strategist',
+    'asesor.avatar2.desc': "Direct and to the point. No beating around the bush — she'll tell you exactly where your money is leaking.",
+    'asesor.avatar2.habilidad': '<b>Special ability:</b> spots weird patterns in your spending before you do.',
+    'asesor.avatar3.nombre': 'The Sidekick',
+    'asesor.avatar3.desc': 'The one who cheers you up when things get heavy. Celebrates every win with you, no matter how small.',
+    'asesor.avatar3.habilidad': '<b>Special ability:</b> makes talking about money feel a lot less heavy.',
     'config.cambiar_asesor_boton': "Change Freaky's look",
     'freaky.dias_aviso_tarjeta_label': 'Warn me about a card payment how many days in advance',
     'ayuda_ia.subtitulo': 'Your financial mentor',
@@ -5061,13 +5134,33 @@ async function init(){
 
 let origenAvisoLegal = 'registro';
 
+// Antes el checkbox de "acepto el Aviso de Privacidad" se podía marcar sin
+// haber abierto el aviso ni una vez — el link estaba ahí, pero nada obligaba
+// a usarlo. Pedido explícito del usuario: forzar que de verdad lo hayan
+// visto antes de poder aceptar. Los checkboxes de registro y onboarding
+// arrancan `disabled` en el HTML — solo se habilitan aquí, al volver de
+// haberlo abierto de verdad desde ese mismo origen.
+function abrirCrearCuenta(){
+  const check = document.getElementById('check-privacidad-registro');
+  check.checked = false;
+  check.disabled = true;
+  document.getElementById('aviso-lee-primero-registro').style.display = '';
+  mostrar('vista-crear-cuenta');
+}
+
 function abrirAvisoLegal(origen){
   origenAvisoLegal = origen;
   mostrar('vista-aviso-legal');
 }
 
 function volverDeAvisoLegal(){
-  const destinos = { privacidad: 'vista-privacidad', onboarding: 'vista-onboarding-rapido' };
+  const destinos = { privacidad: 'vista-seguridad-privacidad', onboarding: 'vista-onboarding-rapido' };
+  if(origenAvisoLegal === 'registro' || origenAvisoLegal === 'onboarding'){
+    const check = document.getElementById(origenAvisoLegal === 'registro' ? 'check-privacidad-registro' : 'check-privacidad-onb');
+    const aviso = document.getElementById(origenAvisoLegal === 'registro' ? 'aviso-lee-primero-registro' : 'aviso-lee-primero-onb');
+    check.disabled = false;
+    if(aviso) aviso.style.display = 'none';
+  }
   mostrar(destinos[origenAvisoLegal] || 'vista-crear-cuenta');
 }
 
@@ -5161,7 +5254,7 @@ async function desactivarBiometria(){
   localStorage.removeItem('biometria_activada');
   localStorage.removeItem('biometria_rechazada');
   await mostrarAlerta(t('privacidad.biometria_desactivada'));
-  mostrar('vista-privacidad');
+  mostrar('vista-seguridad-privacidad');
 }
 
 const NOTIF_ID_GASTOS = 1001, NOTIF_ID_SALDOS = 1002, NOTIF_ID_REPORTE = 1003;
@@ -5267,7 +5360,14 @@ async function entrarAlPanelConOnboarding(){
   }
   if(await debeMostrarOnboardingRapido()){
     mostrar('vista-onboarding-rapido');
-    document.getElementById('onb-config-inicial').style.display = localStorage.getItem('terminos_aceptados') === '1' ? 'none' : 'block';
+    const faltaAceptar = localStorage.getItem('terminos_aceptados') !== '1';
+    document.getElementById('onb-config-inicial').style.display = faltaAceptar ? 'block' : 'none';
+    if(faltaAceptar){
+      const check = document.getElementById('check-privacidad-onb');
+      check.checked = false;
+      check.disabled = true;
+      document.getElementById('aviso-lee-primero-onb').style.display = '';
+    }
     iniciarOnboardingChat();
     return;
   }
@@ -8549,6 +8649,9 @@ function renderSelectorAsesor(){
   cont.innerHTML = ASESORES.map(a => `
     <div class="asesor-tarjeta">
       <img src="${a.carpeta}/avatar.png" alt="">
+      <div class="asesor-tarjeta-titulo">${t('asesor.' + a.id + '.nombre')}</div>
+      <div class="asesor-tarjeta-desc">${t('asesor.' + a.id + '.desc')}</div>
+      <div class="asesor-tarjeta-habilidad">${t('asesor.' + a.id + '.habilidad')}</div>
       <button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>
     </div>
   `).join('');
@@ -8571,7 +8674,7 @@ async function elegirAsesor(id){
     }
   }
   if(asesorSelectorOrigen === 'configuracion'){
-    mostrar('vista-privacidad');
+    mostrar('vista-config-general');
   } else {
     entrarAlPanelConOnboarding();
   }
@@ -11258,9 +11361,11 @@ async function calcularSaludFinanciera(){
   });
 
   let activosLiquidos = 0;
+  let hayCuentaLiquidaRegistrada = false;
   (cuentas || []).forEach(c => {
     if(c.incluir_patrimonio === false) return;
     if(c.es_liquida === false) return;
+    hayCuentaLiquidaRegistrada = true;
     const ultimo = ultimoPorCuenta[c.id];
     if(ultimo) activosLiquidos += convertirAMXN(Number(ultimo.monto), c.moneda || 'MXN');
   });
@@ -11279,7 +11384,16 @@ async function calcularSaludFinanciera(){
   const mesesCobertura = compromisosMensuales > 0 ? activosLiquidos / compromisosMensuales : null;
   let estadoLiquidez;
   if(mesesCobertura === null){
-    estadoLiquidez = activosLiquidos > 0 ? 'saludable' : 'atencion';
+    // "Sin compromisos mensuales" no es lo mismo que "sin ninguna cuenta
+    // registrada" — antes, un usuario que omitió el onboarding y no ha
+    // metido NINGÚN dato (cero cuentas) caía aquí con activosLiquidos=0 y
+    // salía marcado "atención" ("tienes margen limitado") sin ninguna base
+    // real, solo por no haber capturado nada todavía. Si de plano no hay
+    // ninguna cuenta líquida capturada, no hay nada que evaluar — se deja
+    // 'saludable' aquí para que más abajo se detecte como "sin datos" en vez
+    // de disparar una alerta falsa. Si SÍ hay una cuenta capturada con saldo
+    // real en cero, eso sigue siendo una señal real y se marca 'atención'.
+    estadoLiquidez = (!hayCuentaLiquidaRegistrada || activosLiquidos > 0) ? 'saludable' : 'atencion';
   } else if(mesesCobertura >= perfilFinanciero.meses_cobertura_objetivo){
     estadoLiquidez = 'saludable';
   } else if(mesesCobertura >= 1){
@@ -11386,8 +11500,15 @@ const TOUR_PASOS = [
     titulo: 'tour.p7.titulo',
     texto: 'tour.p7.texto',
     selector: '#selector-tema',
-    fallback: '#vista-privacidad',
-    accion: async () => { mostrar('vista-privacidad'); }
+    fallback: '#vista-config-general',
+    accion: async () => { mostrar('vista-config-general'); }
+  },
+  {
+    titulo: 'tour.p7b.titulo',
+    texto: 'tour.p7b.texto',
+    selector: '#seccion-proteccion-datos',
+    fallback: '#vista-seguridad-privacidad',
+    accion: async () => { mostrar('vista-seguridad-privacidad'); }
   },
   {
     titulo: 'tour.pfreaky.titulo',
@@ -12984,8 +13105,24 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 24;
+const VERSION_APP_ACTUAL = 25;
 const CHANGELOG_APP = [
+  {
+    version: 25,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Cada avatar de Freaky ahora tiene su propia personalidad y "habilidad especial" al elegirlo.',
+      'Configuración se dividió en 3: Configuración general, Seguridad y privacidad, y Reportes.',
+      'Aceptar el Aviso de Privacidad ahora requiere haberlo abierto y leído primero.',
+      'Corregido un consejo que decía "tienes margen limitado" sin haber capturado ningún dato todavía.'
+    ],
+    cambios_en: [
+      'Each Freaky avatar now has its own personality and "special ability" when you pick it.',
+      'Settings was split into 3: General settings, Security & privacy, and Reports.',
+      'Accepting the Privacy Notice now requires actually opening and reading it first.',
+      'Fixed a tip that said "you have limited room" before you had entered any data at all.'
+    ]
+  },
   {
     version: 24,
     fecha: '2026-08-20',
