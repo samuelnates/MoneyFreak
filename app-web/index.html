@@ -903,6 +903,11 @@
     background:none;border:none;border-left:2px solid var(--texto-tenue-2);color:var(--texto-tenue);
     border-radius:0;padding:4px 0 4px 14px;font-family:var(--sans);font-size:12px;margin-bottom:18px;line-height:1.6;
   }
+  /* Variantes para confirmaciones/errores donde un .aviso neutro pasa
+     desapercibido (ej. "ya te mandé el correo" — bug real reportado por una
+     usuaria que no distinguía si el envío había funcionado). */
+  .aviso.exito{border-left-color:var(--color-saludable);color:var(--color-saludable);font-weight:600;}
+  .aviso.error{border-left-color:var(--neg);color:var(--neg);font-weight:600;}
   .chart-caja{background:none;border-radius:0;padding:0 0 22px;border:none;border-bottom:1px solid var(--borde);margin-bottom:24px;}
   .composicion-canvas-wrap{max-width:170px;aspect-ratio:1;margin:0 auto;}
   .leyenda{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
@@ -1343,8 +1348,8 @@
     <label for="input-email-recuperar" data-i18n="login.correo">Correo</label>
     <input type="email" id="input-email-recuperar" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder">
   </div>
+  <button class="btn-grande" id="btn-enviar-recuperacion" onclick="enviarRecuperacion()" data-i18n="recuperar.enviar">Enviar link de recuperación</button>
   <div id="recuperar-mensaje" class="aviso" style="display:none;"></div>
-  <button class="btn-grande" onclick="enviarRecuperacion()" data-i18n="recuperar.enviar">Enviar link de recuperación</button>
   <button class="btn-grande secundario" onclick="mostrar('vista-login')" data-i18n="comun.volver">Volver</button>
 </div>
 
@@ -3553,9 +3558,11 @@ const TRADUCCIONES = {
     'legal.donde_guardan_h2': 'Dónde se guardan',
     'legal.donde_guardan_texto': 'En Supabase, con reglas de seguridad a nivel de base de datos (Row Level Security): solo tú puedes ver y editar tus propios datos, aunque otro usuario tenga su propia cuenta en esta misma app.',
     'legal.tus_derechos_h2': 'Tus derechos',
-    'legal.tus_derechos_texto': 'Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración y privacidad" dentro de la app, o pedirlo escribiendo a samuelnates@gmail.com.',
+    'legal.tus_derechos_texto': 'Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración → Seguridad y privacidad" dentro de la app, o pedirlo escribiendo a samuelnates@gmail.com.',
     'recuperar.titulo': 'Recuperar contraseña',
     'recuperar.enviar': 'Enviar link de recuperación',
+    'recuperar.enviando': 'Enviando…',
+    'recuperar.error_envio': 'No se pudo enviar el correo. Intenta de nuevo en un momento.',
     'recuperar.nueva_titulo': 'Nueva contraseña',
     'recuperar.nueva_label': 'Escribe tu nueva contraseña',
     'recuperar.guardar': 'Guardar contraseña',
@@ -4439,9 +4446,11 @@ const TRADUCCIONES = {
     'legal.donde_guardan_h2': 'Where it is stored',
     'legal.donde_guardan_texto': 'In Supabase, with database-level security rules (Row Level Security): only you can see and edit your own data, even if another user has their own account in this same app.',
     'legal.tus_derechos_h2': 'Your rights',
-    'legal.tus_derechos_texto': 'You can download or delete all your data anytime from "Settings and privacy" inside the app, or request it by writing to samuelnates@gmail.com.',
+    'legal.tus_derechos_texto': 'You can download or delete all your data anytime from "Settings → Security & privacy" inside the app, or request it by writing to samuelnates@gmail.com.',
     'recuperar.titulo': 'Reset password',
     'recuperar.enviar': 'Send reset link',
+    'recuperar.enviando': 'Sending…',
+    'recuperar.error_envio': "Couldn't send the email. Try again in a moment.",
     'recuperar.nueva_titulo': 'New password',
     'recuperar.nueva_label': 'Enter your new password',
     'recuperar.guardar': 'Save password',
@@ -5099,8 +5108,23 @@ async function init(){
   });
   tasasCambioPromesa = cargarTasasCambio();
 
+  // Bug real reportado por una usuaria (Yom): al tocar el link de
+  // recuperación del correo, la app la regresaba directo al panel en vez de
+  // pedirle la contraseña nueva. Causa: el link de recuperación SÍ deja una
+  // sesión válida (así funciona la recuperación de Supabase — te "loguea"
+  // temporalmente para que puedas cambiar la contraseña mientras esa sesión
+  // dura), así que unas líneas más abajo `sb.auth.getSession()` encontraba
+  // esa sesión y llamaba a entrarAlPanelConOnboarding(), pisando el
+  // mostrar('vista-nueva-contrasena') de aquí arriba — una carrera entre los
+  // dos, y el panel normal casi siempre ganaba. flujoRecuperacionActivo hace
+  // que ese chequeo de sesión más abajo se quede quieto cuando venimos de un
+  // link de recuperación.
+  let flujoRecuperacionActivo = false;
   sb.auth.onAuthStateChange((event) => {
-    if(event === 'PASSWORD_RECOVERY') mostrar('vista-nueva-contrasena');
+    if(event === 'PASSWORD_RECOVERY'){
+      flujoRecuperacionActivo = true;
+      mostrar('vista-nueva-contrasena');
+    }
   });
 
   if(window.Capacitor?.isNativePlatform?.()){
@@ -5123,7 +5147,10 @@ async function init(){
   }
 
   const { data: { session } } = await sb.auth.getSession();
-  if(session){
+  if(flujoRecuperacionActivo){
+    // Ya se mostró vista-nueva-contrasena arriba — no navegar a ningún otro
+    // lado, o el mostrar('vista-login') de más abajo se lo comería igual.
+  } else if(session){
     await entrarAlPanelConOnboarding();
   } else if(new URLSearchParams(location.search).get('demo') === '1'){
     await verMuestra();
@@ -5689,13 +5716,32 @@ async function crearCuenta(){
   }
 }
 
+// Bug real reportado por una usuaria (Yom, por WhatsApp): tocaba el botón
+// y no notaba ningún cambio — el único indicio era un texto chico y gris
+// (.aviso normal) debajo, fácil de no ver. Ella terminó picándole 2 veces
+// "a ver qué pasaba". Ahora el botón mismo cambia de texto mientras envía y
+// al terminar, y el mensaje usa el estilo .exito (verde, negritas) — y el
+// error de resetPasswordForEmail (antes se descartaba sin más) si se
+// muestra, en vez de fingir que se envió cuando en realidad falló.
 async function enviarRecuperacion(){
   const email = document.getElementById('input-email-recuperar').value.trim();
   const msgDiv = document.getElementById('recuperar-mensaje');
+  const btn = document.getElementById('btn-enviar-recuperacion');
   if(!email) return;
 
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-  msgDiv.textContent = t('recuperar.mensaje_enviado');
+  btn.disabled = true;
+  btn.textContent = t('recuperar.enviando');
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  btn.disabled = false;
+  btn.textContent = t('recuperar.enviar');
+
+  if(error){
+    msgDiv.className = 'aviso error';
+    msgDiv.textContent = t('recuperar.error_envio');
+  } else {
+    msgDiv.className = 'aviso exito';
+    msgDiv.textContent = t('recuperar.mensaje_enviado');
+  }
   msgDiv.style.display = 'block';
 }
 
@@ -13105,8 +13151,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 25;
+const VERSION_APP_ACTUAL = 26;
 const CHANGELOG_APP = [
+  {
+    version: 26,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que el link de "recuperar contraseña" a veces no llevara a la pantalla para poner tu contraseña nueva.',
+      'El botón de recuperar contraseña ahora te avisa claramente cuando el correo ya se envió (o si algo falló).'
+    ],
+    cambios_en: [
+      'Fixed the "reset password" link sometimes not taking you to the new-password screen.',
+      'The reset password button now clearly tells you when the email was sent (or if something failed).'
+    ]
+  },
   {
     version: 25,
     fecha: '2026-08-20',
