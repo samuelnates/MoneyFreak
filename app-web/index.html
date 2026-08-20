@@ -941,7 +941,15 @@
   .login-caja .logo-mark{width:46px;height:46px;margin-bottom:12px;}
   .logo-mark svg{width:100%;height:100%;display:block;}
   .login-caja h1{margin-bottom:6px;font-size:22px;}
-  .login-caja .subtitulo{margin-bottom:32px;}
+  .login-caja .subtitulo{margin-bottom:18px;}
+  .login-features{
+    list-style:none;margin:0 0 28px;padding:0;text-align:left;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .login-features li{
+    font-family:var(--sans);font-size:12px;color:var(--texto-tenue);line-height:1.5;
+    padding-left:14px;border-left:2px solid var(--texto-tenue-2);
+  }
   .login-caja label{text-align:left;}
   .login-caja .marca-pro{position:relative;display:inline-block;padding:6px 14px;}
   .login-caja .marca-pro::before, .login-caja .marca-pro::after{
@@ -1261,6 +1269,14 @@
     <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
     <h1>Money <span id="span-titulo-freak">Freak</span></h1>
     <p class="subtitulo" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
+    <!-- Google rechazó la verificación de marca de OAuth porque "tu página
+         principal no puede ser solo una pantalla de login" — necesita
+         explicar qué hace la app de verdad, no un tagline de 5 palabras. -->
+    <ul class="login-features" aria-label="Qué hace Money Freak">
+      <li data-i18n="login.feature_1">Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.</li>
+      <li data-i18n="login.feature_2">Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.</li>
+      <li data-i18n="login.feature_3">Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.</li>
+    </ul>
     <button type="button" class="btn-grande" id="btn-login-biometrico" style="display:none;margin-bottom:14px;" onclick="iniciarSesionBiometrico()" data-i18n="login.entrar_face_id">Entrar con Face ID</button>
     <form onsubmit="event.preventDefault(); iniciarSesion();">
       <div class="campo">
@@ -1285,6 +1301,11 @@
     </button>
     <button class="btn-grande secundario" onclick="abrirCrearCuenta()" data-i18n="login.crear_cuenta">Crear cuenta</button>
     <button class="btn-link-tenue" onclick="verMuestra()" data-i18n="login.ver_muestra">¿Quieres ver un ejemplo primero?</button>
+    <!-- La verificación de marca de Google exige que la política de
+         privacidad esté enlazada de forma visible en la página principal
+         misma, no solo registrada en la config de OAuth. Antes privacidad.html
+         no estaba enlazado desde ningún lado dentro de la app. -->
+    <a class="btn-link-tenue" href="privacidad.html" data-i18n="login.privacidad_link">Aviso de privacidad</a>
   </div>
 </div>
 
@@ -3161,6 +3182,9 @@ function inicializarTema(){
 const TRADUCCIONES = {
   es: {
     'login.subtitulo': 'Cuentas, bienes, deudas y salud financiera',
+    'login.feature_1': 'Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.',
+    'login.feature_2': 'Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.',
+    'login.feature_3': 'Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.',
     'login.correo': 'Correo',
     'login.password': 'Contraseña',
     'login.olvidaste': '¿Olvidaste tu contraseña?',
@@ -3197,6 +3221,7 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': 'Listo, te voy a recordar este pago cada mes.',
     'login.crear_cuenta': 'Crear cuenta',
     'login.ver_muestra': '¿Quieres ver un ejemplo primero?',
+    'login.privacidad_link': 'Aviso de privacidad',
     'registro.titulo': 'Crear cuenta',
     'registro.nombre_label': 'Tu nombre',
     'registro.nombre_placeholder': '¿Cómo te llamas?',
@@ -3937,6 +3962,7 @@ const TRADUCCIONES = {
     'mes.5': 'Mayo', 'mes.6': 'Junio', 'mes.7': 'Julio', 'mes.8': 'Agosto',
     'mes.9': 'Septiembre', 'mes.10': 'Octubre', 'mes.11': 'Noviembre', 'mes.12': 'Diciembre',
     'login.alert_cuenta_creada': 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
+    'login.alert_error_link': 'El link de tu correo ya no es válido (puede haber expirado, o ya se usó, o se abrió en un navegador distinto al que usaste para registrarte). Vuelve a intentar iniciar sesión, o pide un nuevo link.',
     'recuperar.alert_password_actualizada': 'Tu contraseña se actualizó correctamente.',
     'login.confirm_cerrar_sesion': '¿Cerrar sesión?',
     'config.confirm_borrar_datos1': '¿Seguro que quieres borrar TODOS tus datos financieros de esta app (cuentas, bienes, acciones, deudas e historial)? Esta acción no se puede deshacer.',
@@ -4049,6 +4075,9 @@ const TRADUCCIONES = {
   },
   en: {
     'login.subtitulo': 'Accounts, assets, debts and financial health',
+    'login.feature_1': 'Bring together your accounts, assets, debts, and stocks in one place, with your net worth always up to date.',
+    'login.feature_2': 'Freaky, your AI financial mentor, logs your expenses just by you describing them and tells you if you can afford your month.',
+    'login.feature_3': 'Financial health, cash flow, and credit simulator, calculated automatically from your real data.',
     'login.correo': 'Email',
     'login.password': 'Password',
     'login.olvidaste': 'Forgot your password?',
@@ -4085,6 +4114,7 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': "Done, I'll remind you about this payment every month.",
     'login.crear_cuenta': 'Create account',
     'login.ver_muestra': 'Want to see an example first?',
+    'login.privacidad_link': 'Privacy notice',
     'registro.titulo': 'Create account',
     'registro.nombre_label': 'Your name',
     'registro.nombre_placeholder': 'What\'s your name?',
@@ -4825,6 +4855,7 @@ const TRADUCCIONES = {
     'mes.5': 'May', 'mes.6': 'June', 'mes.7': 'July', 'mes.8': 'August',
     'mes.9': 'September', 'mes.10': 'October', 'mes.11': 'November', 'mes.12': 'December',
     'login.alert_cuenta_creada': 'Account created. Check your email to confirm it, then sign in.',
+    'login.alert_error_link': "The link from your email isn't valid anymore (it may have expired, already been used, or opened in a different browser than the one you signed up with). Try signing in again, or request a new link.",
     'recuperar.alert_password_actualizada': 'Your password was updated successfully.',
     'login.confirm_cerrar_sesion': 'Sign out?',
     'config.confirm_borrar_datos1': 'Are you sure you want to delete ALL your financial data in this app (accounts, assets, stocks, debts, and history)? This action cannot be undone.',
@@ -5154,6 +5185,21 @@ async function init(){
     });
   }
 
+  // Bug real reportado por el usuario ("loop en el onboarding, primera
+  // impresión mala"): si el link del correo (confirmación o recuperación)
+  // falla al intercambiarse por una sesión — código ya usado/expirado, o el
+  // link se abrió en un navegador distinto al que hizo el registro (pasa
+  // seguido en celular, ej. Gmail abre su propio navegador in-app) —
+  // Supabase regresa a esta misma URL con `?error=...` en vez de dejar una
+  // sesión. Antes eso caía sin más al login en blanco, sin explicar nada:
+  // el usuario, sin saber qué pasó, terminaba registrándose otra vez de
+  // cero. Ahora se detecta ese parámetro y se avisa qué pasó de verdad.
+  const paramsAuth = new URLSearchParams(location.search);
+  const errorAuth = paramsAuth.get('error_description') || paramsAuth.get('error_code') || paramsAuth.get('error');
+  if(errorAuth){
+    history.replaceState(null, '', location.pathname);
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   if(flujoRecuperacionActivo){
     // Ya se mostró vista-nueva-contrasena arriba — no navegar a ningún otro
@@ -5164,6 +5210,7 @@ async function init(){
     await verMuestra();
   } else {
     mostrar('vista-login');
+    if(errorAuth) await mostrarAlerta(t('login.alert_error_link'));
   }
 }
 
@@ -5714,6 +5761,16 @@ async function crearCuenta(){
     errDiv.style.display = 'block';
     return;
   }
+
+  // Bug real reportado por el usuario ("loop en el onboarding"): esto nunca
+  // marcaba terminos_aceptados, así que un usuario que se registró por
+  // correo (aceptó la privacidad AQUÍ, apenas unos segundos antes) volvía a
+  // ver la pantalla de "acepta el aviso de privacidad" en el onboarding
+  // rápido — porque debeMostrarOnboardingRapido() solo revisa esta bandera,
+  // sin saber que ya se aceptó desde el registro. Con el fix de forzar ver
+  // el aviso antes de aceptar (checkbox disabled hasta volver de leerlo),
+  // esa repetición además obligaba a reabrir y releer el aviso otra vez.
+  localStorage.setItem('terminos_aceptados', '1');
 
   if(data.session){
     entrarAlPanelConOnboarding();
@@ -13159,8 +13216,22 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 26;
+const VERSION_APP_ACTUAL = 27;
 const CHANGELOG_APP = [
+  {
+    version: 27,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que registrarte por correo te pidiera aceptar el Aviso de Privacidad dos veces (en el registro y otra vez en el onboarding).',
+      'Si el link de confirmación de tu correo ya no es válido, ahora te lo dice claramente en vez de dejarte sin explicación.',
+      'La pantalla de inicio ahora explica qué hace Money Freak y enlaza el Aviso de Privacidad.'
+    ],
+    cambios_en: [
+      'Fixed signing up by email asking you to accept the Privacy Notice twice (once at signup, again in onboarding).',
+      "If your email confirmation link isn't valid anymore, the app now tells you clearly instead of leaving you without an explanation.",
+      'The home screen now explains what Money Freak does and links the Privacy Notice.'
+    ]
+  },
   {
     version: 26,
     fecha: '2026-08-20',
