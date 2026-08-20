@@ -8094,6 +8094,22 @@ function reconciliarLayoutTecladoConRetraso(){
 document.addEventListener('focusin', reconciliarLayoutTecladoConRetraso);
 document.addEventListener('focusout', reconciliarLayoutTecladoConRetraso);
 
+// scrollIntoView({block:'end'}) alinea el mensaje con el borde de abajo del
+// viewport, pero no sabe que #chat-input-fija (position:fixed) tapa una
+// franja encima de ese borde — el mensaje "ya scrolleado" queda con su final
+// (o los botones de acción) escondidos detrás de la barra. Bug reportado por
+// el usuario con screenshot: la respuesta de Freaky se ve tapada y la
+// pantalla no termina de bajar lo suficiente. Se mide cuánto tapa la barra
+// ahora mismo (con getBoundingClientRect, ya resuelto el offset por
+// teclado/nav) y se agrega ese margen al destino del scroll.
+function desplazarChatHaciaAbajo(div){
+  const barra = document.getElementById('chat-input-fija');
+  const tapadoAbajo = barra ? Math.max(0, window.innerHeight - barra.getBoundingClientRect().top) : 0;
+  const rect = div.getBoundingClientRect();
+  const objetivo = window.scrollY + rect.bottom - window.innerHeight + tapadoAbajo + 16;
+  window.scrollTo({ top: Math.max(0, objetivo), behavior: 'smooth' });
+}
+
 let historialAyudaIA = [];
 let snapshotFreakyCache = null;
 const accionesGastoChat = {};
@@ -8339,7 +8355,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
   cont.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  desplazarChatHaciaAbajo(div);
   if(accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva){
     freakyTrigger('point'); // "encontré algo para ti" — hay una propuesta en esta burbuja
   }
