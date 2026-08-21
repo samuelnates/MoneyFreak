@@ -5526,10 +5526,35 @@ function marcarTerminosAceptados(){
     .then(({ error }) => { if(error) console.warn('No se pudo guardar terminos_aceptados_en (¿ya corriste la migración?)', error); });
 }
 
+// Bug real reportado por el usuario: probó el onboarding con una cuenta de
+// Google, y al crear una cuenta NUEVA por correo en el mismo navegador, esa
+// segunda cuenta (con cero datos) se saltaba el onboarding rápido de Freaky
+// por completo — heredaba el "ya lo omití" de 'onboarding_rapido_omitido'
+// en localStorage, que en realidad pertenecía a la OTRA cuenta (localStorage
+// no está aislado por usuario, solo por navegador). Se mueve a la base de
+// datos, igual que avatar_asesor y terminos_aceptados_en.
+let onboardingRapidoHechoCache = null;
+async function onboardingRapidoYaHecho(){
+  if(onboardingRapidoHechoCache !== null) return onboardingRapidoHechoCache;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('onboarding_rapido_en').maybeSingle();
+    onboardingRapidoHechoCache = !!data?.onboarding_rapido_en;
+    return onboardingRapidoHechoCache;
+  }catch(e){
+    console.warn('No se pudo revisar onboarding_rapido_en (¿ya corriste la migración?)', e);
+    return false;
+  }
+}
+function marcarOnboardingRapidoHecho(){
+  onboardingRapidoHechoCache = true;
+  sb.from('perfil_financiero').upsert({ onboarding_rapido_en: new Date().toISOString() }, { onConflict: 'user_id' })
+    .then(({ error }) => { if(error) console.warn('No se pudo guardar onboarding_rapido_en (¿ya corriste la migración?)', error); });
+}
+
 async function debeMostrarOnboardingRapido(){
   if(modoDemo) return false;
   if(!(await terminosYaAceptados())) return true;
-  if(localStorage.getItem('onboarding_rapido_omitido') === '1') return false;
+  if(await onboardingRapidoYaHecho()) return false;
   try{
     const [{ count: cIngresos }, { count: cCuentas }, { count: cDeudas }] = await Promise.all([
       sb.from('ingresos').select('*', { count: 'exact', head: true }),
@@ -5722,7 +5747,7 @@ async function guardarOnboardingRapido(){
     if(cuenta) await sb.from('saldos').upsert({ cuenta_id: cuenta.id, fecha: hoyISO, monto: ahorro }, { onConflict: 'cuenta_id,fecha' });
   }
 
-  localStorage.setItem('onboarding_rapido_omitido', '1');
+  marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
   abrirPanel();
   mostrarAvisoPrivacidadLogin();
@@ -5731,7 +5756,7 @@ async function guardarOnboardingRapido(){
 
 function omitirOnboardingRapido(){
   if(!validarConfigInicialOnboarding()) return;
-  localStorage.setItem('onboarding_rapido_omitido', '1');
+  marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
   abrirPanel();
   mostrarAvisoPrivacidadLogin();
@@ -13332,8 +13357,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 32;
+const VERSION_APP_ACTUAL = 33;
 const CHANGELOG_APP = [
+  {
+    version: 33,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que crear una cuenta nueva por correo, en el mismo navegador donde antes ya se había completado el onboarding con otra cuenta (ej. de Google), se saltara por completo la presentación de Freaky — heredaba por error el "ya lo vi" de la otra cuenta.'
+    ],
+    cambios_en: [
+      'Fixed a new email account created in the same browser where onboarding was already completed with a different account (e.g. Google) skipping the Freaky intro entirely — it was wrongly inheriting the other account\'s "already seen" flag.'
+    ]
+  },
   {
     version: 32,
     fecha: '2026-08-20',
