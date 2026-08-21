@@ -1468,7 +1468,7 @@
     </div>
     <div class="check-fila">
       <input type="checkbox" id="check-privacidad-onb" disabled>
-      <label for="check-privacidad-onb" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
+      <label for="check-privacidad-onb" data-i18n-html="onboarding_rapido.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
     </div>
     <div class="aviso" id="aviso-lee-primero-onb" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
@@ -3598,6 +3598,7 @@ const TRADUCCIONES = {
     'comun.confirmar': 'Confirmar',
     'tour.ver_aria': 'Ver tour guiado',
     'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
+    'onboarding_rapido.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'onboarding\'); return false;">Aviso de Privacidad</a>.',
     'registro.lee_primero': 'Ábrelo y léelo — el check se activa solo cuando regreses.',
     'legal.titulo': 'Aviso de privacidad',
     'legal.aviso_legal_h2': 'Aviso legal',
@@ -3981,6 +3982,7 @@ const TRADUCCIONES = {
     'mes.9': 'Septiembre', 'mes.10': 'Octubre', 'mes.11': 'Noviembre', 'mes.12': 'Diciembre',
     'login.alert_cuenta_creada': 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
     'login.alert_error_link': 'El link de tu correo ya no es válido (puede haber expirado, o ya se usó, o se abrió en un navegador distinto al que usaste para registrarte). Vuelve a intentar iniciar sesión, o pide un nuevo link.',
+    'login.alert_confirmado_otro_navegador': 'Tu correo ya fue confirmado, pero no pudimos iniciar tu sesión automáticamente desde este link (pasa cuando se abre en un navegador o app distinto al que usaste para registrarte). Inicia sesión normalmente con tu correo y contraseña.',
     'recuperar.alert_password_actualizada': 'Tu contraseña se actualizó correctamente.',
     'login.confirm_cerrar_sesion': '¿Cerrar sesión?',
     'config.confirm_borrar_datos1': '¿Seguro que quieres borrar TODOS tus datos financieros de esta app (cuentas, bienes, acciones, deudas e historial)? Esta acción no se puede deshacer.',
@@ -4495,6 +4497,7 @@ const TRADUCCIONES = {
     'comun.confirmar': 'Confirm',
     'tour.ver_aria': 'View guided tour',
     'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
+    'onboarding_rapido.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'onboarding\'); return false;">Privacy Notice</a>.',
     'registro.lee_primero': "Open it and read it — the checkbox unlocks once you come back.",
     'legal.titulo': 'Privacy notice',
     'legal.aviso_legal_h2': 'Legal notice',
@@ -4878,6 +4881,7 @@ const TRADUCCIONES = {
     'mes.9': 'September', 'mes.10': 'October', 'mes.11': 'November', 'mes.12': 'December',
     'login.alert_cuenta_creada': 'Account created. Check your email to confirm it, then sign in.',
     'login.alert_error_link': "The link from your email isn't valid anymore (it may have expired, already been used, or opened in a different browser than the one you signed up with). Try signing in again, or request a new link.",
+    'login.alert_confirmado_otro_navegador': "Your email was already confirmed, but we couldn't sign you in automatically from this link (this happens when it's opened in a different browser or app than the one you signed up with). Sign in normally with your email and password.",
     'recuperar.alert_password_actualizada': 'Your password was updated successfully.',
     'login.confirm_cerrar_sesion': 'Sign out?',
     'config.confirm_borrar_datos1': 'Are you sure you want to delete ALL your financial data in this app (accounts, assets, stocks, debts, and history)? This action cannot be undone.',
@@ -5222,11 +5226,31 @@ async function init(){
   // cero. Ahora se detecta ese parámetro y se avisa qué pasó de verdad.
   const paramsAuth = new URLSearchParams(location.search);
   const errorAuth = paramsAuth.get('error_description') || paramsAuth.get('error_code') || paramsAuth.get('error');
+  const codigoAuthPresente = paramsAuth.has('code');
   if(errorAuth){
     history.replaceState(null, '', location.pathname);
   }
 
+  // sb.auth.getSession() espera internamente a que supabase-js termine de
+  // intentar canjear el `?code=` de la URL por una sesión (PKCE), si hay uno.
   const { data: { session } } = await sb.auth.getSession();
+
+  // Bug real, distinto al de `?error=` de arriba: cuando el link (de
+  // confirmación de correo O del regreso de Google) se abre en un
+  // navegador/app distinto al que inició el registro/login (común en
+  // celular — Gmail o el navegador in-app de Google abren su propio
+  // contexto), supabase-js SÍ intenta canjear el código, falla porque le
+  // falta el "code verifier" (solo existe en el navegador de origen), y en
+  // ese caso puntual NO limpia el `?code=` de la URL ni deja ningún
+  // `?error=` — antes esto caía en silencio total: sin sesión, sin aviso,
+  // con el código pegado en la URL. Se detecta aquí: si ya se esperó a que
+  // el cliente terminara de inicializar y sigue sin haber sesión pero el
+  // `?code=` sigue en la URL, es justo ese caso.
+  const codigoAtorado = !session && codigoAuthPresente && !errorAuth;
+  if(codigoAtorado){
+    history.replaceState(null, '', location.pathname);
+  }
+
   if(flujoRecuperacionActivo){
     // Ya se mostró vista-nueva-contrasena arriba — no navegar a ningún otro
     // lado, o el mostrar('vista-login') de más abajo se lo comería igual.
@@ -5237,6 +5261,7 @@ async function init(){
   } else {
     mostrar('vista-login');
     if(errorAuth) await mostrarAlerta(t('login.alert_error_link'));
+    else if(codigoAtorado) await mostrarAlerta(t('login.alert_confirmado_otro_navegador'));
   }
 }
 
@@ -13307,8 +13332,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 31;
+const VERSION_APP_ACTUAL = 32;
 const CHANGELOG_APP = [
+  {
+    version: 32,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido de raíz que "Volver" desde el Aviso de Privacidad, durante el onboarding después de darte de alta con Google, te regresara al formulario de crear cuenta en vez de al onboarding — encontrado al auditar el flujo completo de registro paso a paso.',
+      'Si el link de confirmación de correo se abre en un navegador o app distinto al que usaste para registrarte, ahora se avisa que tu correo ya quedó confirmado y que puedes iniciar sesión normal, en vez de quedarte en un login en blanco sin explicación.'
+    ],
+    cambios_en: [
+      'Fixed at the root that "Back" from the Privacy Notice, during onboarding right after signing up with Google, sent you to the create-account form instead of back to onboarding — found while auditing the full signup flow step by step.',
+      'If the email confirmation link is opened in a different browser or app than the one you signed up with, you now get a clear message that your email is confirmed and you can sign in normally, instead of a blank login screen with no explanation.'
+    ]
+  },
   {
     version: 31,
     fecha: '2026-08-20',
