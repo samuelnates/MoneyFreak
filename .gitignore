@@ -2,3 +2,10 @@
 # más específico. Esto es solo lo genérico a nivel raíz.
 .DS_Store
 Thumbs.db
+
+# Herramientas de HyperFrames (prototipos de video/animación para redes
+# sociales) instaladas por accidente en la raíz del repo en vez de en un
+# directorio aparte — no son código de la app, no deben versionarse aquí.
+.agents/
+.claude/
+skills-lock.json
