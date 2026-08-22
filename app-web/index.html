@@ -1528,6 +1528,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
     </button>
   </div>
+  <div id="onb-chat-rangos" class="chat-sugerencias" style="display:none;"></div>
   <div id="onb-chat-nose" class="chat-sugerencias" style="display:none;">
     <button type="button" onclick="noSePreguntaOnboarding()" data-i18n="onboarding_rapido.chat_no_se">No sé — calcúlalo tú</button>
   </div>
@@ -3376,6 +3377,7 @@ const TRADUCCIONES = {
     'onboarding_rapido.chat_p_ahorro': 'Y por último, ¿cuánto ya tienes ahorrado o invertido?',
     'onboarding_rapido.chat_siguiente': 'Siguiente',
     'onboarding_rapido.chat_paso': 'Paso {0} de {1}',
+    'onboarding_rapido.chat_rango_mas_de': 'Más de {0}',
     'onboarding_rapido.chat_no_se': 'No sé — calcúlalo tú',
     'onboarding_rapido.chat_no_se_burbuja': 'No sé, calcúlalo tú',
     'onboarding_rapido.guardar_continuar': 'Guardar y continuar',
@@ -4283,6 +4285,7 @@ const TRADUCCIONES = {
     'onboarding_rapido.chat_p_ahorro': 'Last one — how much do you already have saved or invested?',
     'onboarding_rapido.chat_siguiente': 'Next',
     'onboarding_rapido.chat_paso': 'Step {0} of {1}',
+    'onboarding_rapido.chat_rango_mas_de': 'More than {0}',
     'onboarding_rapido.chat_no_se': "I don't know — estimate it",
     'onboarding_rapido.chat_no_se_burbuja': "I don't know, estimate it",
     'onboarding_rapido.guardar_continuar': 'Save and continue',
@@ -5703,10 +5706,6 @@ async function debeMostrarOnboardingRapido(){
 }
 
 async function entrarAlPanelConOnboarding(){
-  if(await debeMostrarSelectorAsesor()){
-    abrirSelectorAsesor('login');
-    return;
-  }
   if(await debeMostrarOnboardingRapido()){
     mostrar('vista-onboarding-rapido');
     const faltaAceptar = !(await terminosYaAceptados()); // ya cacheado, no repite la consulta
@@ -5718,6 +5717,21 @@ async function entrarAlPanelConOnboarding(){
       document.getElementById('aviso-lee-primero-onb').style.display = '';
     }
     iniciarOnboardingChat();
+    return;
+  }
+  await continuarTrasOnboarding();
+}
+
+// Pedido del usuario: diferir el selector de avatar de Freaky a después del
+// primer "momento de valor" (el resultado del onboarding rápido), en vez de
+// pedirlo de entrada antes de que la persona haya visto nada de la app. Antes
+// de elegir uno, el personaje ya se ve bien igual — carpetaAsesorActual() cae
+// a ASESORES[0] como default silencioso. A usuarios existentes que ya
+// pasaron el onboarding rápido pero nunca eligieron avatar (creados antes de
+// esta función) no les cambia nada: lo siguen viendo aquí, al entrar.
+async function continuarTrasOnboarding(){
+  if(await debeMostrarSelectorAsesor()){
+    abrirSelectorAsesor('login');
     return;
   }
   abrirPanel();
@@ -5792,6 +5806,40 @@ function actualizarProgresoOnboarding(){
   `;
 }
 
+// Pedido del usuario: chips de rango en vez de forzar a escribir el número
+// exacto — la mayoría no trae la cifra exacta en la cabeza, pero sí sabe en
+// qué rango cae. El valor que se guarda es el punto medio del rango elegido
+// (editable después con calma en la app real, igual que el estimado de "no
+// sé"); el rango en sí solo decide qué se muestra en la burbuja del chat.
+const RANGOS_ONB_CHAT = [
+  { hasta: 0, valor: 0 },
+  { desde: 1000, hasta: 5000, valor: 3000 },
+  { desde: 5000, hasta: 10000, valor: 7500 },
+  { desde: 10000, hasta: 20000, valor: 15000 },
+  { desde: 20000, hasta: 40000, valor: 30000 },
+  { desde: 40000, valor: 50000 },
+];
+
+function etiquetaRangoOnboarding(rango){
+  if(rango.hasta === 0 && !rango.desde) return formatoMonto(0, 'MXN');
+  if(rango.desde && !rango.hasta) return tf('onboarding_rapido.chat_rango_mas_de', formatoMonto(rango.desde, 'MXN'));
+  return `${formatoMonto(rango.desde, 'MXN')} – ${formatoMonto(rango.hasta, 'MXN')}`;
+}
+
+function mostrarRangosOnboarding(){
+  const cont = document.getElementById('onb-chat-rangos');
+  cont.innerHTML = RANGOS_ONB_CHAT.map((rango, i) => {
+    const etiqueta = escapeHtml(etiquetaRangoOnboarding(rango));
+    return `<button type="button" onclick="elegirRangoOnboarding(${i})">${etiqueta}</button>`;
+  }).join('');
+  cont.style.display = 'flex';
+}
+
+function elegirRangoOnboarding(indice){
+  const rango = RANGOS_ONB_CHAT[indice];
+  registrarRespuestaOnboarding(rango.valor, etiquetaRangoOnboarding(rango));
+}
+
 function mostrarPreguntaOnboarding(){
   const paso = PASOS_ONB_CHAT[onbPasoActual];
   actualizarProgresoOnboarding();
@@ -5799,6 +5847,7 @@ function mostrarPreguntaOnboarding(){
   const input = document.getElementById('input-onb-chat-respuesta');
   input.value = '';
   document.getElementById('onb-chat-input-area').style.display = 'flex';
+  mostrarRangosOnboarding();
   document.getElementById('onb-chat-nose').style.display = 'flex';
   input.focus();
 }
@@ -5812,6 +5861,7 @@ function registrarRespuestaOnboarding(valor, textoBurbuja){
     mostrarPreguntaOnboarding();
   } else {
     document.getElementById('onb-chat-input-area').style.display = 'none';
+    document.getElementById('onb-chat-rangos').style.display = 'none';
     document.getElementById('onb-chat-nose').style.display = 'none';
     document.getElementById('onb-chat-progreso').style.display = 'none';
     verEvaluacionRapida();
@@ -5941,18 +5991,14 @@ async function guardarOnboardingRapido(){
 
   marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
-  abrirPanel();
-  mostrarAvisoPrivacidadLogin();
-  mostrarNovedadesSiHayPendientes();
+  await continuarTrasOnboarding();
 }
 
-function omitirOnboardingRapido(){
+async function omitirOnboardingRapido(){
   if(!validarConfigInicialOnboarding()) return;
   marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
-  abrirPanel();
-  mostrarAvisoPrivacidadLogin();
-  mostrarNovedadesSiHayPendientes();
+  await continuarTrasOnboarding();
 }
 
 function mostrarAvisoPrivacidadLogin(){
@@ -9120,7 +9166,7 @@ async function elegirAsesor(id){
   if(asesorSelectorOrigen === 'configuracion'){
     mostrar('vista-config-general');
   } else {
-    entrarAlPanelConOnboarding();
+    await continuarTrasOnboarding();
   }
 }
 
@@ -13549,8 +13595,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 36;
+const VERSION_APP_ACTUAL = 37;
 const CHANGELOG_APP = [
+  {
+    version: 37,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'El onboarding rápido con Freaky ahora ofrece chips de rango ($1,000–$5,000, etc.) para responder de un toque en vez de escribir el número exacto.',
+      'Elegir el aspecto de Freaky ahora se pregunta después de ver tu primer resultado (no antes de empezar) — para no hacerte decidir algo visual antes de que la app te haya mostrado valor.'
+    ],
+    cambios_en: [
+      'The quick onboarding chat with Freaky now offers range chips ($1,000–$5,000, etc.) to answer with one tap instead of typing the exact number.',
+      'Choosing Freaky\'s look is now asked after you see your first result (not before you start) — so you\'re not asked to make a visual decision before the app has shown you any value.'
+    ]
+  },
   {
     version: 36,
     fecha: '2026-08-22',
