@@ -1358,9 +1358,9 @@
     <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
     <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
   </div>
-  <div class="check-fila">
+  <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-registro')">
     <input type="checkbox" id="check-privacidad-registro" disabled>
-    <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
+    <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
   </div>
   <div class="aviso" id="aviso-lee-primero-registro" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
   <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
@@ -1466,9 +1466,9 @@
       <button type="button" data-tema="light" onclick="elegirTemaOnboarding('light')">Claro</button>
       <button type="button" data-tema="dark" onclick="elegirTemaOnboarding('dark')">Oscuro</button>
     </div>
-    <div class="check-fila">
+    <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-onb')">
       <input type="checkbox" id="check-privacidad-onb" disabled>
-      <label for="check-privacidad-onb" data-i18n-html="onboarding_rapido.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
+      <label for="check-privacidad-onb" data-i18n-html="onboarding_rapido.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
     </div>
     <div class="aviso" id="aviso-lee-primero-onb" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
@@ -3597,9 +3597,10 @@ const TRADUCCIONES = {
     'sesion.expirada': 'Tu sesión expiró. Vuelve a iniciar sesión para seguir usando la app.',
     'comun.confirmar': 'Confirmar',
     'tour.ver_aria': 'Ver tour guiado',
-    'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
-    'onboarding_rapido.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'onboarding\'); return false;">Aviso de Privacidad</a>.',
+    'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
+    'onboarding_rapido.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'onboarding\'); return false;">Aviso de Privacidad</a>.',
     'registro.lee_primero': 'Ábrelo y léelo — el check se activa solo cuando regreses.',
+    'aviso.debes_leer_primero': 'Primero abre y lee el Aviso de Privacidad (toca el link de arriba) — el check se activa solo cuando regreses. Es para tu seguridad: queremos que sepas de verdad qué hacemos con tus datos antes de aceptar.',
     'legal.titulo': 'Aviso de privacidad',
     'legal.aviso_legal_h2': 'Aviso legal',
     'legal.aviso_legal_texto': 'Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos, simulaciones y recomendaciones que ves (salud financiera, simulador de crédito, capacidad de pago, etc.) son estimaciones basadas en la información que tú capturas — no son garantía de resultados, tasas reales, ni de aprobación de ningún crédito. Tú eres responsable de las decisiones financieras que tomes.',
@@ -4496,9 +4497,10 @@ const TRADUCCIONES = {
     'sesion.expirada': 'Your session expired. Please sign in again to keep using the app.',
     'comun.confirmar': 'Confirm',
     'tour.ver_aria': 'View guided tour',
-    'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
-    'onboarding_rapido.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'onboarding\'); return false;">Privacy Notice</a>.',
+    'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
+    'onboarding_rapido.acepto_privacidad': 'I have read and accept the <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'onboarding\'); return false;">Privacy Notice</a>.',
     'registro.lee_primero': "Open it and read it — the checkbox unlocks once you come back.",
+    'aviso.debes_leer_primero': "First open and read the Privacy Notice (tap the link above) — the checkbox unlocks once you come back. It's for your own safety: we want you to actually know what we do with your data before you accept.",
     'legal.titulo': 'Privacy notice',
     'legal.aviso_legal_h2': 'Legal notice',
     'legal.aviso_legal_texto': 'This app is a personal financial organization tool. It is not financial, investment, tax, or legal advice, and does not replace the opinion of a certified professional. The calculations, simulations, and recommendations you see (financial health, credit simulator, payment capacity, etc.) are estimates based on the information you enter — they are not a guarantee of results, real rates, or loan approval. You are responsible for the financial decisions you make.',
@@ -5298,6 +5300,17 @@ async function abrirCrearCuenta(){
 function abrirAvisoLegal(origen){
   origenAvisoLegal = origen;
   mostrar('vista-aviso-legal');
+}
+
+// Pedido del usuario: antes, tocar el checkbox mientras sigue `disabled` no
+// hacía nada — sin explicación, solo no reaccionaba. Eso no genera confianza,
+// se siente roto. Ahora avisa claramente que hay que abrir y leer el aviso
+// primero. El div que envuelve todo (checkbox + texto + link) es quien
+// escucha el clic — un checkbox nativo `disabled` no dispara su propio
+// evento de clic en algunos navegadores, pero el contenedor sí.
+function avisarSiFaltaLeerPrivacidad(idCheckbox){
+  const check = document.getElementById(idCheckbox);
+  if(check && check.disabled) mostrarAlerta(t('aviso.debes_leer_primero'));
 }
 
 function volverDeAvisoLegal(){
@@ -13357,8 +13370,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 33;
+const VERSION_APP_ACTUAL = 34;
 const CHANGELOG_APP = [
+  {
+    version: 34,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Al intentar marcar "acepto el Aviso de Privacidad" sin haberlo abierto, ahora sale un aviso claro pidiendo leerlo primero — antes el check simplemente no reaccionaba, sin explicar por qué.'
+    ],
+    cambios_en: [
+      'Trying to check "I accept the Privacy Notice" without opening it first now shows a clear message asking you to read it — before, the checkbox just didn\'t respond, with no explanation.'
+    ]
+  },
   {
     version: 33,
     fecha: '2026-08-20',
