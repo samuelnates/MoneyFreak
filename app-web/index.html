@@ -168,15 +168,15 @@
   @media (hover:hover) and (pointer:fine){
     .chat-link-destino:hover{background:var(--acento);color:var(--acento-texto);}
   }
-  .onb-chat-progreso{
+  .paso-progreso{
     display:flex;align-items:center;gap:8px;margin:2px 0 10px;
     font-family:var(--mono, monospace);font-size:11.5px;letter-spacing:.06em;
     text-transform:uppercase;color:var(--texto-tenue);
   }
-  .onb-chat-progreso .onb-chat-progreso-barra{
+  .paso-progreso .paso-progreso-barra{
     flex:1;height:4px;border-radius:100px;background:var(--borde-fuerte);overflow:hidden;
   }
-  .onb-chat-progreso .onb-chat-progreso-relleno{
+  .paso-progreso .paso-progreso-relleno{
     height:100%;border-radius:100px;background:var(--acento);
     transition:width 260ms var(--ease-out);
   }
@@ -1349,43 +1349,67 @@
 
 <div id="vista-crear-cuenta" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-login')">‹</button>
+    <button class="btn-volver" onclick="atrasPasoRegistro()">‹</button>
     <h1 data-i18n="registro.titulo">Crear cuenta</h1>
   </div>
-  <div class="campo">
-    <label for="input-nombre-registro" data-i18n="registro.nombre_label">Tu nombre</label>
-    <input type="text" id="input-nombre-registro" placeholder="¿Cómo te llamas?" data-i18n-placeholder="registro.nombre_placeholder">
-  </div>
-  <div class="campo">
-    <label for="input-email-registro" data-i18n="registro.correo_label">Correo</label>
-    <input type="email" id="input-email-registro" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder">
-  </div>
-  <div class="campo">
-    <label for="input-password-registro" data-i18n="registro.password_label">Contraseña</label>
-    <div class="campo-password">
-      <input type="password" id="input-password-registro" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="registro.password_placeholder">
-      <button type="button" class="btn-ojo" id="btn-ojo-password-registro" onclick="toggleVerPassword('input-password-registro', 'btn-ojo-password-registro')" aria-label="Mostrar contraseña" data-i18n-aria-label="comun.mostrar_password" data-i18n="comun.ver">Ver</button>
+  <div id="registro-progreso" class="paso-progreso"></div>
+
+  <div class="registro-paso" data-paso="1">
+    <div class="campo">
+      <label for="input-nombre-registro" data-i18n="registro.nombre_label">Tu nombre</label>
+      <input type="text" id="input-nombre-registro" placeholder="¿Cómo te llamas?" data-i18n-placeholder="registro.nombre_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
     </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <label for="selector-idioma-registro" data-i18n="idioma.label">Idioma</label>
-  <div class="rango-botones selector-idioma" id="selector-idioma-registro">
-    <button type="button" data-idioma="es" onclick="cambiarIdioma('es')">Español</button>
-    <button type="button" data-idioma="en" onclick="cambiarIdioma('en')">English</button>
+
+  <div class="registro-paso" data-paso="2" style="display:none;">
+    <div class="campo">
+      <label for="input-email-registro" data-i18n="registro.correo_label">Correo</label>
+      <input type="email" id="input-email-registro" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <label for="selector-tema-registro" data-i18n="registro.tema_label">Tema de la app</label>
-  <div class="rango-botones" id="selector-tema-registro">
-    <button type="button" data-tema="auto" class="activo" onclick="elegirTemaRegistro('auto')">Automático</button>
-    <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
-    <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
+
+  <div class="registro-paso" data-paso="3" style="display:none;">
+    <div class="campo">
+      <label for="input-password-registro" data-i18n="registro.password_label">Contraseña</label>
+      <div class="campo-password">
+        <input type="password" id="input-password-registro" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="registro.password_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
+        <button type="button" class="btn-ojo" id="btn-ojo-password-registro" onclick="toggleVerPassword('input-password-registro', 'btn-ojo-password-registro')" aria-label="Mostrar contraseña" data-i18n-aria-label="comun.mostrar_password" data-i18n="comun.ver">Ver</button>
+      </div>
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-registro')">
-    <input type="checkbox" id="check-privacidad-registro" disabled>
-    <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
+
+  <div class="registro-paso" data-paso="4" style="display:none;">
+    <label for="selector-idioma-registro" data-i18n="idioma.label">Idioma</label>
+    <div class="rango-botones selector-idioma" id="selector-idioma-registro">
+      <button type="button" data-idioma="es" onclick="cambiarIdioma('es')">Español</button>
+      <button type="button" data-idioma="en" onclick="cambiarIdioma('en')">English</button>
+    </div>
+    <label for="selector-tema-registro" data-i18n="registro.tema_label">Tema de la app</label>
+    <div class="rango-botones" id="selector-tema-registro">
+      <button type="button" data-tema="auto" class="activo" onclick="elegirTemaRegistro('auto')">Automático</button>
+      <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
+      <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <div class="aviso" id="aviso-lee-primero-registro" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
-  <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
-  <div id="registro-error" class="aviso" style="display:none;"></div>
-  <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
+
+  <div class="registro-paso" data-paso="5" style="display:none;">
+    <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-registro')">
+      <input type="checkbox" id="check-privacidad-registro" disabled>
+      <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
+    </div>
+    <div class="aviso" id="aviso-lee-primero-registro" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
+  </div>
+
+  <div class="registro-paso" data-paso="6" style="display:none;">
+    <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
+    <div id="registro-error" class="aviso" style="display:none;"></div>
+    <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
+  </div>
 </div>
 
 <div id="vista-aviso-legal" class="pantalla">
@@ -1494,7 +1518,7 @@
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
   </div>
 
-  <div id="onb-chat-progreso" class="onb-chat-progreso" style="display:none;"></div>
+  <div id="onb-chat-progreso" class="paso-progreso" style="display:none;"></div>
 
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
@@ -3267,6 +3291,7 @@ const TRADUCCIONES = {
     'login.ver_muestra': '¿Quieres ver un ejemplo primero?',
     'login.privacidad_link': 'Aviso de privacidad',
     'registro.titulo': 'Crear cuenta',
+    'registro.paso': 'Paso {0} de {1}',
     'registro.nombre_label': 'Tu nombre',
     'registro.nombre_placeholder': '¿Cómo te llamas?',
     'registro.correo_label': 'Correo',
@@ -4173,6 +4198,7 @@ const TRADUCCIONES = {
     'login.ver_muestra': 'Want to see an example first?',
     'login.privacidad_link': 'Privacy notice',
     'registro.titulo': 'Create account',
+    'registro.paso': 'Step {0} of {1}',
     'registro.nombre_label': 'Your name',
     'registro.nombre_placeholder': 'What\'s your name?',
     'registro.correo_label': 'Email',
@@ -5322,6 +5348,63 @@ let origenAvisoLegal = 'registro';
 // evitaba llegar a "Crear cuenta" teniendo ya una sesión válida. Ahora se
 // revisa la sesión real antes de mostrar el formulario — si ya existe,
 // se manda directo a la app en vez de pedir datos que ya tiene.
+const TOTAL_PASOS_REGISTRO = 6;
+let registroPasoActual = 1;
+
+// Un solo campo/decisión por pantalla en vez de un formulario largo — pedido
+// del usuario para que no tenga que "investigar" qué llenar. Cada paso valida
+// solo lo suyo antes de dejar avanzar; el paso 6 (turnstile + crearCuenta)
+// conserva su propia validación completa como respaldo.
+function mostrarPasoRegistro(n){
+  registroPasoActual = n;
+  document.querySelectorAll('#vista-crear-cuenta .registro-paso').forEach(el=>{
+    el.style.display = (Number(el.dataset.paso) === n) ? '' : 'none';
+  });
+  const prog = document.getElementById('registro-progreso');
+  if(prog){
+    prog.innerHTML = `
+      <span>${tf('registro.paso', n, TOTAL_PASOS_REGISTRO)}</span>
+      <div class="paso-progreso-barra"><div class="paso-progreso-relleno" style="width:${(n / TOTAL_PASOS_REGISTRO) * 100}%;"></div></div>
+    `;
+  }
+  const paso = document.querySelector(`#vista-crear-cuenta .registro-paso[data-paso="${n}"]`);
+  const primerInput = paso && paso.querySelector('input:not([disabled])');
+  if(primerInput) primerInput.focus();
+}
+
+function siguientePasoRegistro(){
+  if(registroPasoActual === 1){
+    if(!document.getElementById('input-nombre-registro').value.trim()){
+      mostrarAlerta(t('registro.error_faltan_campos'));
+      return;
+    }
+  } else if(registroPasoActual === 2){
+    if(!document.getElementById('input-email-registro').value.trim()){
+      mostrarAlerta(t('registro.error_faltan_campos'));
+      return;
+    }
+  } else if(registroPasoActual === 3){
+    if(document.getElementById('input-password-registro').value.length < 6){
+      mostrarAlerta(t('registro.error_password_debil'));
+      return;
+    }
+  } else if(registroPasoActual === 5){
+    if(!document.getElementById('check-privacidad-registro').checked){
+      mostrarAlerta(t('registro.error_acepta_privacidad'));
+      return;
+    }
+  }
+  mostrarPasoRegistro(Math.min(registroPasoActual + 1, TOTAL_PASOS_REGISTRO));
+}
+
+function atrasPasoRegistro(){
+  if(registroPasoActual <= 1){
+    mostrar('vista-login');
+    return;
+  }
+  mostrarPasoRegistro(registroPasoActual - 1);
+}
+
 async function abrirCrearCuenta(){
   const { data: { session } } = await sb.auth.getSession();
   if(session){
@@ -5332,6 +5415,7 @@ async function abrirCrearCuenta(){
   check.checked = false;
   check.disabled = true;
   document.getElementById('aviso-lee-primero-registro').style.display = '';
+  mostrarPasoRegistro(1);
   mostrar('vista-crear-cuenta');
 }
 
@@ -5704,7 +5788,7 @@ function actualizarProgresoOnboarding(){
   el.style.display = 'flex';
   el.innerHTML = `
     <span>${tf('onboarding_rapido.chat_paso', actual, total)}</span>
-    <div class="onb-chat-progreso-barra"><div class="onb-chat-progreso-relleno" style="width:${(actual / total) * 100}%;"></div></div>
+    <div class="paso-progreso-barra"><div class="paso-progreso-relleno" style="width:${(actual / total) * 100}%;"></div></div>
   `;
 }
 
@@ -13465,8 +13549,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 35;
+const VERSION_APP_ACTUAL = 36;
 const CHANGELOG_APP = [
+  {
+    version: 36,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'La pantalla de "Crear cuenta" ahora pide un solo dato por vez (nombre, correo, contraseña, idioma/tema, aviso de privacidad) en vez de un formulario largo, con un contador de "Paso 2 de 6" para saber siempre cuánto falta.'
+    ],
+    cambios_en: [
+      'The "Create account" screen now asks for one thing at a time (name, email, password, language/theme, privacy notice) instead of a long form, with a "Step 2 of 6" counter so you always know how much is left.'
+    ]
+  },
   {
     version: 35,
     fecha: '2026-08-22',
