@@ -168,6 +168,18 @@
   @media (hover:hover) and (pointer:fine){
     .chat-link-destino:hover{background:var(--acento);color:var(--acento-texto);}
   }
+  .onb-chat-progreso{
+    display:flex;align-items:center;gap:8px;margin:2px 0 10px;
+    font-family:var(--mono, monospace);font-size:11.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--texto-tenue);
+  }
+  .onb-chat-progreso .onb-chat-progreso-barra{
+    flex:1;height:4px;border-radius:100px;background:var(--borde-fuerte);overflow:hidden;
+  }
+  .onb-chat-progreso .onb-chat-progreso-relleno{
+    height:100%;border-radius:100px;background:var(--acento);
+    transition:width 260ms var(--ease-out);
+  }
   .chat-sugerencias{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
   .chat-sugerencias button{
     background:var(--superficie);border:1px solid var(--borde-fuerte);color:var(--texto);
@@ -401,6 +413,14 @@
   .panel-insight-atencion{border-left-color:var(--color-atencion);}
   .panel-insight-saludable{border-left-color:var(--color-saludable);}
   .panel-insight-nota{font-family:var(--sans);font-size:11px;color:var(--texto-tenue-2);line-height:1.4;margin:8px 0 16px;}
+
+  .onb-resultado-titular{
+    font-family:var(--sans);font-weight:800;font-size:24px;line-height:1.2;
+    margin:4px 0 16px;text-wrap:balance;
+  }
+  .onb-resultado-titular.riesgo{color:var(--color-riesgo);}
+  .onb-resultado-titular.atencion{color:var(--color-atencion);}
+  .onb-resultado-titular.saludable{color:var(--color-saludable);}
 
   .rango-botones{display:flex;border:1px solid var(--borde-fuerte);border-radius:3px;overflow:hidden;margin-bottom:14px;width:fit-content;}
   .rango-botones button{
@@ -1474,6 +1494,8 @@
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
   </div>
 
+  <div id="onb-chat-progreso" class="onb-chat-progreso" style="display:none;"></div>
+
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
   <div id="onb-chat-input-area" class="onb-chat-input" style="display:none;">
@@ -1481,6 +1503,9 @@
     <button type="button" class="chat-btn-enviar" onclick="avanzarOnboardingChat()" aria-label="Siguiente" data-i18n-aria-label="onboarding_rapido.chat_siguiente">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
     </button>
+  </div>
+  <div id="onb-chat-nose" class="chat-sugerencias" style="display:none;">
+    <button type="button" onclick="noSePreguntaOnboarding()" data-i18n="onboarding_rapido.chat_no_se">No sé — calcúlalo tú</button>
   </div>
 
   <div style="display:none;">
@@ -1494,6 +1519,7 @@
   <button type="button" class="btn-grande" id="btn-onb-evaluar" onclick="verEvaluacionRapida()" style="display:none;" data-i18n="onboarding_rapido.ver_evaluacion">Ver mi primera evaluación</button>
 
   <div id="onb-resultado" style="display:none;">
+    <div id="onb-resultado-titular" class="onb-resultado-titular"></div>
     <div class="panel-insights" id="onb-insights"></div>
     <button type="button" class="btn-grande" onclick="guardarOnboardingRapido()" data-i18n="onboarding_rapido.guardar_continuar">Guardar y continuar</button>
     <button type="button" class="btn-grande secundario" onclick="omitirOnboardingRapido()" data-i18n="onboarding_rapido.omitir">Prefiero configurar todo yo mismo</button>
@@ -3324,6 +3350,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.chat_p_gastos': '¿Cuánto gastas al mes, aproximadamente?',
     'onboarding_rapido.chat_p_ahorro': 'Y por último, ¿cuánto ya tienes ahorrado o invertido?',
     'onboarding_rapido.chat_siguiente': 'Siguiente',
+    'onboarding_rapido.chat_paso': 'Paso {0} de {1}',
+    'onboarding_rapido.chat_no_se': 'No sé — calcúlalo tú',
+    'onboarding_rapido.chat_no_se_burbuja': 'No sé, calcúlalo tú',
     'onboarding_rapido.guardar_continuar': 'Guardar y continuar',
     'onboarding_rapido.omitir': 'Prefiero configurar todo yo mismo',
     'onboarding_rapido.omitir_ahora': 'Omitir por ahora',
@@ -3335,6 +3364,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.eval_ahorro_sin_ingreso': 'Reportaste {0} en ahorro e inversión.',
     'onboarding_rapido.eval_sin_ahorro': 'Aún no reportas ahorro o inversión acumulados.',
     'onboarding_rapido.eval_nota': 'Esta es una primera evaluación aproximada con los números que compartiste — se irá afinando conforme registres tus cuentas, deudas y gastos reales.',
+    'onboarding_rapido.titular_riesgo': 'Ojo — hay algo que conviene arreglar pronto',
+    'onboarding_rapido.titular_atencion': 'Vas bien, con un par de focos amarillos',
+    'onboarding_rapido.titular_saludable': '¡Vas muy bien! Tu situación se ve saludable',
     'onboarding_rapido.nombre_ingreso': 'Ingreso mensual',
     'onboarding_rapido.nombre_liquido': 'Dinero disponible',
     'onboarding_rapido.nombre_deuda': 'Deudas totales',
@@ -4224,6 +4256,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.chat_p_gastos': 'About how much do you spend per month?',
     'onboarding_rapido.chat_p_ahorro': 'Last one — how much do you already have saved or invested?',
     'onboarding_rapido.chat_siguiente': 'Next',
+    'onboarding_rapido.chat_paso': 'Step {0} of {1}',
+    'onboarding_rapido.chat_no_se': "I don't know — estimate it",
+    'onboarding_rapido.chat_no_se_burbuja': "I don't know, estimate it",
     'onboarding_rapido.guardar_continuar': 'Save and continue',
     'onboarding_rapido.omitir': "I'd rather set everything up myself",
     'onboarding_rapido.omitir_ahora': 'Skip for now',
@@ -4235,6 +4270,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.eval_ahorro_sin_ingreso': 'You reported {0} in savings & investments.',
     'onboarding_rapido.eval_sin_ahorro': "You haven't reported any savings or investments yet.",
     'onboarding_rapido.eval_nota': "This is a rough first evaluation based on the numbers you shared — it'll get more precise as you log your real accounts, debts, and expenses.",
+    'onboarding_rapido.titular_riesgo': "Heads up — there's something worth fixing soon",
+    'onboarding_rapido.titular_atencion': "You're doing okay, with a couple of yellow flags",
+    'onboarding_rapido.titular_saludable': "You're doing great! Your situation looks healthy",
     'onboarding_rapido.nombre_ingreso': 'Monthly income',
     'onboarding_rapido.nombre_liquido': 'Available money',
     'onboarding_rapido.nombre_deuda': 'Total debts',
@@ -5654,29 +5692,71 @@ function iniciarOnboardingChat(){
   mostrarPreguntaOnboarding();
 }
 
+// Pedido del usuario: que se sienta menos como un formulario sin fin. Una
+// barra de progreso simple ("Paso 2 de 5") le pone un límite visible a algo
+// que antes solo se sentía como una conversación que no se sabía qué tan
+// larga era.
+function actualizarProgresoOnboarding(){
+  const el = document.getElementById('onb-chat-progreso');
+  if(!el) return;
+  const total = PASOS_ONB_CHAT.length;
+  const actual = Math.min(onbPasoActual + 1, total);
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span>${tf('onboarding_rapido.chat_paso', actual, total)}</span>
+    <div class="onb-chat-progreso-barra"><div class="onb-chat-progreso-relleno" style="width:${(actual / total) * 100}%;"></div></div>
+  `;
+}
+
 function mostrarPreguntaOnboarding(){
   const paso = PASOS_ONB_CHAT[onbPasoActual];
+  actualizarProgresoOnboarding();
   agregarBurbujaOnboarding('asistente', escapeHtml(t(paso.pregunta)));
   const input = document.getElementById('input-onb-chat-respuesta');
   input.value = '';
   document.getElementById('onb-chat-input-area').style.display = 'flex';
+  document.getElementById('onb-chat-nose').style.display = 'flex';
   input.focus();
+}
+
+function registrarRespuestaOnboarding(valor, textoBurbuja){
+  const paso = PASOS_ONB_CHAT[onbPasoActual];
+  document.getElementById(`input-onb-${paso.campo}`).value = String(valor);
+  agregarBurbujaOnboarding('usuario', escapeHtml(textoBurbuja ?? formatoMonto(valor, 'MXN')));
+  onbPasoActual++;
+  if(onbPasoActual < PASOS_ONB_CHAT.length){
+    mostrarPreguntaOnboarding();
+  } else {
+    document.getElementById('onb-chat-input-area').style.display = 'none';
+    document.getElementById('onb-chat-nose').style.display = 'none';
+    document.getElementById('onb-chat-progreso').style.display = 'none';
+    verEvaluacionRapida();
+  }
 }
 
 function avanzarOnboardingChat(){
   const input = document.getElementById('input-onb-chat-respuesta');
   const valor = input.value === '' ? 0 : Number(input.value);
   if(Number.isNaN(valor) || valor < 0) return;
-  const paso = PASOS_ONB_CHAT[onbPasoActual];
-  document.getElementById(`input-onb-${paso.campo}`).value = String(valor);
-  agregarBurbujaOnboarding('usuario', escapeHtml(formatoMonto(valor, 'MXN')));
-  onbPasoActual++;
-  if(onbPasoActual < PASOS_ONB_CHAT.length){
-    mostrarPreguntaOnboarding();
-  } else {
-    document.getElementById('onb-chat-input-area').style.display = 'none';
-    verEvaluacionRapida();
+  registrarRespuestaOnboarding(valor);
+}
+
+// Pedido del usuario: mucha gente no trae el número exacto en la cabeza y
+// eso frena el onboarding a medio camino. "No sé" no lo deja atorado —
+// calcula un estimado razonable (editable después con calma en la app real)
+// en vez de forzar a adivinar un número o abandonar aquí mismo.
+function noSePreguntaOnboarding(){
+  const campo = PASOS_ONB_CHAT[onbPasoActual].campo;
+  const ingresoActual = Number(document.getElementById('input-onb-ingreso').value) || 0;
+  let valor = 0;
+  if(campo === 'ingreso'){
+    valor = 12000; // referencia aproximada de ingreso mensual en México
+  } else if(campo === 'gastos' && ingresoActual > 0){
+    valor = Math.round(ingresoActual * 0.7); // estimado típico: ~70% del ingreso en gastos
   }
+  // liquido/deuda/ahorro sin pista de ingreso: 0 es una respuesta real válida
+  // ("todavía no tengo"), no solo un relleno — se completa después en la app.
+  registrarRespuestaOnboarding(valor, t('onboarding_rapido.chat_no_se_burbuja'));
 }
 
 function calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro){
@@ -5720,6 +5800,17 @@ function renderEvaluacionRapida(items){
   `;
 }
 
+// Pedido del usuario: que el primer resultado se sienta como un logro, no
+// solo una lista de texto — un titular grande arriba, con el tono del
+// hallazgo más urgente (los items ya vienen ordenados riesgo→atención→
+// saludable), en vez de que el usuario tenga que leer todo para saber si
+// va bien o mal.
+function titularEvaluacionRapida(items){
+  const peor = items[0]?.severidad || 'saludable';
+  const claveTitular = { riesgo: 'onboarding_rapido.titular_riesgo', atencion: 'onboarding_rapido.titular_atencion', saludable: 'onboarding_rapido.titular_saludable' }[peor];
+  return { texto: t(claveTitular), severidad: peor };
+}
+
 function verEvaluacionRapida(){
   if(!validarConfigInicialOnboarding()) return;
   const ingreso = Number(document.getElementById('input-onb-ingreso').value) || 0;
@@ -5730,6 +5821,10 @@ function verEvaluacionRapida(){
   onbUltimosValores = { ingreso, liquido, deuda, gastos, ahorro };
 
   const items = calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro);
+  const titular = titularEvaluacionRapida(items);
+  const elTitular = document.getElementById('onb-resultado-titular');
+  elTitular.textContent = titular.texto;
+  elTitular.className = `onb-resultado-titular ${titular.severidad}`;
   document.getElementById('onb-insights').innerHTML = renderEvaluacionRapida(items);
   document.getElementById('onb-resultado').style.display = 'block';
   document.getElementById('btn-onb-evaluar').style.display = 'none';
@@ -13370,8 +13465,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 34;
+const VERSION_APP_ACTUAL = 35;
 const CHANGELOG_APP = [
+  {
+    version: 35,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'El onboarding rápido con Freaky ahora muestra el progreso ("Paso 2 de 5"), tiene un botón de "No sé, calcúlalo tú" para quien no trae el número exacto en la cabeza, y el resultado final abre con un titular grande en vez de solo una lista de texto.'
+    ],
+    cambios_en: [
+      'The quick onboarding chat with Freaky now shows progress ("Step 2 of 5"), has an "I don\'t know, estimate it" option for anyone without the exact number handy, and the final result opens with a big headline instead of just a list of text.'
+    ]
+  },
   {
     version: 34,
     fecha: '2026-08-22',
