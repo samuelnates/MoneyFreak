@@ -878,6 +878,19 @@
   @media (prefers-reduced-motion: no-preference){
     .entrada-escalonada{animation:entrada-tarjeta .4s cubic-bezier(0.23,1,0.32,1) both;}
   }
+  /* Prueba pedida por el usuario: en vez de la cascada de .entrada-escalonada
+     (que anima todo de una vez al cargar, aunque la mitad esté fuera de
+     pantalla), estas tarjetas nacen invisibles y solo se revelan cuando el
+     scroll las va dejando ver de verdad — revelarAlEntrarEnVista() les agrega
+     .visible una sola vez. */
+  .revelar-scroll{opacity:1;transform:none;}
+  @media (prefers-reduced-motion: no-preference){
+    .revelar-scroll{
+      opacity:0;transform:translateY(14px);
+      transition:opacity .45s cubic-bezier(0.23,1,0.32,1), transform .45s cubic-bezier(0.23,1,0.32,1);
+    }
+    .revelar-scroll.visible{opacity:1;transform:translateY(0);}
+  }
   .anillo-progreso{position:relative;width:128px;height:128px;margin:14px auto;}
   .anillo-progreso svg{width:100%;height:100%;transform:rotate(-90deg);}
   .anillo-fondo{fill:none;stroke:var(--borde-fuerte);stroke-width:8;}
@@ -3188,6 +3201,29 @@ function manejarSalir(){
 
 function formatoMonto(numero, moneda){
   return new Intl.NumberFormat('es-MX', {style:'currency', currency: moneda || 'MXN'}).format(numero || 0);
+}
+
+// Prueba pedida por el usuario (post de Instagram sobre scroll-linked
+// animations): en listas largas, en vez de animar todo de golpe al cargar
+// (.entrada-escalonada — la mitad ni se alcanza a ver), cada tarjeta nace
+// invisible y solo se revela cuando el scroll la va dejando ver de verdad.
+// Una sola vez por tarjeta (unobserve al revelar) — no se repite si subes y
+// bajas el scroll, eso se sentiría inquieto en vez de elegante.
+function revelarAlEntrarEnVista(contenedor, selector){
+  const elementos = contenedor.querySelectorAll(selector || '.revelar-scroll');
+  if(!elementos.length) return;
+  if(typeof IntersectionObserver === 'undefined'){
+    elementos.forEach(el => el.classList.add('visible'));
+    return;
+  }
+  const observador = new IntersectionObserver((entradas) => {
+    entradas.forEach(entrada => {
+      if(!entrada.isIntersecting) return;
+      entrada.target.classList.add('visible');
+      observador.unobserve(entrada.target);
+    });
+  }, { threshold: 0.15 });
+  elementos.forEach(el => observador.observe(el));
 }
 
 const REDUCIR_MOVIMIENTO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -11341,8 +11377,8 @@ function renderizarMovimientosGastos(){
   });
 
   const LIMITE_MOVIMIENTOS = 10;
-  const construirTarjetaGasto = (g, i) => `
-    <button type="button" class="tarjeta entrada-escalonada" style="animation-delay:${Math.min(i, LIMITE_MOVIMIENTOS) * 30}ms" data-gasto-id="${g.id}">
+  const construirTarjetaGasto = (g) => `
+    <button type="button" class="tarjeta revelar-scroll" data-gasto-id="${g.id}">
       <div>
         <div class="nombre">${escapeHtml(nombreGasto(g.categoria))}${g.subcategoria ? ' · ' + escapeHtml(nombreGasto(g.subcategoria)) : ''}</div>
         <div class="detalle">${formatoFechaCorta(g.fecha)} · ${escapeHtml(etiquetaMedioPagoGasto(g))}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</div>
@@ -11359,6 +11395,7 @@ function renderizarMovimientosGastos(){
     : '';
 
   cont.innerHTML = (listaGastosHtml || `<div class="mensaje">${t('gastos.sin_gastos_mes')}</div>`) + verMasMovimientosHtml;
+  revelarAlEntrarEnVista(cont);
 
   cont.querySelectorAll('[data-gasto-id]').forEach(btn => {
     const g = gastosMovimientosActuales.find(x => x.id === btn.dataset.gastoId);
@@ -13595,8 +13632,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 37;
+const VERSION_APP_ACTUAL = 38;
 const CHANGELOG_APP = [
+  {
+    version: 38,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'En "Gastos" → movimientos, las tarjetas ahora aparecen con un ligero deslizamiento al ir haciendo scroll hacia ellas, en vez de aparecer todas de golpe.'
+    ],
+    cambios_en: [
+      'In "Expenses" → transactions, cards now gently slide into view as you scroll to them, instead of all appearing at once.'
+    ]
+  },
   {
     version: 37,
     fecha: '2026-08-22',
