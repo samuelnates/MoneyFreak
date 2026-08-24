@@ -4093,6 +4093,7 @@ const TRADUCCIONES = {
     'login.alert_cuenta_creada': 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
     'login.alert_error_link': 'El link de tu correo ya no es válido (puede haber expirado, o ya se usó, o se abrió en un navegador distinto al que usaste para registrarte). Vuelve a intentar iniciar sesión, o pide un nuevo link.',
     'login.alert_confirmado_otro_navegador': 'Tu correo ya fue confirmado, pero no pudimos iniciar tu sesión automáticamente desde este link (pasa cuando se abre en un navegador o app distinto al que usaste para registrarte). Inicia sesión normalmente con tu correo y contraseña.',
+    'login.alert_recuperacion_otro_navegador': 'Este link de recuperación no funcionó porque se abrió en un navegador o app distinto al que lo pediste (pasa seguido si lo abres desde dentro de Gmail o del correo). Pide uno nuevo aquí mismo y ábrelo con el mismo navegador — o cópialo y pégalo directo en Safari o Chrome en vez de tocarlo desde el correo.',
     'recuperar.alert_password_actualizada': 'Tu contraseña se actualizó correctamente.',
     'login.confirm_cerrar_sesion': '¿Cerrar sesión?',
     'config.confirm_borrar_datos1': '¿Seguro que quieres borrar TODOS tus datos financieros de esta app (cuentas, bienes, acciones, deudas e historial)? Esta acción no se puede deshacer.',
@@ -5001,6 +5002,7 @@ const TRADUCCIONES = {
     'login.alert_cuenta_creada': 'Account created. Check your email to confirm it, then sign in.',
     'login.alert_error_link': "The link from your email isn't valid anymore (it may have expired, already been used, or opened in a different browser than the one you signed up with). Try signing in again, or request a new link.",
     'login.alert_confirmado_otro_navegador': "Your email was already confirmed, but we couldn't sign you in automatically from this link (this happens when it's opened in a different browser or app than the one you signed up with). Sign in normally with your email and password.",
+    'login.alert_recuperacion_otro_navegador': "This recovery link didn't work because it was opened in a different browser or app than the one you requested it from (common when you open it from inside Gmail or your mail app). Request a new one right here and open it with the same browser — or copy it and paste it directly into Safari or Chrome instead of tapping it from the email.",
     'recuperar.alert_password_actualizada': 'Your password was updated successfully.',
     'login.confirm_cerrar_sesion': 'Sign out?',
     'config.confirm_borrar_datos1': 'Are you sure you want to delete ALL your financial data in this app (accounts, assets, stocks, debts, and history)? This action cannot be undone.',
@@ -5366,6 +5368,15 @@ async function init(){
   // el cliente terminara de inicializar y sigue sin haber sesión pero el
   // `?code=` sigue en la URL, es justo ese caso.
   const codigoAtorado = !session && codigoAuthPresente && !errorAuth;
+  // Bug real reportado por el papá del usuario (WhatsApp, con capturas): pidió
+  // recuperar su contraseña, abrió el link desde el correo en un navegador/app
+  // distinto al que lo pidió, y le salió el aviso de "confirmación de correo"
+  // de arriba -- mensaje incorrecto (nunca pidió confirmar nada) y sin salida
+  // real (le decía "inicia sesión normalmente", pero si está aquí es porque
+  // olvidó su contraseña, no la tiene para "iniciar sesión normalmente"). Se
+  // distingue con la marca propia `?flujo=recuperacion` (ver enviarRecuperacion)
+  // para dar el mensaje correcto y mandarlo directo a pedir un link nuevo.
+  const esRecuperacionAtorada = codigoAtorado && paramsAuth.get('flujo') === 'recuperacion';
   if(codigoAtorado){
     history.replaceState(null, '', location.pathname);
   }
@@ -5377,6 +5388,9 @@ async function init(){
     await entrarAlPanelConOnboarding();
   } else if(new URLSearchParams(location.search).get('demo') === '1'){
     await verMuestra();
+  } else if(esRecuperacionAtorada){
+    mostrar('vista-olvide-contrasena');
+    await mostrarAlerta(t('login.alert_recuperacion_otro_navegador'));
   } else {
     mostrar('vista-login');
     if(errorAuth) await mostrarAlerta(t('login.alert_error_link'));
@@ -6221,7 +6235,11 @@ async function enviarRecuperacion(){
 
   btn.disabled = true;
   btn.textContent = t('recuperar.enviando');
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  // El "?flujo=recuperacion" es marca propia (Supabase no distingue esto de
+  // forma confiable en la URL de regreso) -- permite detectar en init() si un
+  // "?code=" atorado (link abierto en otro navegador/app) viene de aquí, para
+  // dar un mensaje y una salida correctos en vez del genérico de confirmación.
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '?flujo=recuperacion' });
   btn.disabled = false;
   btn.textContent = t('recuperar.enviar');
 
@@ -13770,8 +13788,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 40;
+const VERSION_APP_ACTUAL = 41;
 const CHANGELOG_APP = [
+  {
+    version: 41,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Se corrigió un mensaje confuso al recuperar tu contraseña desde un link abierto en otra app (ej. desde dentro de Gmail): antes te decía "confirma tu correo" y te dejaba en un callejón sin salida; ahora te explica el problema real y te manda directo a pedir un link nuevo.'
+    ],
+    cambios_en: [
+      'Fixed a confusing message when recovering your password from a link opened in a different app (e.g. from inside Gmail): it used to say "confirm your email" and left you stuck; now it explains the real problem and sends you straight to request a new link.'
+    ]
+  },
   {
     version: 40,
     fecha: '2026-08-22',
