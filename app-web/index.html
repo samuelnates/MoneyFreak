@@ -476,6 +476,20 @@
   .tarjeta.deuda .monto{color:var(--neg);}
   .tarjeta.cuenta-inversion{cursor:default;}
   .tarjeta .equivalente{font-family:var(--mono);font-size:10.5px;color:var(--texto-tenue-2);margin-top:3px;}
+  /* Pedido del usuario: deslizar un movimiento de gasto hacia la izquierda
+     revela "Eliminar" en rojo detrás — el borde que separaba renglones vive
+     ahora en .swipe-fila (fijo) en vez de en .tarjeta (que se desliza), para
+     que la línea divisoria no se mueva con el gesto. */
+  .swipe-fila{position:relative;overflow:hidden;border-bottom:1px solid var(--borde);}
+  .lista .swipe-fila:last-child{border-bottom:none;}
+  .swipe-fila .tarjeta{border-bottom:none;padding-right:2px;background:var(--bg);position:relative;}
+  .swipe-contenido{transition:transform .22s var(--ease-out);touch-action:pan-y;}
+  .swipe-contenido.arrastrando{transition:none;}
+  .swipe-accion-eliminar{
+    position:absolute;top:0;right:0;bottom:0;width:84px;
+    background:var(--color-riesgo);color:#fff;border:none;
+    font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  }
   .btn-grande{
     display:block;width:100%;border:1px solid var(--acento);border-radius:3px;
     font-family:var(--sans);font-size:12px;font-weight:700;padding:15px 18px;margin-bottom:10px;
@@ -10866,21 +10880,30 @@ async function actualizarGasto(){
   abrirGastos();
 }
 
+// Núcleo compartido de borrado -- usado tanto por el botón "Eliminar gasto"
+// de la pantalla de edición como por el swipe-to-delete en movimientos. No
+// navega a ningún lado; cada quien decide qué hacer después de borrar.
+async function eliminarGastoPorId(g){
+  const { error } = await sb.from('gastos').delete().eq('id', g.id);
+  if(error){
+    await mostrarAlerta(t('alert.error_eliminar'));
+    return false;
+  }
+  const esCompraMeses = !!(g.compra_meses_deuda_id || g.compra_meses_tarjeta);
+  if(esCompraMeses){
+    ajustarComprasMesesPorEdicion(g, null); // se resuelve en segundo plano
+  } else {
+    aplicarAjusteGasto(g, -1); // se resuelve en segundo plano
+  }
+  return true;
+}
+
 async function eliminarGasto(){
   if(!gastoActual) return;
   const ok = await mostrarConfirmacion(t('alert.confirm_eliminar_gasto'), { destructivo: true, textoConfirmar: t('comun.eliminar') });
   if(!ok) return;
-  const { error } = await sb.from('gastos').delete().eq('id', gastoActual.id);
-  if(error){
-    await mostrarAlerta(t('alert.error_eliminar'));
-    return;
-  }
-  const esCompraMeses = !!(gastoActual.compra_meses_deuda_id || gastoActual.compra_meses_tarjeta);
-  if(esCompraMeses){
-    ajustarComprasMesesPorEdicion(gastoActual, null); // se resuelve en segundo plano
-  } else {
-    aplicarAjusteGasto(gastoActual, -1); // se resuelve en segundo plano
-  }
+  const eliminado = await eliminarGastoPorId(gastoActual);
+  if(!eliminado) return;
   abrirGastos();
 }
 
@@ -11378,13 +11401,16 @@ function renderizarMovimientosGastos(){
 
   const LIMITE_MOVIMIENTOS = 10;
   const construirTarjetaGasto = (g) => `
-    <button type="button" class="tarjeta revelar-scroll" data-gasto-id="${g.id}">
-      <div>
-        <div class="nombre">${escapeHtml(nombreGasto(g.categoria))}${g.subcategoria ? ' · ' + escapeHtml(nombreGasto(g.subcategoria)) : ''}</div>
-        <div class="detalle">${formatoFechaCorta(g.fecha)} · ${escapeHtml(etiquetaMedioPagoGasto(g))}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</div>
-      </div>
-      <div class="monto">-${formatoMonto(g.monto, g.moneda)}</div>
-    </button>
+    <div class="swipe-fila revelar-scroll" data-gasto-id="${g.id}">
+      <button type="button" class="swipe-accion-eliminar" data-swipe-eliminar data-gasto-id="${g.id}" data-i18n="comun.eliminar">Eliminar</button>
+      <button type="button" class="tarjeta swipe-contenido" data-gasto-id="${g.id}">
+        <div>
+          <div class="nombre">${escapeHtml(nombreGasto(g.categoria))}${g.subcategoria ? ' · ' + escapeHtml(nombreGasto(g.subcategoria)) : ''}</div>
+          <div class="detalle">${formatoFechaCorta(g.fecha)} · ${escapeHtml(etiquetaMedioPagoGasto(g))}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</div>
+        </div>
+        <div class="monto">-${formatoMonto(g.monto, g.moneda)}</div>
+      </button>
+    </div>
   `;
   const listaGastosHtml = gastosFiltrados.slice(0, LIMITE_MOVIMIENTOS).map(construirTarjetaGasto).join('');
   const restoGastosHtml = gastosFiltrados.slice(LIMITE_MOVIMIENTOS).map(construirTarjetaGasto).join('');
@@ -11396,11 +11422,120 @@ function renderizarMovimientosGastos(){
 
   cont.innerHTML = (listaGastosHtml || `<div class="mensaje">${t('gastos.sin_gastos_mes')}</div>`) + verMasMovimientosHtml;
   revelarAlEntrarEnVista(cont);
+  activarSwipeEliminarGasto(cont);
 
-  cont.querySelectorAll('[data-gasto-id]').forEach(btn => {
+  cont.querySelectorAll('.swipe-contenido[data-gasto-id]').forEach(btn => {
     const g = gastosMovimientosActuales.find(x => x.id === btn.dataset.gastoId);
     btn.onclick = () => abrirEditarGasto(g);
   });
+  cont.querySelectorAll('[data-swipe-eliminar]').forEach(btn => {
+    btn.onclick = () => eliminarGastoDesdeMovimiento(btn.dataset.gastoId);
+  });
+}
+
+// Pedido del usuario ("quiero poder eliminar un gasto deslizándolo hacia la
+// izquierda"): patrón swipe-to-delete estilo iOS. Se delega un solo listener
+// por contenedor (no uno por tarjeta) porque la lista se re-renderiza
+// completa en cada filtro — delegar evita tener que re-atar listeners cada
+// vez. Solo una fila puede quedar abierta a la vez.
+function activarSwipeEliminarGasto(contenedor){
+  if(contenedor.dataset.swipeListo) return; // ya tiene los listeners de una render anterior
+  contenedor.dataset.swipeListo = '1';
+
+  const ANCHO_REVELADO = 84;
+  let filaAbierta = null;
+  let arrastre = null;
+
+  function cerrarFila(fila){
+    const contenido = fila.querySelector('.swipe-contenido');
+    contenido.style.transform = 'translateX(0)';
+    fila.classList.remove('abierta');
+    if(filaAbierta === fila) filaAbierta = null;
+  }
+
+  contenedor.addEventListener('touchstart', (e) => {
+    if(window.innerWidth >= 900 || REDUCIR_MOVIMIENTO) return;
+    const fila = e.target.closest('.swipe-fila');
+    if(!fila || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    arrastre = {
+      fila,
+      contenido: fila.querySelector('.swipe-contenido'),
+      inicioX: t.clientX,
+      inicioY: t.clientY,
+      offsetInicial: fila.classList.contains('abierta') ? -ANCHO_REVELADO : 0,
+      mover: false
+    };
+  }, { passive: true });
+
+  contenedor.addEventListener('touchmove', (e) => {
+    if(!arrastre) return;
+    const t = e.touches[0];
+    const dx = t.clientX - arrastre.inicioX;
+    const dy = t.clientY - arrastre.inicioY;
+    if(!arrastre.mover){
+      if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if(Math.abs(dy) > Math.abs(dx)){ arrastre = null; return; } // scroll vertical normal, no interferir
+      arrastre.mover = true;
+      if(filaAbierta && filaAbierta !== arrastre.fila) cerrarFila(filaAbierta);
+      arrastre.contenido.classList.add('arrastrando');
+    }
+    e.preventDefault();
+    const offset = Math.max(-ANCHO_REVELADO - 14, Math.min(0, arrastre.offsetInicial + dx));
+    arrastre.contenido.style.transform = `translateX(${offset}px)`;
+  }, { passive: false });
+
+  contenedor.addEventListener('touchend', () => {
+    if(!arrastre) return;
+    if(arrastre.mover){
+      arrastre.contenido.classList.remove('arrastrando');
+      const offsetActual = Number(/translateX\((-?\d+(?:\.\d+)?)px\)/.exec(arrastre.contenido.style.transform)?.[1] || 0);
+      const abrir = offsetActual < -(ANCHO_REVELADO / 2);
+      arrastre.contenido.style.transform = abrir ? `translateX(-${ANCHO_REVELADO}px)` : 'translateX(0)';
+      arrastre.fila.classList.toggle('abierta', abrir);
+      filaAbierta = abrir ? arrastre.fila : null;
+    }
+    arrastre = null;
+  });
+
+  // Tocar la tarjeta mientras su fila está abierta la cierra en vez de abrir
+  // la edición del gasto — así no se abre por accidente al querer cerrarla.
+  contenedor.addEventListener('click', (e) => {
+    if(!filaAbierta) return;
+    if(e.target.closest('[data-swipe-eliminar]')) return;
+    const fila = e.target.closest('.swipe-fila');
+    if(fila === filaAbierta){
+      e.preventDefault();
+      e.stopPropagation();
+      cerrarFila(fila);
+    }
+  }, true);
+}
+
+async function eliminarGastoDesdeMovimiento(id){
+  const g = gastosMovimientosActuales.find(x => x.id === id);
+  if(!g) return;
+  const ok = await mostrarConfirmacion(t('alert.confirm_eliminar_gasto'), { destructivo: true, textoConfirmar: t('comun.eliminar') });
+  if(!ok) return;
+  const eliminado = await eliminarGastoPorId(g);
+  if(!eliminado) return;
+
+  gastosMovimientosActuales = gastosMovimientosActuales.filter(x => x.id !== id);
+  const fila = document.querySelector(`#gastos-movimientos-contenido .swipe-fila[data-gasto-id="${id}"]`);
+  if(!fila) return;
+  if(gastosMovimientosActuales.length === 0 || !document.querySelector('#gastos-movimientos-contenido [data-gasto-id]:not([data-gasto-id="' + id + '"])')){
+    renderizarMovimientosGastos(); // se quedaría vacía -- re-renderiza para mostrar el mensaje "sin gastos"
+    return;
+  }
+  if(REDUCIR_MOVIMIENTO){ fila.remove(); return; }
+  fila.style.overflow = 'hidden';
+  fila.style.maxHeight = fila.offsetHeight + 'px';
+  fila.style.transition = 'max-height .25s ease, opacity .25s ease';
+  requestAnimationFrame(() => {
+    fila.style.maxHeight = '0px';
+    fila.style.opacity = '0';
+  });
+  fila.addEventListener('transitionend', () => fila.remove(), { once: true });
 }
 
 let graficaHistoricoGastos = null;
@@ -13632,8 +13767,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 38;
+const VERSION_APP_ACTUAL = 39;
 const CHANGELOG_APP = [
+  {
+    version: 39,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'En "Gastos" → movimientos, ahora puedes deslizar un gasto hacia la izquierda para eliminarlo directo desde la lista, sin tener que abrir la pantalla de edición.'
+    ],
+    cambios_en: [
+      'In "Expenses" → transactions, you can now swipe an expense left to delete it right from the list, without opening the edit screen.'
+    ]
+  },
   {
     version: 38,
     fecha: '2026-08-22',
