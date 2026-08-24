@@ -11512,11 +11512,14 @@ function activarSwipeEliminarGasto(contenedor){
   }, true);
 }
 
+// Sin modal de confirmación aquí a propósito (pedido del usuario, "triple
+// confirmación ya es demasiado"): deslizar + tocar "Eliminar" ya son 2 pasos
+// deliberados, igual que el swipe-delete nativo de Mail/Gmail. El botón
+// "Eliminar gasto" de la pantalla de edición sí conserva su confirmación —
+// ahí se puede llegar solo por estar viendo el gasto, sin intención de borrar.
 async function eliminarGastoDesdeMovimiento(id){
   const g = gastosMovimientosActuales.find(x => x.id === id);
   if(!g) return;
-  const ok = await mostrarConfirmacion(t('alert.confirm_eliminar_gasto'), { destructivo: true, textoConfirmar: t('comun.eliminar') });
-  if(!ok) return;
   const eliminado = await eliminarGastoPorId(g);
   if(!eliminado) return;
 
@@ -13767,8 +13770,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 39;
+const VERSION_APP_ACTUAL = 40;
 const CHANGELOG_APP = [
+  {
+    version: 40,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Se quitó la confirmación extra al eliminar un gasto deslizándolo — deslizar y tocar "Eliminar" ya bastan, sin un tercer paso de confirmación.'
+    ],
+    cambios_en: [
+      'Removed the extra confirmation when deleting an expense by swiping — swiping and tapping "Delete" is already enough, no third confirmation step.'
+    ]
+  },
   {
     version: 39,
     fecha: '2026-08-22',
