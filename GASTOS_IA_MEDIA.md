@@ -20,6 +20,7 @@ consume crédito** — solo cuenta lo que sí llegó a generarse.
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 1, fallback) | seedance-2.5 | fal | ❌ rechazado (política de contenido, parecido a persona real) | 0 | $0 |
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 2, aspect auto) | seedance-2.5 | kie | ❌ rechazado (HTTP 402, sin crédito) | 0 | $0 |
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 3, 8s/480p, exitoso) | seedance-2.5 | kie | ✅ éxito | 224 | $1.12 |
+| 2026-08-25 | Vídeo final presentación Freaky (15s/720p) | seedance-2.5 | kie | ❌ rechazado (HTTP 402, sin crédito) | 0 | $0 |
 
 **Gasto acumulado confirmado:** 224 créditos ($1.12) del draft de vídeo, más el costo aún
 no capturado de la imagen de referencia (probablemente unos pocos créditos, GPT Image 2 en
