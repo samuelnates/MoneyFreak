@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soporte — Money Freak</title>
+<meta name="description" content="Ayuda y soporte de Money Freak.">
+<link rel="icon" type="image/svg+xml" href="app-icon/icon-1024.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#000000;
+    --superficie:#0D0D0B;
+    --borde:#232019;
+    --texto:#EDEAE2;
+    --texto-tenue:#8D8676;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F7F5EF;
+      --superficie:#FFFFFF;
+      --borde:#E4E0D2;
+      --texto:#2A2718;
+      --texto-tenue:#6B6555;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+    line-height:1.6;padding:32px 20px 80px;
+  }
+  .contenedor{max-width:640px;margin:0 auto;}
+  .marca{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:6px;}
+  h1{font-size:26px;margin:0 0 6px;}
+  .fecha{font-family:var(--mono);font-size:12px;color:var(--texto-tenue);margin-bottom:32px;}
+  h2{font-size:16px;margin:32px 0 8px;}
+  p{font-size:14px;color:var(--texto);margin:0 0 4px;}
+  .caja{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:18px 20px;margin-bottom:8px;}
+  a{color:inherit;}
+  a.boton{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:13px;padding:10px 16px;border:1px solid var(--borde);border-radius:8px;text-decoration:none;}
+  .volver{display:inline-block;margin-top:40px;font-family:var(--mono);font-size:13px;color:var(--texto-tenue);text-decoration:none;border-bottom:1px solid var(--borde);}
+  .volver:hover{color:var(--texto);}
+  .logo-mark{width:30px;height:30px;margin-bottom:10px;color:var(--texto);}
+  .logo-mark svg{width:100%;height:100%;display:block;}
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
+  <div class="marca">MONEY FREAK</div>
+  <h1>Soporte</h1>
+  <div class="fecha">¿Tienes una duda, problema o sugerencia?</div>
+
+  <h2>Escríbenos</h2>
+  <div class="caja">
+    <p>Respondemos por correo a cualquier duda sobre tu cuenta, un error en la app, o una sugerencia.</p>
+    <a class="boton" href="mailto:help@moneyfreak.app">help@moneyfreak.app</a>
+  </div>
+
+  <h2>Preguntas frecuentes</h2>
+  <div class="caja">
+    <p><strong>¿Cómo borro mi cuenta y mis datos?</strong><br>Desde la app: Configuración → Seguridad y privacidad → Eliminar mi cuenta. También puedes <a href="borrar-datos.html">solicitarlo aquí</a> si no puedes entrar a tu cuenta.</p>
+  </div>
+  <div class="caja">
+    <p><strong>¿Mis datos financieros están seguros?</strong><br>Sí — cada usuario solo puede ver y editar sus propios datos, protegidos a nivel de base de datos. Consulta el <a href="privacidad.html">aviso de privacidad</a> para más detalle.</p>
+  </div>
+  <div class="caja">
+    <p><strong>¿Money Freak conecta con mi banco automáticamente?</strong><br>Todavía no — por ahora el registro de cuentas, gastos e ingresos es manual (o con ayuda de Freaky, el asistente con IA).</p>
+  </div>
+
+  <a class="volver" href="index.html">‹ Volver a la app</a>
+</div>
+</body>
+</html>
