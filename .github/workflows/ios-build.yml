@@ -108,22 +108,24 @@ jobs:
           name: MoneyFreak-ipa
           path: ${{ runner.temp }}/export/*.ipa
 
+      # --- Subida automática a App Store Connect / TestFlight ---
+      # Usa una API Key de App Store Connect (rol "App Manager"), distinta
+      # al certificado de distribución. `xcrun altool` instala la llave en
+      # la ubicación estándar que espera (~/.appstoreconnect/private_keys)
+      # y sube el .ipa directo, sin necesitar Mac/Transporter del usuario.
+      - name: Subir el .ipa a App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo -n "$ASC_API_KEY_P8" | base64 --decode -o ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          IPA_PATH=$(ls $RUNNER_TEMP/export/*.ipa)
+          xcrun altool --upload-app -f "$IPA_PATH" -t ios \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
       - name: Borrar el keychain temporal
         if: always()
         run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-
-      # --- Todavía no automatizado: subir directo a TestFlight ---
-      # Requeriría una API Key de App Store Connect (otro secret nuevo,
-      # distinto al certificado/perfil) para usar `xcrun altool` o
-      # `xcrun notarytool`/fastlane. Por ahora el .ipa firmado queda como
-      # artefacto descargable de este workflow (pestaña Actions -> el run
-      # -> "Artifacts" al final de la página) -- se sube a TestFlight a mano
-      # con la app Transporter de Apple. Se puede automatizar después si
-      # hace falta subir builds muy seguido.
-      #
-      # Nota honesta: este workflow se escribió siguiendo el patrón estándar
-      # de Apple/GitHub Actions para firma con certificado + perfil, pero no
-      # se pudo probar corriéndolo de verdad en este entorno (no hay Mac/Xcode
-      # aquí) -- la primera vez que le des "Run workflow" es la prueba real.
-      # Si `method: app-store-connect` da error en el export (por versión de
-      # Xcode del runner), el valor alterno a probar es `app-store`.
