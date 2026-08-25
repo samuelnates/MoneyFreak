@@ -2,3 +2,6 @@
 # más específico. Esto es solo lo genérico a nivel raíz.
 .DS_Store
 Thumbs.db
+
+# Claves de API (nunca commitear)
+.env
