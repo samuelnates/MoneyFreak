@@ -10,6 +10,21 @@
         <string>Money Freak</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Usa Face ID para confirmar tu identidad y entrar a Money Freak de forma segura.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Money Freak usa la cámara para fotografiar tickets y recibos, y así llenar el gasto por ti.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Money Freak usa el micrófono para que grabes una nota de voz al registrar un gasto.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.miscuentaspro.app</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

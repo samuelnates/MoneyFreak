@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Money Freak</title>
+<!-- La verificación de marca de Google OAuth rechazó un intento anterior
+     porque "en la página principal no se explica el propósito de la app" —
+     no había ni un <meta name="description"> ni og:*, así que un revisor
+     (o un crawler) que solo mira metadatos no encontraba nada. -->
+<meta name="description" content="Money Freak: controla tus cuentas, bienes, deudas y salud financiera en un solo lugar, con Freaky, tu mentor financiero con IA.">
+<meta property="og:title" content="Money Freak">
+<meta property="og:description" content="Controla tus cuentas, bienes, deudas y salud financiera en un solo lugar, con Freaky, tu mentor financiero con IA.">
+<meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Money Freak">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -159,6 +167,18 @@
   }
   @media (hover:hover) and (pointer:fine){
     .chat-link-destino:hover{background:var(--acento);color:var(--acento-texto);}
+  }
+  .paso-progreso{
+    display:flex;align-items:center;gap:8px;margin:2px 0 10px;
+    font-family:var(--mono, monospace);font-size:11.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--texto-tenue);
+  }
+  .paso-progreso .paso-progreso-barra{
+    flex:1;height:4px;border-radius:100px;background:var(--borde-fuerte);overflow:hidden;
+  }
+  .paso-progreso .paso-progreso-relleno{
+    height:100%;border-radius:100px;background:var(--acento);
+    transition:width 260ms var(--ease-out);
   }
   .chat-sugerencias{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
   .chat-sugerencias button{
@@ -394,6 +414,14 @@
   .panel-insight-saludable{border-left-color:var(--color-saludable);}
   .panel-insight-nota{font-family:var(--sans);font-size:11px;color:var(--texto-tenue-2);line-height:1.4;margin:8px 0 16px;}
 
+  .onb-resultado-titular{
+    font-family:var(--sans);font-weight:800;font-size:24px;line-height:1.2;
+    margin:4px 0 16px;text-wrap:balance;
+  }
+  .onb-resultado-titular.riesgo{color:var(--color-riesgo);}
+  .onb-resultado-titular.atencion{color:var(--color-atencion);}
+  .onb-resultado-titular.saludable{color:var(--color-saludable);}
+
   .rango-botones{display:flex;border:1px solid var(--borde-fuerte);border-radius:3px;overflow:hidden;margin-bottom:14px;width:fit-content;}
   .rango-botones button{
     background:none;border:none;border-right:1px solid var(--borde-fuerte);color:var(--texto-tenue);
@@ -448,6 +476,20 @@
   .tarjeta.deuda .monto{color:var(--neg);}
   .tarjeta.cuenta-inversion{cursor:default;}
   .tarjeta .equivalente{font-family:var(--mono);font-size:10.5px;color:var(--texto-tenue-2);margin-top:3px;}
+  /* Pedido del usuario: deslizar un movimiento de gasto hacia la izquierda
+     revela "Eliminar" en rojo detrás — el borde que separaba renglones vive
+     ahora en .swipe-fila (fijo) en vez de en .tarjeta (que se desliza), para
+     que la línea divisoria no se mueva con el gesto. */
+  .swipe-fila{position:relative;overflow:hidden;border-bottom:1px solid var(--borde);}
+  .lista .swipe-fila:last-child{border-bottom:none;}
+  .swipe-fila .tarjeta{border-bottom:none;padding-right:2px;background:var(--bg);position:relative;}
+  .swipe-contenido{transition:transform .22s var(--ease-out);touch-action:pan-y;}
+  .swipe-contenido.arrastrando{transition:none;}
+  .swipe-accion-eliminar{
+    position:absolute;top:0;right:0;bottom:0;width:84px;
+    background:var(--color-riesgo);color:#fff;border:none;
+    font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  }
   .btn-grande{
     display:block;width:100%;border:1px solid var(--acento);border-radius:3px;
     font-family:var(--sans);font-size:12px;font-weight:700;padding:15px 18px;margin-bottom:10px;
@@ -596,12 +638,46 @@
   .freaky-personaje{
     display:none;position:fixed;left:0;top:0;z-index:8;cursor:pointer;
     width:84px;height:84px;border:none;padding:0;background:none;
+    /* La sombra vivía en cada .freaky-img (abajo) — 6 imágenes apiladas, cada
+       una con su propio filtro. Con la respiración en reposo animando este
+       botón en un loop infinito (repeat:-1, nunca para), Safari/iOS tenía que
+       re-rasterizar 6 filtros superpuestos en cada frame, y durante el
+       crossfade de pose (freakyMostrarPose) llegaban a solaparse 2 capas con
+       sombra propia a la vez — eso es el "recuadro" parpadeando que reportó
+       el usuario (bug real de renderizado, las imágenes sí son PNG
+       transparente de verdad, confirmado). Un solo filtro aquí, en el
+       contenedor, sombrea el resultado ya compuesto — 1 capa en vez de 6.
+    */
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)) drop-shadow(0 10px 14px rgba(0,0,0,0.3));
+    /* Fuerza una capa GPU propia y estable para el filtro — evita que Safari
+       lo re-rasterice por software en cada frame de la animación infinita
+       (causa raíz del parpadeo). No afecta nada visual: no hay rotación 3D. */
+    -webkit-backface-visibility:hidden;backface-visibility:hidden;
   }
   body.con-sesion:not(.freaky-vuelo-desactivado) .freaky-personaje{display:flex;}
+  /* El contenedor de arriba (.freaky-personaje) es el que GSAP mueve de un
+     lado a otro de la pantalla (x/y) durante los vuelos, y el que usan los
+     gestos de un solo disparo (freakyTrigger). La respiración/balanceo en
+     reposo vivía en el MISMO elemento como un tween de GSAP en loop infinito
+     (repeat:-1, nunca paraba) — desde que Freaky dejó de volar sin parar
+     (ver freakyIrAPerchaDePantalla) pasa casi todo el tiempo en reposo, así
+     que ese tween corría de forma continua durante sesiones enteras, y el
+     usuario lo reportó como parpadeo persistente. Se separa en un
+     contenedor propio (.freaky-cuerpo) que anima con @keyframes de CSS en
+     vez de JS — el navegador compone esto de forma mucho más estable que un
+     tween que reescribe el transform en cada frame para siempre — sin tocar
+     el transform del contenedor externo, que sigue siendo 100% de GSAP.
+  */
+  .freaky-cuerpo{position:relative;width:100%;height:100%;}
+  @media (prefers-reduced-motion: no-preference){
+    .freaky-cuerpo.freaky-reposo-flotando{animation:freaky-respirar 1.4s ease-in-out infinite;}
+    .freaky-cuerpo.freaky-reposo-sentado{animation:freaky-balanceo 3.6s ease-in-out infinite;}
+  }
+  @keyframes freaky-respirar{0%,100%{transform:scale(1,1) translateY(0);}50%{transform:scale(1.01,0.99) translateY(-5px);}}
+  @keyframes freaky-balanceo{0%,100%{transform:rotate(0deg) translateY(0);}50%{transform:rotate(-3deg) translateY(2px);}}
   .freaky-img{
     position:absolute;top:0;left:0;width:100%;height:100%;
     object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;
-    filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)) drop-shadow(0 10px 14px rgba(0,0,0,0.3));
   }
   .freaky-estela{
     position:fixed;width:8px;height:8px;border-radius:50%;background:var(--acento);
@@ -637,6 +713,13 @@
     padding:20px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;
   }
   .asesor-tarjeta img{width:120px;height:120px;object-fit:contain;}
+  .asesor-tarjeta-titulo{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--texto);}
+  .asesor-tarjeta-desc{font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue);line-height:1.5;}
+  .asesor-tarjeta-habilidad{
+    font-family:var(--sans);font-size:11px;color:var(--texto-tenue);line-height:1.4;
+    background:var(--bg);border:1px solid var(--borde);border-radius:10px;padding:8px 10px;
+  }
+  .asesor-tarjeta-habilidad b{color:var(--texto);font-weight:600;}
   .asesor-tarjeta button{width:100%;}
 
   .panel-freaky-card{
@@ -768,6 +851,7 @@
     border:solid var(--acento-texto);border-width:0 2px 2px 0;transform:rotate(45deg);
   }
   .check-fila input[type=checkbox]:focus-visible{outline:2px solid var(--texto-tenue);outline-offset:2px;}
+  .check-fila input[type=checkbox]:disabled{opacity:.35;cursor:not-allowed;}
   .check-fila label{margin-bottom:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--texto);font-weight:400;}
   .fila-filtros{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .fila-filtros select{flex:1;min-width:150px;min-height:44px;margin-bottom:0;font-size:13.5px;padding:10px 4px;}
@@ -807,6 +891,19 @@
   }
   @media (prefers-reduced-motion: no-preference){
     .entrada-escalonada{animation:entrada-tarjeta .4s cubic-bezier(0.23,1,0.32,1) both;}
+  }
+  /* Prueba pedida por el usuario: en vez de la cascada de .entrada-escalonada
+     (que anima todo de una vez al cargar, aunque la mitad esté fuera de
+     pantalla), estas tarjetas nacen invisibles y solo se revelan cuando el
+     scroll las va dejando ver de verdad — revelarAlEntrarEnVista() les agrega
+     .visible una sola vez. */
+  .revelar-scroll{opacity:1;transform:none;}
+  @media (prefers-reduced-motion: no-preference){
+    .revelar-scroll{
+      opacity:0;transform:translateY(14px);
+      transition:opacity .45s cubic-bezier(0.23,1,0.32,1), transform .45s cubic-bezier(0.23,1,0.32,1);
+    }
+    .revelar-scroll.visible{opacity:1;transform:translateY(0);}
   }
   .anillo-progreso{position:relative;width:128px;height:128px;margin:14px auto;}
   .anillo-progreso svg{width:100%;height:100%;transform:rotate(-90deg);}
@@ -861,6 +958,11 @@
     background:none;border:none;border-left:2px solid var(--texto-tenue-2);color:var(--texto-tenue);
     border-radius:0;padding:4px 0 4px 14px;font-family:var(--sans);font-size:12px;margin-bottom:18px;line-height:1.6;
   }
+  /* Variantes para confirmaciones/errores donde un .aviso neutro pasa
+     desapercibido (ej. "ya te mandé el correo" — bug real reportado por una
+     usuaria que no distinguía si el envío había funcionado). */
+  .aviso.exito{border-left-color:var(--color-saludable);color:var(--color-saludable);font-weight:600;}
+  .aviso.error{border-left-color:var(--neg);color:var(--neg);font-weight:600;}
   .chart-caja{background:none;border-radius:0;padding:0 0 22px;border:none;border-bottom:1px solid var(--borde);margin-bottom:24px;}
   .composicion-canvas-wrap{max-width:170px;aspect-ratio:1;margin:0 auto;}
   .leyenda{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
@@ -878,6 +980,8 @@
   .separador-o{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--texto-tenue-2);font-size:12px;}
   .separador-o::before,.separador-o::after{content:'';flex:1;height:1px;background:var(--borde);}
   .btn-google{display:flex;align-items:center;justify-content:center;gap:10px;}
+  .btn-apple{display:flex;align-items:center;justify-content:center;gap:10px;background:#000;color:#fff;border:none;}
+  .btn-apple:active{opacity:0.75;transform:scale(0.97);}
   .marca-pro{
     font-family:var(--mono);font-size:10px;color:var(--texto-tenue-2);
     letter-spacing:.14em;margin-bottom:22px;
@@ -887,6 +991,14 @@
   .logo-mark svg{width:100%;height:100%;display:block;}
   .login-caja h1{margin-bottom:6px;font-size:22px;}
   .login-caja .subtitulo{margin-bottom:32px;}
+  .login-features{
+    list-style:none;margin:28px 0 20px;padding:0;text-align:left;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .login-features li{
+    font-family:var(--sans);font-size:12px;color:var(--texto-tenue);line-height:1.5;
+    padding-left:14px;border-left:2px solid var(--texto-tenue-2);
+  }
   .login-caja label{text-align:left;}
   .login-caja .marca-pro{position:relative;display:inline-block;padding:6px 14px;}
   .login-caja .marca-pro::before, .login-caja .marca-pro::after{
@@ -1041,7 +1153,7 @@
     /* Pantallas de contenido (dashboards): más anchas que un formulario, no una columna angosta perdida en medio de la pantalla */
     .pantalla{max-width:720px;}
     #vista-inicio, #vista-balance, #vista-salud, #vista-flujo, #vista-simulador, #vista-cuentas, #vista-score{max-width:920px;}
-    #vista-privacidad{max-width:760px;}
+    #vista-config-general, #vista-seguridad-privacidad, #vista-reportes{max-width:760px;}
 
     .panel-grid{
       display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;
@@ -1099,6 +1211,21 @@
 </head>
 <body>
 
+<!-- Respaldo para revisores/crawlers que no ejecutan JS: toda la pantalla de
+     login (con la descripción real y el link de privacidad) vive dentro de
+     .pantalla, que por default es display:none — solo se hace visible
+     cuando el JS corre y le agrega la clase .activa. Un lector que no
+     ejecute JS (o que respete display:none al extraer texto) vería una
+     página en blanco sin esto, sin importar cuánto texto real haya en el
+     HTML. La verificación de marca de OAuth de Google seguía rechazando el
+     sitio ("no se explica el propósito de la app" / "el nombre no
+     coincide") incluso después de agregar esa descripción visible para un
+     usuario real — este es el gap que quedaba. -->
+<noscript>
+  <h1>Money Freak</h1>
+  <p>Money Freak: controla tus cuentas, bienes, deudas y salud financiera en un solo lugar, con Freaky, tu mentor financiero con IA.</p>
+  <p><a href="privacidad.html">Aviso de privacidad</a></p>
+</noscript>
 
 <nav class="sidebar-desktop">
   <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
@@ -1155,12 +1282,14 @@
   <span class="freaky-badge" id="freaky-badge-fallback" aria-hidden="true"></span>
 </button>
 <button type="button" class="freaky-personaje" id="freaky-personaje" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
-  <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
-  <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-saludando" class="freaky-img" alt="" style="opacity:0;">
-  <img id="freaky-img-ojos_cerrados" class="freaky-img" alt="" style="opacity:0;">
+  <div class="freaky-cuerpo" id="freaky-cuerpo">
+    <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
+    <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-hablando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-sentado" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-saludando" class="freaky-img" alt="" style="opacity:0;">
+    <img id="freaky-img-ojos_cerrados" class="freaky-img" alt="" style="opacity:0;">
+  </div>
   <span class="freaky-badge" id="freaky-badge" aria-hidden="true"></span>
 </button>
 <div class="freaky-burbuja-proactiva" id="freaky-burbuja-proactiva" style="display:none;">
@@ -1226,49 +1355,98 @@
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M21.35 11.1h-9.17v2.98h5.4c-.23 1.4-1.63 4.1-5.4 4.1-3.25 0-5.9-2.7-5.9-6s2.65-6 5.9-6c1.85 0 3.09.79 3.8 1.47l2.6-2.5C16.9 3.6 14.6 2.6 12.18 2.6 6.98 2.6 2.78 6.8 2.78 12s4.2 9.4 9.4 9.4c5.4 0 9-3.8 9-9.15 0-.62-.07-1.09-.17-1.15Z"/></svg>
       <span data-i18n="login.google">Continuar con Google</span>
     </button>
-    <button class="btn-grande secundario" onclick="mostrar('vista-crear-cuenta')" data-i18n="login.crear_cuenta">Crear cuenta</button>
+    <!-- Requisito de Apple (App Store Guideline 4.8): al ofrecer Google como
+         login de terceros, hay que ofrecer Sign in with Apple igual de
+         visible -- mismo estilo de botón que Google, negro sólido con logo
+         blanco, como pide la guía de marca de Apple. -->
+    <button type="button" class="btn-grande btn-apple" onclick="iniciarSesionApple()">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16.365 1.43c0 1.14-.468 2.104-1.404 2.892-.936.78-1.98 1.152-3.132 1.116-.036-1.116.348-2.076 1.152-2.88.804-.804 1.812-1.284 3.024-1.44.036.12.06.24.06.312zM19.98 17.34c-.336.78-.756 1.512-1.26 2.196-.708.96-1.284 1.626-1.728 1.998-.684.612-1.416.924-2.196.936-.564 0-1.242-.156-2.028-.48-.792-.324-1.518-.48-2.184-.48-.696 0-1.44.156-2.232.48-.792.336-1.428.504-1.914.516-.744.036-1.494-.288-2.256-.972-.48-.396-1.08-1.092-1.812-2.088-.78-1.08-1.428-2.316-1.932-3.72-.552-1.548-.828-3.048-.828-4.5 0-1.68.36-3.132 1.08-4.344.564-.972 1.32-1.74 2.268-2.304.948-.564 1.968-.852 3.06-.876.6 0 1.392.192 2.376.564.984.372 1.62.564 1.908.564.216 0 .924-.216 2.112-.648 1.128-.408 2.076-.576 2.856-.516 2.112.168 3.696.996 4.752 2.508-1.884 1.14-2.82 2.736-2.808 4.788.012 1.596.588 2.928 1.728 3.984.516.492 1.092.876 1.728 1.14-.144.42-.3.828-.468 1.236z"/></svg>
+      <span data-i18n="login.apple">Continuar con Apple</span>
+    </button>
+    <button class="btn-grande secundario" onclick="abrirCrearCuenta()" data-i18n="login.crear_cuenta">Crear cuenta</button>
     <button class="btn-link-tenue" onclick="verMuestra()" data-i18n="login.ver_muestra">¿Quieres ver un ejemplo primero?</button>
+    <!-- Bajado hasta acá (pedido del usuario, "no me gustó dónde lo
+         pusiste, que no estorbe") — antes vivía arriba del formulario y
+         empujaba el login hacia abajo. Sigue cumpliendo lo que pidió Google
+         (que la página principal describa la funcionalidad de la app),
+         solo que ya no compite con el login por la atención de quien solo
+         quiere entrar. -->
+    <ul class="login-features" aria-label="Qué hace Money Freak">
+      <li data-i18n="login.feature_1">Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.</li>
+      <li data-i18n="login.feature_2">Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.</li>
+      <li data-i18n="login.feature_3">Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.</li>
+    </ul>
+    <!-- La verificación de marca de Google exige que la política de
+         privacidad esté enlazada de forma visible en la página principal
+         misma, no solo registrada en la config de OAuth. Antes privacidad.html
+         no estaba enlazado desde ningún lado dentro de la app. -->
+    <a class="btn-link-tenue" href="privacidad.html" data-i18n="login.privacidad_link">Aviso de privacidad</a>
   </div>
 </div>
 
 <div id="vista-crear-cuenta" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-login')">‹</button>
+    <button class="btn-volver" onclick="atrasPasoRegistro()">‹</button>
     <h1 data-i18n="registro.titulo">Crear cuenta</h1>
   </div>
-  <div class="campo">
-    <label for="input-nombre-registro" data-i18n="registro.nombre_label">Tu nombre</label>
-    <input type="text" id="input-nombre-registro" placeholder="¿Cómo te llamas?" data-i18n-placeholder="registro.nombre_placeholder">
-  </div>
-  <div class="campo">
-    <label for="input-email-registro" data-i18n="registro.correo_label">Correo</label>
-    <input type="email" id="input-email-registro" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder">
-  </div>
-  <div class="campo">
-    <label for="input-password-registro" data-i18n="registro.password_label">Contraseña</label>
-    <div class="campo-password">
-      <input type="password" id="input-password-registro" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="registro.password_placeholder">
-      <button type="button" class="btn-ojo" id="btn-ojo-password-registro" onclick="toggleVerPassword('input-password-registro', 'btn-ojo-password-registro')" aria-label="Mostrar contraseña" data-i18n-aria-label="comun.mostrar_password" data-i18n="comun.ver">Ver</button>
+  <div id="registro-progreso" class="paso-progreso"></div>
+
+  <div class="registro-paso" data-paso="1">
+    <div class="campo">
+      <label for="input-nombre-registro" data-i18n="registro.nombre_label">Tu nombre</label>
+      <input type="text" id="input-nombre-registro" placeholder="¿Cómo te llamas?" data-i18n-placeholder="registro.nombre_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
     </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <label for="selector-idioma-registro" data-i18n="idioma.label">Idioma</label>
-  <div class="rango-botones selector-idioma" id="selector-idioma-registro">
-    <button type="button" data-idioma="es" onclick="cambiarIdioma('es')">Español</button>
-    <button type="button" data-idioma="en" onclick="cambiarIdioma('en')">English</button>
+
+  <div class="registro-paso" data-paso="2" style="display:none;">
+    <div class="campo">
+      <label for="input-email-registro" data-i18n="registro.correo_label">Correo</label>
+      <input type="email" id="input-email-registro" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <label for="selector-tema-registro" data-i18n="registro.tema_label">Tema de la app</label>
-  <div class="rango-botones" id="selector-tema-registro">
-    <button type="button" data-tema="auto" class="activo" onclick="elegirTemaRegistro('auto')">Automático</button>
-    <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
-    <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
+
+  <div class="registro-paso" data-paso="3" style="display:none;">
+    <div class="campo">
+      <label for="input-password-registro" data-i18n="registro.password_label">Contraseña</label>
+      <div class="campo-password">
+        <input type="password" id="input-password-registro" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="registro.password_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
+        <button type="button" class="btn-ojo" id="btn-ojo-password-registro" onclick="toggleVerPassword('input-password-registro', 'btn-ojo-password-registro')" aria-label="Mostrar contraseña" data-i18n-aria-label="comun.mostrar_password" data-i18n="comun.ver">Ver</button>
+      </div>
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <div class="check-fila">
-    <input type="checkbox" id="check-privacidad-registro">
-    <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
+
+  <div class="registro-paso" data-paso="4" style="display:none;">
+    <label for="selector-idioma-registro" data-i18n="idioma.label">Idioma</label>
+    <div class="rango-botones selector-idioma" id="selector-idioma-registro">
+      <button type="button" data-idioma="es" onclick="cambiarIdioma('es')">Español</button>
+      <button type="button" data-idioma="en" onclick="cambiarIdioma('en')">English</button>
+    </div>
+    <label for="selector-tema-registro" data-i18n="registro.tema_label">Tema de la app</label>
+    <div class="rango-botones" id="selector-tema-registro">
+      <button type="button" data-tema="auto" class="activo" onclick="elegirTemaRegistro('auto')">Automático</button>
+      <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
+      <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
+    </div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
-  <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
-  <div id="registro-error" class="aviso" style="display:none;"></div>
-  <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
+
+  <div class="registro-paso" data-paso="5" style="display:none;">
+    <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-registro')">
+      <input type="checkbox" id="check-privacidad-registro" disabled>
+      <label for="check-privacidad-registro" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('registro'); return false;">Aviso de Privacidad</a>.</label>
+    </div>
+    <div class="aviso" id="aviso-lee-primero-registro" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
+    <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
+  </div>
+
+  <div class="registro-paso" data-paso="6" style="display:none;">
+    <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
+    <div id="registro-error" class="aviso" style="display:none;"></div>
+    <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
+  </div>
 </div>
 
 <div id="vista-aviso-legal" class="pantalla">
@@ -1285,7 +1463,7 @@
   <h2 data-i18n="legal.donde_guardan_h2">Dónde se guardan</h2>
   <div class="aviso" data-i18n="legal.donde_guardan_texto">En Supabase, con reglas de seguridad a nivel de base de datos (Row Level Security): solo tú puedes ver y editar tus propios datos, aunque otro usuario tenga su propia cuenta en esta misma app.</div>
   <h2 data-i18n="legal.tus_derechos_h2">Tus derechos</h2>
-  <div class="aviso" data-i18n="legal.tus_derechos_texto">Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración y privacidad" dentro de la app, o pedirlo escribiendo a samuelnates@gmail.com.</div>
+  <div class="aviso" data-i18n="legal.tus_derechos_texto">Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración y privacidad" dentro de la app, o pedirlo escribiendo a help@moneyfreak.app.</div>
   <button class="btn-grande secundario" onclick="volverDeAvisoLegal()" data-i18n="comun.volver">Volver</button>
 </div>
 
@@ -1298,8 +1476,8 @@
     <label for="input-email-recuperar" data-i18n="login.correo">Correo</label>
     <input type="email" id="input-email-recuperar" autocomplete="username" placeholder="correo@ejemplo.com" data-i18n-placeholder="comun.correo_placeholder">
   </div>
+  <button class="btn-grande" id="btn-enviar-recuperacion" onclick="enviarRecuperacion()" data-i18n="recuperar.enviar">Enviar link de recuperación</button>
   <div id="recuperar-mensaje" class="aviso" style="display:none;"></div>
-  <button class="btn-grande" onclick="enviarRecuperacion()" data-i18n="recuperar.enviar">Enviar link de recuperación</button>
   <button class="btn-grande secundario" onclick="mostrar('vista-login')" data-i18n="comun.volver">Volver</button>
 </div>
 
@@ -1369,12 +1547,15 @@
       <button type="button" data-tema="light" onclick="elegirTemaOnboarding('light')">Claro</button>
       <button type="button" data-tema="dark" onclick="elegirTemaOnboarding('dark')">Oscuro</button>
     </div>
-    <div class="check-fila">
-      <input type="checkbox" id="check-privacidad-onb">
-      <label for="check-privacidad-onb" data-i18n-html="registro.acepto_privacidad">He leído y acepto el <a href="#" onclick="abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
+    <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-onb')">
+      <input type="checkbox" id="check-privacidad-onb" disabled>
+      <label for="check-privacidad-onb" data-i18n-html="onboarding_rapido.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
     </div>
+    <div class="aviso" id="aviso-lee-primero-onb" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
   </div>
+
+  <div id="onb-chat-progreso" class="paso-progreso" style="display:none;"></div>
 
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
@@ -1383,6 +1564,10 @@
     <button type="button" class="chat-btn-enviar" onclick="avanzarOnboardingChat()" aria-label="Siguiente" data-i18n-aria-label="onboarding_rapido.chat_siguiente">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
     </button>
+  </div>
+  <div id="onb-chat-rangos" class="chat-sugerencias" style="display:none;"></div>
+  <div id="onb-chat-nose" class="chat-sugerencias" style="display:none;">
+    <button type="button" onclick="noSePreguntaOnboarding()" data-i18n="onboarding_rapido.chat_no_se">No sé — calcúlalo tú</button>
   </div>
 
   <div style="display:none;">
@@ -1396,6 +1581,7 @@
   <button type="button" class="btn-grande" id="btn-onb-evaluar" onclick="verEvaluacionRapida()" style="display:none;" data-i18n="onboarding_rapido.ver_evaluacion">Ver mi primera evaluación</button>
 
   <div id="onb-resultado" style="display:none;">
+    <div id="onb-resultado-titular" class="onb-resultado-titular"></div>
     <div class="panel-insights" id="onb-insights"></div>
     <button type="button" class="btn-grande" onclick="guardarOnboardingRapido()" data-i18n="onboarding_rapido.guardar_continuar">Guardar y continuar</button>
     <button type="button" class="btn-grande secundario" onclick="omitirOnboardingRapido()" data-i18n="onboarding_rapido.omitir">Prefiero configurar todo yo mismo</button>
@@ -1774,16 +1960,19 @@
   </div>
   <div class="campo">
     <label for="input-umbral-amarillo" data-i18n="salud.umbral_amarillo_label">% de endeudamiento donde empieza "Atención"</label>
-    <input type="number" id="input-umbral-amarillo" min="0" inputmode="decimal" step="0.1" placeholder="20">
+    <input type="number" id="input-umbral-amarillo" min="0" inputmode="decimal" step="0.1" placeholder="30">
   </div>
+  <div class="aviso" data-i18n="salud.umbral_amarillo_recomendado">Recomendado: 30%. Tú decides si prefieres un límite más estricto o más flexible.</div>
   <div class="campo">
     <label for="input-umbral-rojo" data-i18n="salud.umbral_rojo_label">% de endeudamiento donde empieza "Riesgo"</label>
-    <input type="number" id="input-umbral-rojo" min="0" inputmode="decimal" step="0.1" placeholder="35">
+    <input type="number" id="input-umbral-rojo" min="0" inputmode="decimal" step="0.1" placeholder="50">
   </div>
+  <div class="aviso" data-i18n="salud.umbral_rojo_recomendado">Recomendado: 50%. Tú decides si prefieres un límite más estricto o más flexible.</div>
   <div class="campo">
     <label for="input-meses-objetivo" data-i18n="salud.meses_objetivo_label">Meses de cobertura de liquidez que quieres mantener</label>
-    <input type="number" id="input-meses-objetivo" min="0" inputmode="decimal" step="0.1" placeholder="3">
+    <input type="number" id="input-meses-objetivo" min="0" inputmode="decimal" step="0.1" placeholder="6">
   </div>
+  <div class="aviso" data-i18n="salud.meses_objetivo_recomendado">Recomendado: 6 meses. Tú decides si prefieres guardar más o menos colchón.</div>
   <button class="btn-grande secundario" onclick="mostrar('vista-salud')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
@@ -2047,7 +2236,20 @@
 <div id="vista-privacidad" class="pantalla">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-inicio')">‹</button>
-    <h1 data-i18n="sidebar.configuracion">Configuración y privacidad</h1>
+    <h1 data-i18n="sidebar.configuracion">Configuración</h1>
+  </div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-config-general')" data-i18n="config.menu_general_boton">Configuración general</button>
+  <div class="aviso" data-i18n="config.menu_general_desc">Idioma, tema, notificaciones, y cómo se comporta Freaky.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-seguridad-privacidad')" data-i18n="config.menu_seguridad_boton">Seguridad y privacidad</button>
+  <div class="aviso" data-i18n="config.menu_seguridad_desc">Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-reportes')" data-i18n="config.menu_reportes_boton">Reportes</button>
+  <div class="aviso" data-i18n="config.menu_reportes_desc">Radiografía financiera con IA, para analizar tus finanzas a fondo.</div>
+</div>
+
+<div id="vista-config-general" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_general_boton">Configuración general</h1>
   </div>
   <h2 data-i18n="idioma.label">Idioma</h2>
   <div class="rango-botones selector-idioma" id="selector-idioma">
@@ -2062,13 +2264,6 @@
     <button type="button" data-tema="dark" onclick="cambiarTema('dark')">Oscuro</button>
   </div>
   <div class="aviso" data-i18n="config.apariencia_aviso">Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.</div>
-
-  <h2 data-i18n="config.proteccion_h2">Cómo protegemos tu información</h2>
-  <div class="aviso" data-i18n="config.proteccion_aviso1">Tus datos están aislados por usuario a nivel de base de datos (Row Level Security) — ni siquiera otro usuario con su propia cuenta en esta misma app puede ver tus cuentas, bienes o deudas. No es solo la pantalla la que lo oculta, es la base de datos la que lo bloquea.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso2">Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso3">No vendemos ni compartimos tu información financiera con nadie. Los únicos servicios externos que se consultan son cotizaciones públicas de acciones y tipos de cambio — nunca reciben tus datos personales, solo símbolos de acciones y monedas.</div>
-  <div class="aviso" data-i18n="config.proteccion_aviso4">Tu sesión se cierra sola después de 15 minutos sin actividad, para proteger tu información si dejas el dispositivo abierto o lo compartes con alguien más.</div>
-  <button class="btn-grande secundario btn-escritura" id="btn-desactivar-biometria" style="display:none;" onclick="desactivarBiometria()" data-i18n="privacidad.desactivar_biometria">Desactivar Face ID / huella</button>
 
   <div id="seccion-notificaciones" style="display:none;">
     <h2 data-i18n="notif.titulo">Notificaciones</h2>
@@ -2108,20 +2303,42 @@
     <label for="input-dias-aviso-tarjeta" data-i18n="freaky.dias_aviso_tarjeta_label">Avisarme de un pago de tarjeta con cuántos días de anticipación</label>
     <input type="number" id="input-dias-aviso-tarjeta" min="1" max="30" step="1" placeholder="5" onchange="guardarDiasAvisoTarjeta()">
   </div>
+</div>
 
-  <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
-  <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
-  <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
-  <button class="btn-grande secundario" id="btn-radiografia-auto" onclick="generarRadiografiaAutomatica(false)" data-i18n="config.radiografia_boton_auto" style="margin-top:8px;">Generar automáticamente (beta interna)</button>
+<div id="vista-seguridad-privacidad" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_seguridad_boton">Seguridad y privacidad</h1>
+  </div>
+  <h2 id="seccion-proteccion-datos" data-i18n="config.proteccion_h2">Cómo protegemos tu información</h2>
+  <div class="aviso" data-i18n="config.proteccion_aviso1">Tus datos están aislados por usuario a nivel de base de datos (Row Level Security) — ni siquiera otro usuario con su propia cuenta en esta misma app puede ver tus cuentas, bienes o deudas. No es solo la pantalla la que lo oculta, es la base de datos la que lo bloquea.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso2">Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso3">No vendemos ni compartimos tu información financiera con nadie. Los únicos servicios externos que se consultan son cotizaciones públicas de acciones y tipos de cambio — nunca reciben tus datos personales, solo símbolos de acciones y monedas.</div>
+  <div class="aviso" data-i18n="config.proteccion_aviso4">Tu sesión se cierra sola después de 15 minutos sin actividad, para proteger tu información si dejas el dispositivo abierto o lo compartes con alguien más.</div>
+  <button class="btn-grande secundario btn-escritura" id="btn-desactivar-biometria" style="display:none;" onclick="desactivarBiometria()" data-i18n="privacidad.desactivar_biometria">Desactivar Face ID / huella</button>
 
   <h2 data-i18n="config.control_datos_h2">Control sobre tus datos</h2>
   <button class="btn-grande secundario" onclick="exportarMisDatos()" data-i18n="config.descargar_datos">Descargar todos mis datos (JSON)</button>
   <button class="btn-grande peligro btn-escritura" onclick="confirmarBorrarDatos()" data-i18n="config.borrar_datos">Borrar todos mis datos</button>
   <div class="aviso" data-i18n="config.borrar_datos_aviso">Borrar tus datos elimina para siempre tus cuentas, bienes, acciones, deudas y todo tu historial de esta app. No borra tu acceso (correo/contraseña) — solo tu información financiera.</div>
 
+  <button class="btn-grande peligro btn-escritura" onclick="confirmarEliminarCuentaCompleta()" data-i18n="config.eliminar_cuenta_boton">Eliminar mi cuenta por completo</button>
+  <div class="aviso" data-i18n="config.eliminar_cuenta_aviso">A diferencia de "Borrar todos mis datos", esto elimina también tu acceso (correo/contraseña) — tu cuenta deja de existir por completo y no podrás volver a entrar con ella.</div>
+
   <h2 data-i18n="legal.aviso_legal_h2">Aviso legal</h2>
   <div class="aviso" data-i18n="config.aviso_legal_corto">Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos y simulaciones son estimaciones, no garantía de resultados.</div>
   <button class="btn-grande secundario" onclick="abrirAvisoLegal('privacidad')" data-i18n="config.ver_aviso_completo">Ver aviso completo</button>
+</div>
+
+<div id="vista-reportes" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_reportes_boton">Reportes</h1>
+  </div>
+  <h2 data-i18n="config.radiografia_h2">Radiografía financiera con IA</h2>
+  <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
+  <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
+  <button class="btn-grande secundario" id="btn-radiografia-auto" onclick="generarRadiografiaAutomatica(false)" data-i18n="config.radiografia_boton_auto" style="margin-top:8px;">Generar automáticamente (beta interna)</button>
 </div>
 
 <div id="vista-ayuda-ia" class="pantalla pantalla-chat">
@@ -2162,7 +2379,7 @@
 
 <div id="vista-radiografia-resultado" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <button class="btn-volver" onclick="mostrar('vista-reportes')">‹</button>
     <h1 data-i18n="radiografia.resultado_titulo">Tu radiografía financiera</h1>
   </div>
   <div id="radiografia-resultado-contenido"></div>
@@ -2878,7 +3095,16 @@ let graficaHistorialItem = null;
 let graficaFlujo = null;
 let cuentasInversionData = [];
 let accionesData = [];
-let perfilFinanciero = { umbral_amarillo: 20, umbral_rojo: 35, meses_cobertura_objetivo: 3 };
+// Valores recomendados por default para quien nunca ha tocado "Editar
+// umbrales" — pedido explícito del usuario, con estos 3 números. Se muestran
+// también como recomendación visible en la pantalla de edición (ver
+// vista-editar-perfil) para que el usuario sepa qué está ajustando cuando
+// los cambie, no solo un placeholder que desaparece.
+const UMBRAL_AMARILLO_RECOMENDADO = 30; // % de endeudamiento donde empieza "Atención"
+const UMBRAL_ROJO_RECOMENDADO = 50; // % de endeudamiento donde empieza "Riesgo"
+const MESES_COBERTURA_RECOMENDADO = 6; // meses de cobertura de liquidez
+
+let perfilFinanciero = { umbral_amarillo: UMBRAL_AMARILLO_RECOMENDADO, umbral_rojo: UMBRAL_ROJO_RECOMENDADO, meses_cobertura_objetivo: MESES_COBERTURA_RECOMENDADO };
 
 const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta', 'vista-aviso-legal', 'vista-olvide-contrasena', 'vista-nueva-contrasena', 'vista-onboarding-rapido', 'vista-elegir-asesor'];
 
@@ -2909,9 +3135,11 @@ function mostrar(idVista){
   if(idVista === 'vista-cuentas-deudas') cargarDeudas();
   if(idVista === 'vista-cuentas-transferencias') cargarTransferencias();
   if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
-  if(idVista === 'vista-privacidad'){
+  if(idVista === 'vista-seguridad-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
     if(btnDesactivar) btnDesactivar.style.display = (window.Capacitor?.isNativePlatform?.() && localStorage.getItem('biometria_activada') === '1') ? '' : 'none';
+  }
+  if(idVista === 'vista-config-general'){
     inicializarSeccionNotificaciones();
     cargarPreferenciaAvisoTarjeta();
   }
@@ -2919,6 +3147,12 @@ function mostrar(idVista){
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
     btn.classList.toggle('activo', btn.dataset.vista === idVista);
   });
+  // Freaky ya no vuela solo por un temporizador (ver freakyIrAPerchaDePantalla) —
+  // el único momento en que debe buscar dónde sentarse es un cambio real de
+  // pantalla, así que se dispara aquí y en ningún otro lado.
+  if(idVista !== vistaAnterior && freakyVueloIniciado && document.body.classList.contains('con-sesion') && !document.body.classList.contains('freaky-vuelo-desactivado')){
+    freakyIrAPerchaDePantalla();
+  }
   reiniciarTemporizadorInactividad();
   iniciarMiniTourSiPrimeraVez(idVista);
   actualizarVisibilidadBotonTour();
@@ -2996,6 +3230,29 @@ function formatoMonto(numero, moneda){
   return new Intl.NumberFormat('es-MX', {style:'currency', currency: moneda || 'MXN'}).format(numero || 0);
 }
 
+// Prueba pedida por el usuario (post de Instagram sobre scroll-linked
+// animations): en listas largas, en vez de animar todo de golpe al cargar
+// (.entrada-escalonada — la mitad ni se alcanza a ver), cada tarjeta nace
+// invisible y solo se revela cuando el scroll la va dejando ver de verdad.
+// Una sola vez por tarjeta (unobserve al revelar) — no se repite si subes y
+// bajas el scroll, eso se sentiría inquieto en vez de elegante.
+function revelarAlEntrarEnVista(contenedor, selector){
+  const elementos = contenedor.querySelectorAll(selector || '.revelar-scroll');
+  if(!elementos.length) return;
+  if(typeof IntersectionObserver === 'undefined'){
+    elementos.forEach(el => el.classList.add('visible'));
+    return;
+  }
+  const observador = new IntersectionObserver((entradas) => {
+    entradas.forEach(entrada => {
+      if(!entrada.isIntersecting) return;
+      entrada.target.classList.add('visible');
+      observador.unobserve(entrada.target);
+    });
+  }, { threshold: 0.15 });
+  elementos.forEach(el => observador.observe(el));
+}
+
 const REDUCIR_MOVIMIENTO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function animarNumero(elemento, valorFinal, moneda, duracionMs){
@@ -3057,11 +3314,15 @@ function inicializarTema(){
 const TRADUCCIONES = {
   es: {
     'login.subtitulo': 'Cuentas, bienes, deudas y salud financiera',
+    'login.feature_1': 'Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.',
+    'login.feature_2': 'Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.',
+    'login.feature_3': 'Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.',
     'login.correo': 'Correo',
     'login.password': 'Contraseña',
     'login.olvidaste': '¿Olvidaste tu contraseña?',
     'login.o': 'o',
     'login.google': 'Continuar con Google',
+    'login.apple': 'Continuar con Apple',
     'login.entrar': 'Entrar',
     'login.entrar_face_id': 'Entrar con Face ID',
     'login.biometria_razon': 'Confirma tu identidad para entrar a Money Freak',
@@ -3093,7 +3354,9 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': 'Listo, te voy a recordar este pago cada mes.',
     'login.crear_cuenta': 'Crear cuenta',
     'login.ver_muestra': '¿Quieres ver un ejemplo primero?',
+    'login.privacidad_link': 'Aviso de privacidad',
     'registro.titulo': 'Crear cuenta',
+    'registro.paso': 'Paso {0} de {1}',
     'registro.nombre_label': 'Tu nombre',
     'registro.nombre_placeholder': '¿Cómo te llamas?',
     'registro.correo_label': 'Correo',
@@ -3111,7 +3374,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Flujo de efectivo',
     'sidebar.gastos': 'Gastos y presupuesto',
     'sidebar.simulador': 'Simulador de crédito',
-    'sidebar.configuracion': 'Configuración y privacidad',
+    'sidebar.configuracion': 'Configuración',
     'sidebar.salir': 'Salir',
     'sidebar.salir_muestra': 'Salir de la muestra',
     'panel.score.titulo': 'Score Money Freak',
@@ -3161,7 +3424,7 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Hoy corta tu tarjeta {0} — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'panel.insight_corte_proximo': 'Tu tarjeta {0} corta en {1} días — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'onboarding_rapido.titulo': 'Antes de empezar',
-    'onboarding_rapido.subtitulo': '5 números para darte una primera evaluación en menos de un minuto. Después puedes afinar todo con detalle.',
+    'onboarding_rapido.subtitulo': '5 números para saber cómo vas, en menos de un minuto. Luego afinas todo con calma.',
     'onboarding_rapido.aviso_config_inicial': 'Confirma esto antes de seguir.',
     'onboarding_rapido.ingreso_label': 'Ingreso mensual aproximado',
     'onboarding_rapido.liquido_label': 'Dinero líquido (cuentas, efectivo)',
@@ -3169,14 +3432,18 @@ const TRADUCCIONES = {
     'onboarding_rapido.gastos_label': 'Gastos mensuales aproximados',
     'onboarding_rapido.ahorro_label': 'Ahorro e inversión (lo que ya tienes guardado)',
     'onboarding_rapido.ver_evaluacion': 'Ver mi primera evaluación',
-    'onboarding_rapido.chat_intro_1': '¡Hola! Soy Freaky, tu mentor financiero. Te voy a ayudar a llevar el control de tu dinero: puedo avisarte si te alcanza el mes, registrar tus gastos con solo describírtelos, y ayudarte a navegar la app cuando lo necesites.',
-    'onboarding_rapido.chat_intro_2': 'Para empezar bien, te voy a pedir 5 números — nada exacto, solo un estimado. Vamos.',
+    'onboarding_rapido.chat_intro_1': 'Hola, soy Freaky. De aquí en adelante te echo la mano con tu dinero: te aviso si te alcanza el mes, anoto tus gastos nomás contándomelos, y si te pierdes en la app, aquí ando.',
+    'onboarding_rapido.chat_intro_2': 'Para arrancar te voy a pedir 5 números — nada exacto, nomás un estimado. Vamos.',
     'onboarding_rapido.chat_p_ingreso': '¿Cuánto es tu ingreso mensual aproximado?',
     'onboarding_rapido.chat_p_liquido': '¿Cuánto dinero líquido tienes hoy (cuentas, efectivo)?',
     'onboarding_rapido.chat_p_deuda': '¿Cuánto debes en total, sumando todo?',
     'onboarding_rapido.chat_p_gastos': '¿Cuánto gastas al mes, aproximadamente?',
     'onboarding_rapido.chat_p_ahorro': 'Y por último, ¿cuánto ya tienes ahorrado o invertido?',
     'onboarding_rapido.chat_siguiente': 'Siguiente',
+    'onboarding_rapido.chat_paso': 'Paso {0} de {1}',
+    'onboarding_rapido.chat_rango_mas_de': 'Más de {0}',
+    'onboarding_rapido.chat_no_se': 'No sé — calcúlalo tú',
+    'onboarding_rapido.chat_no_se_burbuja': 'No sé, calcúlalo tú',
     'onboarding_rapido.guardar_continuar': 'Guardar y continuar',
     'onboarding_rapido.omitir': 'Prefiero configurar todo yo mismo',
     'onboarding_rapido.omitir_ahora': 'Omitir por ahora',
@@ -3188,6 +3455,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.eval_ahorro_sin_ingreso': 'Reportaste {0} en ahorro e inversión.',
     'onboarding_rapido.eval_sin_ahorro': 'Aún no reportas ahorro o inversión acumulados.',
     'onboarding_rapido.eval_nota': 'Esta es una primera evaluación aproximada con los números que compartiste — se irá afinando conforme registres tus cuentas, deudas y gastos reales.',
+    'onboarding_rapido.titular_riesgo': 'Ojo — hay algo que conviene arreglar pronto',
+    'onboarding_rapido.titular_atencion': 'Vas bien, con un par de focos amarillos',
+    'onboarding_rapido.titular_saludable': '¡Vas muy bien! Tu situación se ve saludable',
     'onboarding_rapido.nombre_ingreso': 'Ingreso mensual',
     'onboarding_rapido.nombre_liquido': 'Dinero disponible',
     'onboarding_rapido.nombre_deuda': 'Deudas totales',
@@ -3342,8 +3612,10 @@ const TRADUCCIONES = {
     'tour.p5.texto': 'Aquí ves tu saldo líquido proyectado día a día, sumando tu sueldo y restando tus pagos y aportaciones — para saber con tiempo si vas a llegar bien de efectivo.',
     'tour.p6.titulo': 'Simulador de crédito',
     'tour.p6.texto': 'Antes de pedir un crédito, simula el pago mensual real (con seguro y comisión incluidos) y si te conviene según tus finanzas actuales.',
-    'tour.p7.titulo': 'Configuración y privacidad',
-    'tour.p7.texto': 'Aquí puedes cambiar el tema claro/oscuro de la app, y tus datos están aislados y protegidos por usuario — puedes exportarlos o borrarlos por completo cuando quieras.',
+    'tour.p7.titulo': 'Configuración general',
+    'tour.p7.texto': 'Aquí cambias el idioma, el tema claro/oscuro, tus notificaciones, y cómo se comporta Freaky.',
+    'tour.p7b.titulo': 'Seguridad y privacidad',
+    'tour.p7b.texto': 'Tus datos están aislados y protegidos por usuario — puedes exportarlos o borrarlos por completo cuando quieras.',
     'tour.pfreaky.titulo': 'Freaky, tu asistente',
     'tour.pfreaky.texto': 'Este botón (arriba a la derecha) te lleva con Freaky en cualquier pantalla — tu mentor financiero. Pregúntale cómo usar la app, cómo vas de dinero, o pídele que repita este recorrido.',
     'tour.p8.titulo': 'Eso es todo',
@@ -3448,7 +3720,10 @@ const TRADUCCIONES = {
     'sesion.expirada': 'Tu sesión expiró. Vuelve a iniciar sesión para seguir usando la app.',
     'comun.confirmar': 'Confirmar',
     'tour.ver_aria': 'Ver tour guiado',
-    'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
+    'registro.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'registro\'); return false;">Aviso de Privacidad</a>.',
+    'onboarding_rapido.acepto_privacidad': 'He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'onboarding\'); return false;">Aviso de Privacidad</a>.',
+    'registro.lee_primero': 'Ábrelo y léelo — el check se activa solo cuando regreses.',
+    'aviso.debes_leer_primero': 'Primero abre y lee el Aviso de Privacidad (toca el link de arriba) — el check se activa solo cuando regreses. Es para tu seguridad: queremos que sepas de verdad qué hacemos con tus datos antes de aceptar.',
     'legal.titulo': 'Aviso de privacidad',
     'legal.aviso_legal_h2': 'Aviso legal',
     'legal.aviso_legal_texto': 'Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos, simulaciones y recomendaciones que ves (salud financiera, simulador de crédito, capacidad de pago, etc.) son estimaciones basadas en la información que tú capturas — no son garantía de resultados, tasas reales, ni de aprobación de ningún crédito. Tú eres responsable de las decisiones financieras que tomes.',
@@ -3459,13 +3734,21 @@ const TRADUCCIONES = {
     'legal.donde_guardan_h2': 'Dónde se guardan',
     'legal.donde_guardan_texto': 'En Supabase, con reglas de seguridad a nivel de base de datos (Row Level Security): solo tú puedes ver y editar tus propios datos, aunque otro usuario tenga su propia cuenta en esta misma app.',
     'legal.tus_derechos_h2': 'Tus derechos',
-    'legal.tus_derechos_texto': 'Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración y privacidad" dentro de la app, o pedirlo escribiendo a samuelnates@gmail.com.',
+    'legal.tus_derechos_texto': 'Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración → Seguridad y privacidad" dentro de la app, o pedirlo escribiendo a help@moneyfreak.app.',
     'recuperar.titulo': 'Recuperar contraseña',
     'recuperar.enviar': 'Enviar link de recuperación',
+    'recuperar.enviando': 'Enviando…',
+    'recuperar.error_envio': 'No se pudo enviar el correo. Intenta de nuevo en un momento.',
     'recuperar.nueva_titulo': 'Nueva contraseña',
     'recuperar.nueva_label': 'Escribe tu nueva contraseña',
     'recuperar.guardar': 'Guardar contraseña',
     'login.modal_privacidad_texto': 'Tus datos financieros son privados. Solo tú puedes verlos.',
+    'config.menu_general_boton': 'Configuración general',
+    'config.menu_general_desc': 'Idioma, tema, notificaciones, y cómo se comporta Freaky.',
+    'config.menu_seguridad_boton': 'Seguridad y privacidad',
+    'config.menu_seguridad_desc': 'Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.',
+    'config.menu_reportes_boton': 'Reportes',
+    'config.menu_reportes_desc': 'Radiografía financiera con IA, para analizar tus finanzas a fondo.',
     'config.apariencia_h2': 'Apariencia',
     'config.apariencia_aviso': 'Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.',
     'config.proteccion_h2': 'Cómo protegemos tu información',
@@ -3517,8 +3800,17 @@ const TRADUCCIONES = {
     'freaky.aviso_recordarmelo': 'Sí, recuérdame',
     'freaky.aviso_teaser': 'Necesito decirte algo 👀',
     'asesor.titulo': 'Elige a Freaky',
-    'asesor.subtitulo': 'Es el mismo mentor de siempre — solo cambia cómo se ve.',
+    'asesor.subtitulo': 'Mismo cerebro, distinta onda — elige con quién te cae mejor hablar de dinero.',
     'asesor.elegir': 'Elegir',
+    'asesor.avatar1.nombre': 'El Sabio',
+    'asesor.avatar1.desc': 'Con la calma de quien ya vio de todo. Te explica las cosas con paciencia, sin apuros y sin hacerte sentir mal por tus números.',
+    'asesor.avatar1.habilidad': '<b>Habilidad especial:</b> convierte cualquier cifra fea en una explicación que sí entiendes.',
+    'asesor.avatar2.nombre': 'La Estratega',
+    'asesor.avatar2.desc': 'Directa y al grano. No te da vueltas: te dice justo dónde se te está yendo el dinero.',
+    'asesor.avatar2.habilidad': '<b>Habilidad especial:</b> detecta patrones raros en tus gastos antes que tú.',
+    'asesor.avatar3.nombre': 'El Cómplice',
+    'asesor.avatar3.desc': 'El que te anima cuando las cosas se ponen pesadas. Celebra contigo cada logro, por chico que sea.',
+    'asesor.avatar3.habilidad': '<b>Habilidad especial:</b> hace que hablar de dinero se sienta menos pesado.',
     'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
     'freaky.dias_aviso_tarjeta_label': 'Avisarme de un pago de tarjeta con cuántos días de anticipación',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
@@ -3652,8 +3944,11 @@ const TRADUCCIONES = {
     'transferencia.total_registradas': '{0} registradas',
     'salud.umbrales_titulo': 'Umbrales de salud financiera',
     'salud.umbral_amarillo_label': '% de endeudamiento donde empieza "Atención"',
+    'salud.umbral_amarillo_recomendado': 'Recomendado: 30%. Tú decides si prefieres un límite más estricto o más flexible.',
     'salud.umbral_rojo_label': '% de endeudamiento donde empieza "Riesgo"',
+    'salud.umbral_rojo_recomendado': 'Recomendado: 50%. Tú decides si prefieres un límite más estricto o más flexible.',
     'salud.meses_objetivo_label': 'Meses de cobertura de liquidez que quieres mantener',
+    'salud.meses_objetivo_recomendado': 'Recomendado: 6 meses. Tú decides si prefieres guardar más o menos colchón.',
     'comun.guardar': 'Guardar',
     'comun.cancelar': 'Cancelar',
     'comun.eliminar': 'Eliminar',
@@ -3810,12 +4105,21 @@ const TRADUCCIONES = {
     'mes.5': 'Mayo', 'mes.6': 'Junio', 'mes.7': 'Julio', 'mes.8': 'Agosto',
     'mes.9': 'Septiembre', 'mes.10': 'Octubre', 'mes.11': 'Noviembre', 'mes.12': 'Diciembre',
     'login.alert_cuenta_creada': 'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.',
+    'login.alert_error_link': 'El link de tu correo ya no es válido (puede haber expirado, o ya se usó, o se abrió en un navegador distinto al que usaste para registrarte). Vuelve a intentar iniciar sesión, o pide un nuevo link.',
+    'login.alert_confirmado_otro_navegador': 'Tu correo ya fue confirmado, pero no pudimos iniciar tu sesión automáticamente desde este link (pasa cuando se abre en un navegador o app distinto al que usaste para registrarte). Inicia sesión normalmente con tu correo y contraseña.',
+    'login.alert_recuperacion_otro_navegador': 'Este link de recuperación no funcionó porque se abrió en un navegador o app distinto al que lo pediste (pasa seguido si lo abres desde dentro de Gmail o del correo). Pide uno nuevo aquí mismo y ábrelo con el mismo navegador — o cópialo y pégalo directo en Safari o Chrome en vez de tocarlo desde el correo.',
     'recuperar.alert_password_actualizada': 'Tu contraseña se actualizó correctamente.',
     'login.confirm_cerrar_sesion': '¿Cerrar sesión?',
     'config.confirm_borrar_datos1': '¿Seguro que quieres borrar TODOS tus datos financieros de esta app (cuentas, bienes, acciones, deudas e historial)? Esta acción no se puede deshacer.',
     'config.prompt_borrar_confirmar': 'Para confirmar, escribe {0} en mayúsculas:',
     'config.alert_no_coincidio': 'No se borró nada — el texto no coincidió.',
     'config.alert_datos_borrados': 'Tus datos se borraron. Vamos a cerrar tu sesión.',
+    'config.eliminar_cuenta_boton': 'Eliminar mi cuenta por completo',
+    'config.eliminar_cuenta_aviso': 'A diferencia de "Borrar todos mis datos", esto elimina también tu acceso (correo/contraseña) — tu cuenta deja de existir por completo y no podrás volver a entrar con ella.',
+    'config.confirm_eliminar_cuenta1': '¿Seguro que quieres eliminar tu cuenta de Money Freak por completo? Se borra todo tu historial financiero Y tu acceso (correo/contraseña) — no vas a poder volver a entrar con esta cuenta. Esta acción no se puede deshacer.',
+    'config.prompt_eliminar_cuenta_confirmar': 'Para confirmar que quieres eliminar tu cuenta por completo, escribe {0} en mayúsculas:',
+    'config.alert_cuenta_eliminada': 'Tu cuenta se eliminó por completo. Gracias por haber usado Money Freak.',
+    'alert.error_eliminar_cuenta': 'No se pudo eliminar tu cuenta. Revisa tu internet e intenta de nuevo — si el problema sigue, escribe a help@moneyfreak.app.',
     'alert.error_actualizar': 'No se pudo actualizar.',
     'alert.error_eliminar': 'No se pudo eliminar.',
     'alert.error_guardar_cuenta': 'No se pudo guardar la cuenta.',
@@ -3840,6 +4144,10 @@ const TRADUCCIONES = {
     'registro.error_acepta_privacidad': 'Necesitas aceptar el Aviso de Privacidad para continuar.',
     'registro.error_correo_existente': 'Ese correo ya tiene una cuenta. Intenta iniciar sesión.',
     'registro.error_generico': 'No se pudo crear la cuenta. Intenta de nuevo.',
+    'registro.error_rate_limit': 'Se enviaron demasiados correos en poco tiempo. Espera unos minutos y vuelve a intentar.',
+    'registro.error_password_debil': 'Tu contraseña es muy débil o muy corta. Usa al menos 6 caracteres.',
+    'registro.error_correo_invalido': 'Ese correo no es válido. Revísalo e intenta de nuevo.',
+    'registro.error_conexion': 'No se pudo conectar. Revisa tu internet e intenta de nuevo.',
     'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un link para restablecer tu contraseña.',
     'recuperar.error_min_caracteres': 'La contraseña debe tener al menos 6 caracteres.',
     'recuperar.error_generico': 'No se pudo guardar. Intenta de nuevo.',
@@ -3922,11 +4230,15 @@ const TRADUCCIONES = {
   },
   en: {
     'login.subtitulo': 'Accounts, assets, debts and financial health',
+    'login.feature_1': 'Bring together your accounts, assets, debts, and stocks in one place, with your net worth always up to date.',
+    'login.feature_2': 'Freaky, your AI financial mentor, logs your expenses just by you describing them and tells you if you can afford your month.',
+    'login.feature_3': 'Financial health, cash flow, and credit simulator, calculated automatically from your real data.',
     'login.correo': 'Email',
     'login.password': 'Password',
     'login.olvidaste': 'Forgot your password?',
     'login.o': 'or',
     'login.google': 'Continue with Google',
+    'login.apple': 'Continue with Apple',
     'login.entrar': 'Sign in',
     'login.entrar_face_id': 'Sign in with Face ID',
     'login.biometria_razon': 'Confirm your identity to sign in to Money Freak',
@@ -3958,7 +4270,9 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': "Done, I'll remind you about this payment every month.",
     'login.crear_cuenta': 'Create account',
     'login.ver_muestra': 'Want to see an example first?',
+    'login.privacidad_link': 'Privacy notice',
     'registro.titulo': 'Create account',
+    'registro.paso': 'Step {0} of {1}',
     'registro.nombre_label': 'Your name',
     'registro.nombre_placeholder': 'What\'s your name?',
     'registro.correo_label': 'Email',
@@ -3976,7 +4290,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Cash flow',
     'sidebar.gastos': 'Expenses & budget',
     'sidebar.simulador': 'Credit simulator',
-    'sidebar.configuracion': 'Settings & privacy',
+    'sidebar.configuracion': 'Settings',
     'sidebar.salir': 'Sign out',
     'sidebar.salir_muestra': 'Exit sample',
     'panel.score.titulo': 'Money Freak Score',
@@ -4026,7 +4340,7 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Your {0} card closes today — check your statement and log your next payment to avoid interest.',
     'panel.insight_corte_proximo': 'Your {0} card closes in {1} days — check your statement and log your next payment to avoid interest.',
     'onboarding_rapido.titulo': 'Before you start',
-    'onboarding_rapido.subtitulo': "5 numbers to get a first evaluation in under a minute. You can fine-tune everything in detail afterward.",
+    'onboarding_rapido.subtitulo': "5 numbers to see where you stand, in under a minute. Fine-tune everything later, no rush.",
     'onboarding_rapido.aviso_config_inicial': 'Confirm this before continuing.',
     'onboarding_rapido.ingreso_label': 'Approximate monthly income',
     'onboarding_rapido.liquido_label': 'Liquid money (accounts, cash)',
@@ -4034,14 +4348,18 @@ const TRADUCCIONES = {
     'onboarding_rapido.gastos_label': 'Approximate monthly expenses',
     'onboarding_rapido.ahorro_label': 'Savings & investments (what you already have saved)',
     'onboarding_rapido.ver_evaluacion': 'See my first evaluation',
-    'onboarding_rapido.chat_intro_1': "Hi! I'm Freaky, your financial mentor. I'll help you stay on top of your money: I can tell you if you can afford your month, log your expenses just by you describing them, and help you find your way around the app whenever you need.",
-    'onboarding_rapido.chat_intro_2': "To get started, I'll ask you for 5 numbers — nothing exact, just a rough estimate. Let's go.",
+    'onboarding_rapido.chat_intro_1': "Hi, I'm Freaky. From here on I've got your back with your money: I'll give you a heads-up if your month's tight, log expenses just by you telling me about them, and if you ever get lost in the app, I'm right here.",
+    'onboarding_rapido.chat_intro_2': "To kick things off I'll ask you for 5 numbers — nothing exact, just a rough guess. Let's go.",
     'onboarding_rapido.chat_p_ingreso': "What's your approximate monthly income?",
     'onboarding_rapido.chat_p_liquido': 'How much liquid money do you have today (accounts, cash)?',
     'onboarding_rapido.chat_p_deuda': 'How much do you owe in total, adding everything up?',
     'onboarding_rapido.chat_p_gastos': 'About how much do you spend per month?',
     'onboarding_rapido.chat_p_ahorro': 'Last one — how much do you already have saved or invested?',
     'onboarding_rapido.chat_siguiente': 'Next',
+    'onboarding_rapido.chat_paso': 'Step {0} of {1}',
+    'onboarding_rapido.chat_rango_mas_de': 'More than {0}',
+    'onboarding_rapido.chat_no_se': "I don't know — estimate it",
+    'onboarding_rapido.chat_no_se_burbuja': "I don't know, estimate it",
     'onboarding_rapido.guardar_continuar': 'Save and continue',
     'onboarding_rapido.omitir': "I'd rather set everything up myself",
     'onboarding_rapido.omitir_ahora': 'Skip for now',
@@ -4053,6 +4371,9 @@ const TRADUCCIONES = {
     'onboarding_rapido.eval_ahorro_sin_ingreso': 'You reported {0} in savings & investments.',
     'onboarding_rapido.eval_sin_ahorro': "You haven't reported any savings or investments yet.",
     'onboarding_rapido.eval_nota': "This is a rough first evaluation based on the numbers you shared — it'll get more precise as you log your real accounts, debts, and expenses.",
+    'onboarding_rapido.titular_riesgo': "Heads up — there's something worth fixing soon",
+    'onboarding_rapido.titular_atencion': "You're doing okay, with a couple of yellow flags",
+    'onboarding_rapido.titular_saludable': "You're doing great! Your situation looks healthy",
     'onboarding_rapido.nombre_ingreso': 'Monthly income',
     'onboarding_rapido.nombre_liquido': 'Available money',
     'onboarding_rapido.nombre_deuda': 'Total debts',
@@ -4207,8 +4528,10 @@ const TRADUCCIONES = {
     'tour.p5.texto': 'Here you see your projected liquid balance day by day, adding your income and subtracting your payments and contributions — so you know ahead of time if you\'ll have enough cash.',
     'tour.p6.titulo': 'Credit simulator',
     'tour.p6.texto': 'Before applying for a loan, simulate the real monthly payment (insurance and fees included) and whether it makes sense given your current finances.',
-    'tour.p7.titulo': 'Settings & privacy',
-    'tour.p7.texto': 'Here you can change the app\'s light/dark theme, and your data is isolated and protected per user — you can export or delete it completely whenever you want.',
+    'tour.p7.titulo': 'General settings',
+    'tour.p7.texto': "Here you change the language, light/dark theme, your notifications, and how Freaky behaves.",
+    'tour.p7b.titulo': 'Security & privacy',
+    'tour.p7b.texto': "Your data is isolated and protected per user — you can export or delete it completely whenever you want.",
     'tour.pfreaky.titulo': 'Freaky, your assistant',
     'tour.pfreaky.texto': "This button (top-right) takes you to Freaky from any screen — your financial mentor. Ask how to use the app, how your money's doing, or have it repeat this tour.",
     'tour.p8.titulo': "That's it",
@@ -4313,7 +4636,10 @@ const TRADUCCIONES = {
     'sesion.expirada': 'Your session expired. Please sign in again to keep using the app.',
     'comun.confirmar': 'Confirm',
     'tour.ver_aria': 'View guided tour',
-    'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
+    'registro.acepto_privacidad': 'I have read and accept the <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'registro\'); return false;">Privacy Notice</a>.',
+    'onboarding_rapido.acepto_privacidad': 'I have read and accept the <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal(\'onboarding\'); return false;">Privacy Notice</a>.',
+    'registro.lee_primero': "Open it and read it — the checkbox unlocks once you come back.",
+    'aviso.debes_leer_primero': "First open and read the Privacy Notice (tap the link above) — the checkbox unlocks once you come back. It's for your own safety: we want you to actually know what we do with your data before you accept.",
     'legal.titulo': 'Privacy notice',
     'legal.aviso_legal_h2': 'Legal notice',
     'legal.aviso_legal_texto': 'This app is a personal financial organization tool. It is not financial, investment, tax, or legal advice, and does not replace the opinion of a certified professional. The calculations, simulations, and recommendations you see (financial health, credit simulator, payment capacity, etc.) are estimates based on the information you enter — they are not a guarantee of results, real rates, or loan approval. You are responsible for the financial decisions you make.',
@@ -4324,13 +4650,21 @@ const TRADUCCIONES = {
     'legal.donde_guardan_h2': 'Where it is stored',
     'legal.donde_guardan_texto': 'In Supabase, with database-level security rules (Row Level Security): only you can see and edit your own data, even if another user has their own account in this same app.',
     'legal.tus_derechos_h2': 'Your rights',
-    'legal.tus_derechos_texto': 'You can download or delete all your data anytime from "Settings and privacy" inside the app, or request it by writing to samuelnates@gmail.com.',
+    'legal.tus_derechos_texto': 'You can download or delete all your data anytime from "Settings → Security & privacy" inside the app, or request it by writing to help@moneyfreak.app.',
     'recuperar.titulo': 'Reset password',
     'recuperar.enviar': 'Send reset link',
+    'recuperar.enviando': 'Sending…',
+    'recuperar.error_envio': "Couldn't send the email. Try again in a moment.",
     'recuperar.nueva_titulo': 'New password',
     'recuperar.nueva_label': 'Enter your new password',
     'recuperar.guardar': 'Save password',
     'login.modal_privacidad_texto': 'Your financial data is private. Only you can see it.',
+    'config.menu_general_boton': 'General settings',
+    'config.menu_general_desc': 'Language, theme, notifications, and how Freaky behaves.',
+    'config.menu_seguridad_boton': 'Security & privacy',
+    'config.menu_seguridad_desc': 'How we protect your information, Face ID/fingerprint, and full control over your data.',
+    'config.menu_reportes_boton': 'Reports',
+    'config.menu_reportes_desc': 'AI financial X-ray, for a deep analysis of your finances.',
     'config.apariencia_h2': 'Appearance',
     'config.apariencia_aviso': 'Automatic follows your phone or computer setting, just like other apps.',
     'config.proteccion_h2': 'How we protect your information',
@@ -4382,8 +4716,17 @@ const TRADUCCIONES = {
     'freaky.aviso_recordarmelo': 'Yes, remind me',
     'freaky.aviso_teaser': 'I need to tell you something 👀',
     'asesor.titulo': 'Choose your Freaky',
-    'asesor.subtitulo': "It's the same mentor as always — only how it looks changes.",
+    'asesor.subtitulo': "Same brain, different vibe — pick whoever you'd rather talk money with.",
     'asesor.elegir': 'Choose',
+    'asesor.avatar1.nombre': 'The Sage',
+    'asesor.avatar1.desc': "Calm like someone who's seen it all. He explains things patiently, no rushing, no judging your numbers.",
+    'asesor.avatar1.habilidad': '<b>Special ability:</b> turns any ugly number into an explanation you actually get.',
+    'asesor.avatar2.nombre': 'The Strategist',
+    'asesor.avatar2.desc': "Direct and to the point. No beating around the bush — she'll tell you exactly where your money is leaking.",
+    'asesor.avatar2.habilidad': '<b>Special ability:</b> spots weird patterns in your spending before you do.',
+    'asesor.avatar3.nombre': 'The Sidekick',
+    'asesor.avatar3.desc': 'The one who cheers you up when things get heavy. Celebrates every win with you, no matter how small.',
+    'asesor.avatar3.habilidad': '<b>Special ability:</b> makes talking about money feel a lot less heavy.',
     'config.cambiar_asesor_boton': "Change Freaky's look",
     'freaky.dias_aviso_tarjeta_label': 'Warn me about a card payment how many days in advance',
     'ayuda_ia.subtitulo': 'Your financial mentor',
@@ -4517,8 +4860,11 @@ const TRADUCCIONES = {
     'transferencia.total_registradas': '{0} logged',
     'salud.umbrales_titulo': 'Financial health thresholds',
     'salud.umbral_amarillo_label': '% debt ratio where "Attention" starts',
+    'salud.umbral_amarillo_recomendado': 'Recommended: 30%. You decide if you want a stricter or more flexible limit.',
     'salud.umbral_rojo_label': '% debt ratio where "Risk" starts',
+    'salud.umbral_rojo_recomendado': 'Recommended: 50%. You decide if you want a stricter or more flexible limit.',
     'salud.meses_objetivo_label': 'Months of liquidity coverage you want to keep',
+    'salud.meses_objetivo_recomendado': 'Recommended: 6 months. You decide if you want a bigger or smaller cushion.',
     'comun.guardar': 'Save',
     'comun.cancelar': 'Cancel',
     'comun.eliminar': 'Delete',
@@ -4675,12 +5021,21 @@ const TRADUCCIONES = {
     'mes.5': 'May', 'mes.6': 'June', 'mes.7': 'July', 'mes.8': 'August',
     'mes.9': 'September', 'mes.10': 'October', 'mes.11': 'November', 'mes.12': 'December',
     'login.alert_cuenta_creada': 'Account created. Check your email to confirm it, then sign in.',
+    'login.alert_error_link': "The link from your email isn't valid anymore (it may have expired, already been used, or opened in a different browser than the one you signed up with). Try signing in again, or request a new link.",
+    'login.alert_confirmado_otro_navegador': "Your email was already confirmed, but we couldn't sign you in automatically from this link (this happens when it's opened in a different browser or app than the one you signed up with). Sign in normally with your email and password.",
+    'login.alert_recuperacion_otro_navegador': "This recovery link didn't work because it was opened in a different browser or app than the one you requested it from (common when you open it from inside Gmail or your mail app). Request a new one right here and open it with the same browser — or copy it and paste it directly into Safari or Chrome instead of tapping it from the email.",
     'recuperar.alert_password_actualizada': 'Your password was updated successfully.',
     'login.confirm_cerrar_sesion': 'Sign out?',
     'config.confirm_borrar_datos1': 'Are you sure you want to delete ALL your financial data in this app (accounts, assets, stocks, debts, and history)? This action cannot be undone.',
     'config.prompt_borrar_confirmar': 'To confirm, type {0} in uppercase:',
     'config.alert_no_coincidio': 'Nothing was deleted — the text did not match.',
     'config.alert_datos_borrados': 'Your data was deleted. We are going to sign you out.',
+    'config.eliminar_cuenta_boton': 'Delete my account completely',
+    'config.eliminar_cuenta_aviso': 'Unlike "Delete all my data", this also deletes your access (email/password) — your account stops existing completely and you won\'t be able to sign in with it again.',
+    'config.confirm_eliminar_cuenta1': 'Are you sure you want to completely delete your Money Freak account? This deletes all your financial history AND your access (email/password) — you won\'t be able to sign in with this account again. This action cannot be undone.',
+    'config.prompt_eliminar_cuenta_confirmar': 'To confirm you want to completely delete your account, type {0} in uppercase:',
+    'config.alert_cuenta_eliminada': 'Your account was completely deleted. Thanks for using Money Freak.',
+    'alert.error_eliminar_cuenta': 'Could not delete your account. Check your internet and try again — if it keeps happening, write to help@moneyfreak.app.',
     'alert.error_actualizar': 'Could not update.',
     'alert.error_eliminar': 'Could not delete.',
     'alert.error_guardar_cuenta': 'Could not save the account.',
@@ -4705,6 +5060,10 @@ const TRADUCCIONES = {
     'registro.error_acepta_privacidad': 'You need to accept the Privacy Notice to continue.',
     'registro.error_correo_existente': 'That email already has an account. Try signing in.',
     'registro.error_generico': 'Could not create the account. Try again.',
+    'registro.error_rate_limit': 'Too many emails were sent in a short time. Wait a few minutes and try again.',
+    'registro.error_password_debil': 'Your password is too weak or too short. Use at least 6 characters.',
+    'registro.error_correo_invalido': 'That email is not valid. Check it and try again.',
+    'registro.error_conexion': 'Could not connect. Check your internet and try again.',
     'recuperar.mensaje_enviado': 'If that email has an account, we sent a link to reset your password.',
     'recuperar.error_min_caracteres': 'The password must be at least 6 characters.',
     'recuperar.error_generico': 'Could not save. Try again.',
@@ -4966,8 +5325,23 @@ async function init(){
   });
   tasasCambioPromesa = cargarTasasCambio();
 
+  // Bug real reportado por una usuaria (Yom): al tocar el link de
+  // recuperación del correo, la app la regresaba directo al panel en vez de
+  // pedirle la contraseña nueva. Causa: el link de recuperación SÍ deja una
+  // sesión válida (así funciona la recuperación de Supabase — te "loguea"
+  // temporalmente para que puedas cambiar la contraseña mientras esa sesión
+  // dura), así que unas líneas más abajo `sb.auth.getSession()` encontraba
+  // esa sesión y llamaba a entrarAlPanelConOnboarding(), pisando el
+  // mostrar('vista-nueva-contrasena') de aquí arriba — una carrera entre los
+  // dos, y el panel normal casi siempre ganaba. flujoRecuperacionActivo hace
+  // que ese chequeo de sesión más abajo se quede quieto cuando venimos de un
+  // link de recuperación.
+  let flujoRecuperacionActivo = false;
   sb.auth.onAuthStateChange((event) => {
-    if(event === 'PASSWORD_RECOVERY') mostrar('vista-nueva-contrasena');
+    if(event === 'PASSWORD_RECOVERY'){
+      flujoRecuperacionActivo = true;
+      mostrar('vista-nueva-contrasena');
+    }
   });
 
   if(window.Capacitor?.isNativePlatform?.()){
@@ -4989,25 +5363,180 @@ async function init(){
     });
   }
 
+  // Bug real reportado por el usuario ("loop en el onboarding, primera
+  // impresión mala"): si el link del correo (confirmación o recuperación)
+  // falla al intercambiarse por una sesión — código ya usado/expirado, o el
+  // link se abrió en un navegador distinto al que hizo el registro (pasa
+  // seguido en celular, ej. Gmail abre su propio navegador in-app) —
+  // Supabase regresa a esta misma URL con `?error=...` en vez de dejar una
+  // sesión. Antes eso caía sin más al login en blanco, sin explicar nada:
+  // el usuario, sin saber qué pasó, terminaba registrándose otra vez de
+  // cero. Ahora se detecta ese parámetro y se avisa qué pasó de verdad.
+  const paramsAuth = new URLSearchParams(location.search);
+  const errorAuth = paramsAuth.get('error_description') || paramsAuth.get('error_code') || paramsAuth.get('error');
+  const codigoAuthPresente = paramsAuth.has('code');
+  if(errorAuth){
+    history.replaceState(null, '', location.pathname);
+  }
+
+  // sb.auth.getSession() espera internamente a que supabase-js termine de
+  // intentar canjear el `?code=` de la URL por una sesión (PKCE), si hay uno.
   const { data: { session } } = await sb.auth.getSession();
-  if(session){
+
+  // Bug real, distinto al de `?error=` de arriba: cuando el link (de
+  // confirmación de correo O del regreso de Google) se abre en un
+  // navegador/app distinto al que inició el registro/login (común en
+  // celular — Gmail o el navegador in-app de Google abren su propio
+  // contexto), supabase-js SÍ intenta canjear el código, falla porque le
+  // falta el "code verifier" (solo existe en el navegador de origen), y en
+  // ese caso puntual NO limpia el `?code=` de la URL ni deja ningún
+  // `?error=` — antes esto caía en silencio total: sin sesión, sin aviso,
+  // con el código pegado en la URL. Se detecta aquí: si ya se esperó a que
+  // el cliente terminara de inicializar y sigue sin haber sesión pero el
+  // `?code=` sigue en la URL, es justo ese caso.
+  const codigoAtorado = !session && codigoAuthPresente && !errorAuth;
+  // Bug real reportado por el papá del usuario (WhatsApp, con capturas): pidió
+  // recuperar su contraseña, abrió el link desde el correo en un navegador/app
+  // distinto al que lo pidió, y le salió el aviso de "confirmación de correo"
+  // de arriba -- mensaje incorrecto (nunca pidió confirmar nada) y sin salida
+  // real (le decía "inicia sesión normalmente", pero si está aquí es porque
+  // olvidó su contraseña, no la tiene para "iniciar sesión normalmente"). Se
+  // distingue con la marca propia `?flujo=recuperacion` (ver enviarRecuperacion)
+  // para dar el mensaje correcto y mandarlo directo a pedir un link nuevo.
+  const esRecuperacionAtorada = codigoAtorado && paramsAuth.get('flujo') === 'recuperacion';
+  if(codigoAtorado){
+    history.replaceState(null, '', location.pathname);
+  }
+
+  if(flujoRecuperacionActivo){
+    // Ya se mostró vista-nueva-contrasena arriba — no navegar a ningún otro
+    // lado, o el mostrar('vista-login') de más abajo se lo comería igual.
+  } else if(session){
     await entrarAlPanelConOnboarding();
   } else if(new URLSearchParams(location.search).get('demo') === '1'){
     await verMuestra();
+  } else if(esRecuperacionAtorada){
+    mostrar('vista-olvide-contrasena');
+    await mostrarAlerta(t('login.alert_recuperacion_otro_navegador'));
   } else {
     mostrar('vista-login');
+    if(errorAuth) await mostrarAlerta(t('login.alert_error_link'));
+    else if(codigoAtorado) await mostrarAlerta(t('login.alert_confirmado_otro_navegador'));
   }
 }
 
 let origenAvisoLegal = 'registro';
+
+// Antes el checkbox de "acepto el Aviso de Privacidad" se podía marcar sin
+// haber abierto el aviso ni una vez — el link estaba ahí, pero nada obligaba
+// a usarlo. Pedido explícito del usuario: forzar que de verdad lo hayan
+// visto antes de poder aceptar. Los checkboxes de registro y onboarding
+// arrancan `disabled` en el HTML — solo se habilitan aquí, al volver de
+// haberlo abierto de verdad desde ese mismo origen.
+// Bug real reportado por el usuario, con capturas: alguien que YA tiene
+// cuenta (ej. entró con Google antes) terminaba viendo el formulario de
+// "Crear cuenta" pidiéndole nombre/correo otra vez — y "Volver" desde el
+// Aviso de Privacidad solo lo regresaba a esa misma pantalla equivocada,
+// reforzando la sensación de loop. La causa real no era el botón "Volver"
+// (ese sí regresa a donde el usuario realmente estaba) sino que nada
+// evitaba llegar a "Crear cuenta" teniendo ya una sesión válida. Ahora se
+// revisa la sesión real antes de mostrar el formulario — si ya existe,
+// se manda directo a la app en vez de pedir datos que ya tiene.
+const TOTAL_PASOS_REGISTRO = 6;
+let registroPasoActual = 1;
+
+// Un solo campo/decisión por pantalla en vez de un formulario largo — pedido
+// del usuario para que no tenga que "investigar" qué llenar. Cada paso valida
+// solo lo suyo antes de dejar avanzar; el paso 6 (turnstile + crearCuenta)
+// conserva su propia validación completa como respaldo.
+function mostrarPasoRegistro(n){
+  registroPasoActual = n;
+  document.querySelectorAll('#vista-crear-cuenta .registro-paso').forEach(el=>{
+    el.style.display = (Number(el.dataset.paso) === n) ? '' : 'none';
+  });
+  const prog = document.getElementById('registro-progreso');
+  if(prog){
+    prog.innerHTML = `
+      <span>${tf('registro.paso', n, TOTAL_PASOS_REGISTRO)}</span>
+      <div class="paso-progreso-barra"><div class="paso-progreso-relleno" style="width:${(n / TOTAL_PASOS_REGISTRO) * 100}%;"></div></div>
+    `;
+  }
+  const paso = document.querySelector(`#vista-crear-cuenta .registro-paso[data-paso="${n}"]`);
+  const primerInput = paso && paso.querySelector('input:not([disabled])');
+  if(primerInput) primerInput.focus();
+}
+
+function siguientePasoRegistro(){
+  if(registroPasoActual === 1){
+    if(!document.getElementById('input-nombre-registro').value.trim()){
+      mostrarAlerta(t('registro.error_faltan_campos'));
+      return;
+    }
+  } else if(registroPasoActual === 2){
+    if(!document.getElementById('input-email-registro').value.trim()){
+      mostrarAlerta(t('registro.error_faltan_campos'));
+      return;
+    }
+  } else if(registroPasoActual === 3){
+    if(document.getElementById('input-password-registro').value.length < 6){
+      mostrarAlerta(t('registro.error_password_debil'));
+      return;
+    }
+  } else if(registroPasoActual === 5){
+    if(!document.getElementById('check-privacidad-registro').checked){
+      mostrarAlerta(t('registro.error_acepta_privacidad'));
+      return;
+    }
+  }
+  mostrarPasoRegistro(Math.min(registroPasoActual + 1, TOTAL_PASOS_REGISTRO));
+}
+
+function atrasPasoRegistro(){
+  if(registroPasoActual <= 1){
+    mostrar('vista-login');
+    return;
+  }
+  mostrarPasoRegistro(registroPasoActual - 1);
+}
+
+async function abrirCrearCuenta(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    entrarAlPanelConOnboarding();
+    return;
+  }
+  const check = document.getElementById('check-privacidad-registro');
+  check.checked = false;
+  check.disabled = true;
+  document.getElementById('aviso-lee-primero-registro').style.display = '';
+  mostrarPasoRegistro(1);
+  mostrar('vista-crear-cuenta');
+}
 
 function abrirAvisoLegal(origen){
   origenAvisoLegal = origen;
   mostrar('vista-aviso-legal');
 }
 
+// Pedido del usuario: antes, tocar el checkbox mientras sigue `disabled` no
+// hacía nada — sin explicación, solo no reaccionaba. Eso no genera confianza,
+// se siente roto. Ahora avisa claramente que hay que abrir y leer el aviso
+// primero. El div que envuelve todo (checkbox + texto + link) es quien
+// escucha el clic — un checkbox nativo `disabled` no dispara su propio
+// evento de clic en algunos navegadores, pero el contenedor sí.
+function avisarSiFaltaLeerPrivacidad(idCheckbox){
+  const check = document.getElementById(idCheckbox);
+  if(check && check.disabled) mostrarAlerta(t('aviso.debes_leer_primero'));
+}
+
 function volverDeAvisoLegal(){
-  const destinos = { privacidad: 'vista-privacidad', onboarding: 'vista-onboarding-rapido' };
+  const destinos = { privacidad: 'vista-seguridad-privacidad', onboarding: 'vista-onboarding-rapido' };
+  if(origenAvisoLegal === 'registro' || origenAvisoLegal === 'onboarding'){
+    const check = document.getElementById(origenAvisoLegal === 'registro' ? 'check-privacidad-registro' : 'check-privacidad-onb');
+    const aviso = document.getElementById(origenAvisoLegal === 'registro' ? 'aviso-lee-primero-registro' : 'aviso-lee-primero-onb');
+    check.disabled = false;
+    if(aviso) aviso.style.display = 'none';
+  }
   mostrar(destinos[origenAvisoLegal] || 'vista-crear-cuenta');
 }
 
@@ -5023,15 +5552,53 @@ function toggleVerPassword(idInput, idBoton){
 
 async function iniciarSesionGoogle(){
   if(window.Capacitor?.isNativePlatform?.()){
+    // Android ya regresa a la app solo con el link real (https://www.moneyfreak.app/)
+    // vía App Links verificados (ver AndroidManifest.xml). iOS necesitaría el
+    // equivalente (Associated Domains), que requiere el Team ID de Apple
+    // Developer — todavía no disponible. Mientras tanto, en iOS se usa un
+    // esquema de URL propio (com.miscuentaspro.app://), que no depende de
+    // ningún dominio verificado y ya está registrado en Info.plist
+    // (CFBundleURLTypes) — Supabase hace el segundo salto del OAuth
+    // (Google -> Supabase -> este redirectTo), así que puede ser cualquier
+    // URL que esté en la lista de Redirect URLs del proyecto, no solo https.
+    const esIOS = window.Capacitor.getPlatform?.() === 'ios';
     const { data } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://www.moneyfreak.app/', skipBrowserRedirect: true }
+      options: {
+        redirectTo: esIOS ? 'com.miscuentaspro.app://oauth-callback' : 'https://www.moneyfreak.app/',
+        skipBrowserRedirect: true
+      }
     });
     if(data?.url) await window.Capacitor.Plugins.Browser.open({ url: data.url });
     return;
   }
   await sb.auth.signInWithOAuth({
     provider: 'google',
+    options: { redirectTo: location.origin + location.pathname }
+  });
+}
+
+// Requisito de Apple para publicar en App Store (Guideline 4.8): al ofrecer
+// Google como login de terceros, hay que ofrecer Sign in with Apple como
+// alternativa igual de visible. Mismo patrón exacto que iniciarSesionGoogle()
+// -- Supabase ya tiene configurado el proveedor "apple" (Services ID +
+// llave), así que del lado del cliente es el mismo flujo OAuth, solo cambia
+// el provider.
+async function iniciarSesionApple(){
+  if(window.Capacitor?.isNativePlatform?.()){
+    const esIOS = window.Capacitor.getPlatform?.() === 'ios';
+    const { data } = await sb.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: esIOS ? 'com.miscuentaspro.app://oauth-callback' : 'https://www.moneyfreak.app/',
+        skipBrowserRedirect: true
+      }
+    });
+    if(data?.url) await window.Capacitor.Plugins.Browser.open({ url: data.url });
+    return;
+  }
+  await sb.auth.signInWithOAuth({
+    provider: 'apple',
     options: { redirectTo: location.origin + location.pathname }
   });
 }
@@ -5101,7 +5668,7 @@ async function desactivarBiometria(){
   localStorage.removeItem('biometria_activada');
   localStorage.removeItem('biometria_rechazada');
   await mostrarAlerta(t('privacidad.biometria_desactivada'));
-  mostrar('vista-privacidad');
+  mostrar('vista-seguridad-privacidad');
 }
 
 const NOTIF_ID_GASTOS = 1001, NOTIF_ID_SALDOS = 1002, NOTIF_ID_REPORTE = 1003;
@@ -5184,10 +5751,77 @@ async function reprogramarNotificaciones(){
   if(notifications.length > 0) await LN.schedule({ notifications });
 }
 
+// Bug real reportado por el usuario ("loop en el onboarding... garantizamos
+// que el usuario no confíe"): esto vivía en localStorage, exclusivo del
+// navegador/dispositivo donde se puso — pero el link de confirmación de
+// correo siempre carga la página desde cero, a veces en un navegador
+// distinto al que hizo el registro (común en celular: el correo se abre en
+// la app de Mail, que usa su propio navegador in-app, con su propio
+// localStorage vacío). En ese contexto nuevo, el aviso se pedía otra vez
+// aunque ya se hubiera aceptado segundos antes. Se mueve a la base de datos
+// (perfil_financiero.terminos_aceptados_en), igual que avatar_asesor —
+// sobrevive el cambio de navegador porque la verdad vive del lado del
+// servidor, no en el dispositivo.
+let terminosAceptadosCache = null;
+async function terminosYaAceptados(){
+  if(terminosAceptadosCache !== null) return terminosAceptadosCache;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('terminos_aceptados_en').maybeSingle();
+    if(data?.terminos_aceptados_en){
+      terminosAceptadosCache = true;
+      return true;
+    }
+    // Si se registró por correo, crearCuenta() ya exigió el checkbox marcado
+    // (y antes de eso, haber abierto y leído el aviso de verdad) antes de
+    // poder crear la cuenta — no hay que volver a preguntar solo porque esta
+    // sesión nunca vio ese momento.
+    const { data: { user } } = await sb.auth.getUser();
+    if(user?.app_metadata?.provider === 'email'){
+      marcarTerminosAceptados();
+      return true;
+    }
+    terminosAceptadosCache = false;
+    return false;
+  }catch(e){
+    console.warn('No se pudo revisar terminos_aceptados_en (¿ya corriste la migración?)', e);
+    return false;
+  }
+}
+function marcarTerminosAceptados(){
+  terminosAceptadosCache = true;
+  sb.from('perfil_financiero').upsert({ terminos_aceptados_en: new Date().toISOString() }, { onConflict: 'user_id' })
+    .then(({ error }) => { if(error) console.warn('No se pudo guardar terminos_aceptados_en (¿ya corriste la migración?)', error); });
+}
+
+// Bug real reportado por el usuario: probó el onboarding con una cuenta de
+// Google, y al crear una cuenta NUEVA por correo en el mismo navegador, esa
+// segunda cuenta (con cero datos) se saltaba el onboarding rápido de Freaky
+// por completo — heredaba el "ya lo omití" de 'onboarding_rapido_omitido'
+// en localStorage, que en realidad pertenecía a la OTRA cuenta (localStorage
+// no está aislado por usuario, solo por navegador). Se mueve a la base de
+// datos, igual que avatar_asesor y terminos_aceptados_en.
+let onboardingRapidoHechoCache = null;
+async function onboardingRapidoYaHecho(){
+  if(onboardingRapidoHechoCache !== null) return onboardingRapidoHechoCache;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('onboarding_rapido_en').maybeSingle();
+    onboardingRapidoHechoCache = !!data?.onboarding_rapido_en;
+    return onboardingRapidoHechoCache;
+  }catch(e){
+    console.warn('No se pudo revisar onboarding_rapido_en (¿ya corriste la migración?)', e);
+    return false;
+  }
+}
+function marcarOnboardingRapidoHecho(){
+  onboardingRapidoHechoCache = true;
+  sb.from('perfil_financiero').upsert({ onboarding_rapido_en: new Date().toISOString() }, { onConflict: 'user_id' })
+    .then(({ error }) => { if(error) console.warn('No se pudo guardar onboarding_rapido_en (¿ya corriste la migración?)', error); });
+}
+
 async function debeMostrarOnboardingRapido(){
   if(modoDemo) return false;
-  if(localStorage.getItem('terminos_aceptados') !== '1') return true;
-  if(localStorage.getItem('onboarding_rapido_omitido') === '1') return false;
+  if(!(await terminosYaAceptados())) return true;
+  if(await onboardingRapidoYaHecho()) return false;
   try{
     const [{ count: cIngresos }, { count: cCuentas }, { count: cDeudas }] = await Promise.all([
       sb.from('ingresos').select('*', { count: 'exact', head: true }),
@@ -5201,14 +5835,32 @@ async function debeMostrarOnboardingRapido(){
 }
 
 async function entrarAlPanelConOnboarding(){
-  if(await debeMostrarSelectorAsesor()){
-    abrirSelectorAsesor('login');
-    return;
-  }
   if(await debeMostrarOnboardingRapido()){
     mostrar('vista-onboarding-rapido');
-    document.getElementById('onb-config-inicial').style.display = localStorage.getItem('terminos_aceptados') === '1' ? 'none' : 'block';
+    const faltaAceptar = !(await terminosYaAceptados()); // ya cacheado, no repite la consulta
+    document.getElementById('onb-config-inicial').style.display = faltaAceptar ? 'block' : 'none';
+    if(faltaAceptar){
+      const check = document.getElementById('check-privacidad-onb');
+      check.checked = false;
+      check.disabled = true;
+      document.getElementById('aviso-lee-primero-onb').style.display = '';
+    }
     iniciarOnboardingChat();
+    return;
+  }
+  await continuarTrasOnboarding();
+}
+
+// Pedido del usuario: diferir el selector de avatar de Freaky a después del
+// primer "momento de valor" (el resultado del onboarding rápido), en vez de
+// pedirlo de entrada antes de que la persona haya visto nada de la app. Antes
+// de elegir uno, el personaje ya se ve bien igual — carpetaAsesorActual() cae
+// a ASESORES[0] como default silencioso. A usuarios existentes que ya
+// pasaron el onboarding rápido pero nunca eligieron avatar (creados antes de
+// esta función) no les cambia nada: lo siguen viendo aquí, al entrar.
+async function continuarTrasOnboarding(){
+  if(await debeMostrarSelectorAsesor()){
+    abrirSelectorAsesor('login');
     return;
   }
   abrirPanel();
@@ -5224,7 +5876,7 @@ function validarConfigInicialOnboarding(){
     mostrarAlerta(t('registro.error_acepta_privacidad'));
     return false;
   }
-  localStorage.setItem('terminos_aceptados', '1');
+  marcarTerminosAceptados();
   bloque.style.display = 'none';
   return true;
 }
@@ -5267,29 +5919,107 @@ function iniciarOnboardingChat(){
   mostrarPreguntaOnboarding();
 }
 
+// Pedido del usuario: que se sienta menos como un formulario sin fin. Una
+// barra de progreso simple ("Paso 2 de 5") le pone un límite visible a algo
+// que antes solo se sentía como una conversación que no se sabía qué tan
+// larga era.
+function actualizarProgresoOnboarding(){
+  const el = document.getElementById('onb-chat-progreso');
+  if(!el) return;
+  const total = PASOS_ONB_CHAT.length;
+  const actual = Math.min(onbPasoActual + 1, total);
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span>${tf('onboarding_rapido.chat_paso', actual, total)}</span>
+    <div class="paso-progreso-barra"><div class="paso-progreso-relleno" style="width:${(actual / total) * 100}%;"></div></div>
+  `;
+}
+
+// Pedido del usuario: chips de rango en vez de forzar a escribir el número
+// exacto — la mayoría no trae la cifra exacta en la cabeza, pero sí sabe en
+// qué rango cae. El valor que se guarda es el punto medio del rango elegido
+// (editable después con calma en la app real, igual que el estimado de "no
+// sé"); el rango en sí solo decide qué se muestra en la burbuja del chat.
+const RANGOS_ONB_CHAT = [
+  { hasta: 0, valor: 0 },
+  { desde: 1000, hasta: 5000, valor: 3000 },
+  { desde: 5000, hasta: 10000, valor: 7500 },
+  { desde: 10000, hasta: 20000, valor: 15000 },
+  { desde: 20000, hasta: 40000, valor: 30000 },
+  { desde: 40000, valor: 50000 },
+];
+
+function etiquetaRangoOnboarding(rango){
+  if(rango.hasta === 0 && !rango.desde) return formatoMonto(0, 'MXN');
+  if(rango.desde && !rango.hasta) return tf('onboarding_rapido.chat_rango_mas_de', formatoMonto(rango.desde, 'MXN'));
+  return `${formatoMonto(rango.desde, 'MXN')} – ${formatoMonto(rango.hasta, 'MXN')}`;
+}
+
+function mostrarRangosOnboarding(){
+  const cont = document.getElementById('onb-chat-rangos');
+  cont.innerHTML = RANGOS_ONB_CHAT.map((rango, i) => {
+    const etiqueta = escapeHtml(etiquetaRangoOnboarding(rango));
+    return `<button type="button" onclick="elegirRangoOnboarding(${i})">${etiqueta}</button>`;
+  }).join('');
+  cont.style.display = 'flex';
+}
+
+function elegirRangoOnboarding(indice){
+  const rango = RANGOS_ONB_CHAT[indice];
+  registrarRespuestaOnboarding(rango.valor, etiquetaRangoOnboarding(rango));
+}
+
 function mostrarPreguntaOnboarding(){
   const paso = PASOS_ONB_CHAT[onbPasoActual];
+  actualizarProgresoOnboarding();
   agregarBurbujaOnboarding('asistente', escapeHtml(t(paso.pregunta)));
   const input = document.getElementById('input-onb-chat-respuesta');
   input.value = '';
   document.getElementById('onb-chat-input-area').style.display = 'flex';
+  mostrarRangosOnboarding();
+  document.getElementById('onb-chat-nose').style.display = 'flex';
   input.focus();
+}
+
+function registrarRespuestaOnboarding(valor, textoBurbuja){
+  const paso = PASOS_ONB_CHAT[onbPasoActual];
+  document.getElementById(`input-onb-${paso.campo}`).value = String(valor);
+  agregarBurbujaOnboarding('usuario', escapeHtml(textoBurbuja ?? formatoMonto(valor, 'MXN')));
+  onbPasoActual++;
+  if(onbPasoActual < PASOS_ONB_CHAT.length){
+    mostrarPreguntaOnboarding();
+  } else {
+    document.getElementById('onb-chat-input-area').style.display = 'none';
+    document.getElementById('onb-chat-rangos').style.display = 'none';
+    document.getElementById('onb-chat-nose').style.display = 'none';
+    document.getElementById('onb-chat-progreso').style.display = 'none';
+    verEvaluacionRapida();
+  }
 }
 
 function avanzarOnboardingChat(){
   const input = document.getElementById('input-onb-chat-respuesta');
   const valor = input.value === '' ? 0 : Number(input.value);
   if(Number.isNaN(valor) || valor < 0) return;
-  const paso = PASOS_ONB_CHAT[onbPasoActual];
-  document.getElementById(`input-onb-${paso.campo}`).value = String(valor);
-  agregarBurbujaOnboarding('usuario', escapeHtml(formatoMonto(valor, 'MXN')));
-  onbPasoActual++;
-  if(onbPasoActual < PASOS_ONB_CHAT.length){
-    mostrarPreguntaOnboarding();
-  } else {
-    document.getElementById('onb-chat-input-area').style.display = 'none';
-    verEvaluacionRapida();
+  registrarRespuestaOnboarding(valor);
+}
+
+// Pedido del usuario: mucha gente no trae el número exacto en la cabeza y
+// eso frena el onboarding a medio camino. "No sé" no lo deja atorado —
+// calcula un estimado razonable (editable después con calma en la app real)
+// en vez de forzar a adivinar un número o abandonar aquí mismo.
+function noSePreguntaOnboarding(){
+  const campo = PASOS_ONB_CHAT[onbPasoActual].campo;
+  const ingresoActual = Number(document.getElementById('input-onb-ingreso').value) || 0;
+  let valor = 0;
+  if(campo === 'ingreso'){
+    valor = 12000; // referencia aproximada de ingreso mensual en México
+  } else if(campo === 'gastos' && ingresoActual > 0){
+    valor = Math.round(ingresoActual * 0.7); // estimado típico: ~70% del ingreso en gastos
   }
+  // liquido/deuda/ahorro sin pista de ingreso: 0 es una respuesta real válida
+  // ("todavía no tengo"), no solo un relleno — se completa después en la app.
+  registrarRespuestaOnboarding(valor, t('onboarding_rapido.chat_no_se_burbuja'));
 }
 
 function calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro){
@@ -5333,6 +6063,17 @@ function renderEvaluacionRapida(items){
   `;
 }
 
+// Pedido del usuario: que el primer resultado se sienta como un logro, no
+// solo una lista de texto — un titular grande arriba, con el tono del
+// hallazgo más urgente (los items ya vienen ordenados riesgo→atención→
+// saludable), en vez de que el usuario tenga que leer todo para saber si
+// va bien o mal.
+function titularEvaluacionRapida(items){
+  const peor = items[0]?.severidad || 'saludable';
+  const claveTitular = { riesgo: 'onboarding_rapido.titular_riesgo', atencion: 'onboarding_rapido.titular_atencion', saludable: 'onboarding_rapido.titular_saludable' }[peor];
+  return { texto: t(claveTitular), severidad: peor };
+}
+
 function verEvaluacionRapida(){
   if(!validarConfigInicialOnboarding()) return;
   const ingreso = Number(document.getElementById('input-onb-ingreso').value) || 0;
@@ -5343,6 +6084,10 @@ function verEvaluacionRapida(){
   onbUltimosValores = { ingreso, liquido, deuda, gastos, ahorro };
 
   const items = calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro);
+  const titular = titularEvaluacionRapida(items);
+  const elTitular = document.getElementById('onb-resultado-titular');
+  elTitular.textContent = titular.texto;
+  elTitular.className = `onb-resultado-titular ${titular.severidad}`;
   document.getElementById('onb-insights').innerHTML = renderEvaluacionRapida(items);
   document.getElementById('onb-resultado').style.display = 'block';
   document.getElementById('btn-onb-evaluar').style.display = 'none';
@@ -5373,20 +6118,16 @@ async function guardarOnboardingRapido(){
     if(cuenta) await sb.from('saldos').upsert({ cuenta_id: cuenta.id, fecha: hoyISO, monto: ahorro }, { onConflict: 'cuenta_id,fecha' });
   }
 
-  localStorage.setItem('onboarding_rapido_omitido', '1');
+  marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
-  abrirPanel();
-  mostrarAvisoPrivacidadLogin();
-  mostrarNovedadesSiHayPendientes();
+  await continuarTrasOnboarding();
 }
 
-function omitirOnboardingRapido(){
+async function omitirOnboardingRapido(){
   if(!validarConfigInicialOnboarding()) return;
-  localStorage.setItem('onboarding_rapido_omitido', '1');
+  marcarOnboardingRapidoHecho();
   onbUltimosValores = null;
-  abrirPanel();
-  mostrarAvisoPrivacidadLogin();
-  mostrarNovedadesSiHayPendientes();
+  await continuarTrasOnboarding();
 }
 
 function mostrarAvisoPrivacidadLogin(){
@@ -5496,6 +6237,9 @@ async function crearCuenta(){
     errDiv.style.display = 'block';
     return;
   }
+  // Ya no se marca aquí con localStorage (ver terminosYaAceptados) — se
+  // detecta solo por el proveedor ('email') la primera vez que el usuario
+  // confirma su correo y entra, sin importar en qué navegador lo haga.
   const captchaToken = (window.TURNSTILE_SITE_KEY && typeof turnstile !== 'undefined' && turnstileWidgetIdRegistro !== null)
     ? turnstile.getResponse(turnstileWidgetIdRegistro)
     : undefined;
@@ -5513,9 +6257,21 @@ async function crearCuenta(){
   if(turnstileWidgetIdRegistro !== null && typeof turnstile !== 'undefined') turnstile.reset(turnstileWidgetIdRegistro);
 
   if(error){
-    errDiv.textContent = error.message.includes('already registered') || error.message.includes('already exists')
-      ? t('registro.error_correo_existente')
-      : t('registro.error_generico');
+    console.error('crearCuenta signUp error:', error.status, error.code, error.message);
+    const msg = (error.message || '').toLowerCase();
+    if(msg.includes('already registered') || msg.includes('already exists') || error.code === 'user_already_exists'){
+      errDiv.textContent = t('registro.error_correo_existente');
+    } else if(error.status === 429 || error.code === 'over_email_send_rate_limit' || msg.includes('rate limit')){
+      errDiv.textContent = t('registro.error_rate_limit');
+    } else if(error.code === 'weak_password' || msg.includes('password')){
+      errDiv.textContent = t('registro.error_password_debil');
+    } else if(error.code === 'validation_failed' || msg.includes('invalid') && msg.includes('email')){
+      errDiv.textContent = t('registro.error_correo_invalido');
+    } else if(error.name === 'AuthRetryableFetchError' || msg.includes('fetch') || msg.includes('network')){
+      errDiv.textContent = t('registro.error_conexion');
+    } else {
+      errDiv.textContent = t('registro.error_generico');
+    }
     errDiv.style.display = 'block';
     return;
   }
@@ -5529,13 +6285,40 @@ async function crearCuenta(){
   }
 }
 
+// Bug real reportado por una usuaria (Yom, por WhatsApp): tocaba el botón
+// y no notaba ningún cambio — el único indicio era un texto chico y gris
+// (.aviso normal) debajo, fácil de no ver. Ella terminó picándole 2 veces
+// "a ver qué pasaba". Ahora el botón mismo cambia de texto mientras envía y
+// al terminar, y el mensaje usa el estilo .exito (verde, negritas) — y el
+// error de resetPasswordForEmail (antes se descartaba sin más) si se
+// muestra, en vez de fingir que se envió cuando en realidad falló.
 async function enviarRecuperacion(){
   const email = document.getElementById('input-email-recuperar').value.trim();
   const msgDiv = document.getElementById('recuperar-mensaje');
+  const btn = document.getElementById('btn-enviar-recuperacion');
   if(!email) return;
 
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-  msgDiv.textContent = t('recuperar.mensaje_enviado');
+  btn.disabled = true;
+  btn.textContent = t('recuperar.enviando');
+  // El "?flujo=recuperacion" es marca propia (Supabase no distingue esto de
+  // forma confiable en la URL de regreso) -- permite detectar en init() si un
+  // "?code=" atorado (link abierto en otro navegador/app) viene de aquí, para
+  // dar un mensaje y una salida correctos en vez del genérico de confirmación.
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '?flujo=recuperacion' });
+  btn.disabled = false;
+  btn.textContent = t('recuperar.enviar');
+
+  if(error){
+    console.error('enviarRecuperacion error:', error.status, error.code, error.message);
+    msgDiv.className = 'aviso error';
+    const msg = (error.message || '').toLowerCase();
+    msgDiv.textContent = (error.status === 429 || error.code === 'over_email_send_rate_limit' || msg.includes('rate limit'))
+      ? t('registro.error_rate_limit')
+      : t('recuperar.error_envio');
+  } else {
+    msgDiv.className = 'aviso exito';
+    msgDiv.textContent = t('recuperar.mensaje_enviado');
+  }
   msgDiv.style.display = 'block';
 }
 
@@ -5978,6 +6761,51 @@ async function borrarTodosMisDatos(){
   location.reload();
 }
 
+// Requisito de Apple para publicar en App Store (Guideline 5.1.1(v)): si la
+// app deja crear una cuenta, tiene que dejar eliminarla por completo desde
+// dentro de la app -- "Borrar todos mis datos" no basta, porque a propósito
+// deja vivo el acceso (correo/contraseña). Esto sí lo borra todo, incluido
+// el usuario real de auth -- por eso necesita la Edge Function
+// eliminar-mi-cuenta (solo la service role key puede borrar un auth.users).
+async function confirmarEliminarCuentaCompleta(){
+  const ok1 = await mostrarConfirmacion(t('config.confirm_eliminar_cuenta1'), { destructivo: true, textoConfirmar: t('comun.continuar') });
+  if(!ok1) return;
+  const palabraConfirmacion = document.documentElement.lang === 'en' ? 'DELETE' : 'BORRAR';
+  const escrito = await mostrarPromptTexto(tf('config.prompt_eliminar_cuenta_confirmar', palabraConfirmacion), { placeholder: palabraConfirmacion, destructivo: true, textoConfirmar: t('config.eliminar_cuenta_boton') });
+  if(escrito !== palabraConfirmacion){
+    await mostrarAlerta(t('config.alert_no_coincidio'));
+    return;
+  }
+  await eliminarCuentaCompleta();
+}
+
+async function eliminarCuentaCompleta(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ await mostrarAlerta(t('alert.error_eliminar_cuenta')); return; }
+
+  let resp;
+  try{
+    resp = await fetchConTimeout(`${window.SUPABASE_URL}/functions/v1/eliminar-mi-cuenta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    }, 30000);
+  }catch(e){
+    console.error('Timeout o error de red llamando a eliminar-mi-cuenta', e);
+    await mostrarAlerta(t('alert.error_eliminar_cuenta'));
+    return;
+  }
+  if(!resp.ok){
+    const errBody = await resp.json().catch(() => ({}));
+    console.error('eliminar-mi-cuenta respondió con error:', resp.status, errBody);
+    await mostrarAlerta(t('alert.error_eliminar_cuenta'));
+    return;
+  }
+
+  await mostrarAlerta(t('config.alert_cuenta_eliminada'));
+  await sb.auth.signOut();
+  location.reload();
+}
+
 async function cargarTodo(){
   if(tasasCambioPromesa) await tasasCambioPromesa;
   await Promise.all([cargarCuentasInversion(), cargarBienes(), cargarDeudas(), cargarAcciones(), cargarIngresos(), cargarTransferencias()]);
@@ -6164,7 +6992,7 @@ async function calcularInsightsPanel(b, s, g){
     }
   }
 
-  if(s.estadoGeneral === 'saludable' && s.mesesCobertura !== null && s.mesesCobertura >= (perfilFinanciero.meses_cobertura_objetivo || 3) * 1.5){
+  if(s.estadoGeneral === 'saludable' && s.mesesCobertura !== null && s.mesesCobertura >= (perfilFinanciero.meses_cobertura_objetivo || MESES_COBERTURA_RECOMENDADO) * 1.5){
     candidatos.push({ severidad: 'saludable', texto: tf('panel.insight_liquidez_solida', s.mesesCobertura.toFixed(1)) });
   }
 
@@ -6295,12 +7123,12 @@ async function calcularScoreMoneyFreak(b, s, g){
     racha++;
   }
 
-  const metaMeses = perfilFinanciero.meses_cobertura_objetivo || 3;
+  const metaMeses = perfilFinanciero.meses_cobertura_objetivo || MESES_COBERTURA_RECOMENDADO;
   const liquidez = s.mesesCobertura === null
     ? (s.activosLiquidos > 0 ? 100 : null)
     : Math.max(0, Math.min(100, (s.mesesCobertura / metaMeses) * 100));
 
-  const techoEndeudamiento = perfilFinanciero.umbral_rojo || 35;
+  const techoEndeudamiento = perfilFinanciero.umbral_rojo || UMBRAL_ROJO_RECOMENDADO;
   const endeudamiento = s.tasaEndeudamiento === null
     ? null
     : Math.max(0, Math.min(100, 100 - (s.tasaEndeudamiento / techoEndeudamiento) * 100));
@@ -8073,26 +8901,53 @@ function ajustarLayoutTeclado(){
   if(!vv) return;
   const tapado = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   const tecladoAbierto = tapado > 80; // umbral para no disparar con la barra de direcciones de Safari
-  if(barra) barra.style.bottom = tecladoAbierto ? `${tapado}px` : '';
+  // +46px de colchón cuando el teclado está abierto: la barra propia de
+  // Safari con "anterior/siguiente/listo" (y la fila de texto predictivo)
+  // que aparece ENCIMA del teclado no siempre queda reflejada por completo en
+  // visualViewport.height — varía por versión de iOS. Sin este margen, la
+  // barra de escritura sube justo hasta el borde que sí mide la API, pero se
+  // queda tapada por esa franja extra que no podemos medir directamente.
+  // Bug real reportado por el usuario con screenshot: seguía sin poder ver
+  // lo que escribía después del fix anterior (que sí resolvía el reposicionamiento,
+  // solo que sin este colchón no alcanzaba a despejar del todo).
+  const colchon = tecladoAbierto ? 46 : 0;
+  if(barra) barra.style.bottom = tecladoAbierto ? `${tapado + colchon}px` : '';
   document.body.classList.toggle('teclado-abierto', tecladoAbierto);
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', ajustarLayoutTeclado);
   window.visualViewport.addEventListener('scroll', ajustarLayoutTeclado);
 }
-// Respaldo: en iOS Safari, cuando el teclado se cierra casi al mismo tiempo
-// que la pantalla se mueve por otra razón (ej. el auto-scroll al llegar la
-// respuesta de Freaky), a veces 'resize'/'scroll' de visualViewport no
-// vuelven a disparar y la barra se queda pegada en la posición de cuando el
-// teclado seguía abierto (bug real reportado por el usuario, con screenshot).
-// focusin/focusout del documento sí son confiables — se reintenta varias
-// veces con distintos retrasos porque la animación de cierre del teclado no
-// termina de inmediato, para no leer visualViewport a medio camino.
+// Respaldo: en iOS Safari, tanto al abrir como al cerrar el teclado, a veces
+// 'resize'/'scroll' de visualViewport no disparan de nuevo una vez que la
+// barra propia de "anterior/siguiente/listo" y el texto predictivo terminan
+// de asentarse (su altura cambia un poco después del primer evento) — la
+// barra se queda posicionada con la medida a medio camino. focusin/focusout
+// del documento sí son confiables — se reintenta varias veces con distintos
+// retrasos, incluyendo uno más tardío (1400ms) para el caso de un teclado
+// lento en terminar de asentarse, sin leer visualViewport a medio camino.
 function reconciliarLayoutTecladoConRetraso(){
-  [50, 250, 500, 900].forEach(ms => setTimeout(ajustarLayoutTeclado, ms));
+  ajustarLayoutTeclado();
+  [50, 250, 500, 900, 1400].forEach(ms => setTimeout(ajustarLayoutTeclado, ms));
 }
 document.addEventListener('focusin', reconciliarLayoutTecladoConRetraso);
 document.addEventListener('focusout', reconciliarLayoutTecladoConRetraso);
+
+// scrollIntoView({block:'end'}) alinea el mensaje con el borde de abajo del
+// viewport, pero no sabe que #chat-input-fija (position:fixed) tapa una
+// franja encima de ese borde — el mensaje "ya scrolleado" queda con su final
+// (o los botones de acción) escondidos detrás de la barra. Bug reportado por
+// el usuario con screenshot: la respuesta de Freaky se ve tapada y la
+// pantalla no termina de bajar lo suficiente. Se mide cuánto tapa la barra
+// ahora mismo (con getBoundingClientRect, ya resuelto el offset por
+// teclado/nav) y se agrega ese margen al destino del scroll.
+function desplazarChatHaciaAbajo(div){
+  const barra = document.getElementById('chat-input-fija');
+  const tapadoAbajo = barra ? Math.max(0, window.innerHeight - barra.getBoundingClientRect().top) : 0;
+  const rect = div.getBoundingClientRect();
+  const objetivo = window.scrollY + rect.bottom - window.innerHeight + tapadoAbajo + 16;
+  window.scrollTo({ top: Math.max(0, objetivo), behavior: 'smooth' });
+}
 
 let historialAyudaIA = [];
 let snapshotFreakyCache = null;
@@ -8339,7 +9194,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
   cont.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  desplazarChatHaciaAbajo(div);
   if(accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva){
     freakyTrigger('point'); // "encontré algo para ti" — hay una propuesta en esta burbuja
   }
@@ -8462,6 +9317,9 @@ function renderSelectorAsesor(){
   cont.innerHTML = ASESORES.map(a => `
     <div class="asesor-tarjeta">
       <img src="${a.carpeta}/avatar.png" alt="">
+      <div class="asesor-tarjeta-titulo">${t('asesor.' + a.id + '.nombre')}</div>
+      <div class="asesor-tarjeta-desc">${t('asesor.' + a.id + '.desc')}</div>
+      <div class="asesor-tarjeta-habilidad">${t('asesor.' + a.id + '.habilidad')}</div>
       <button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>
     </div>
   `).join('');
@@ -8484,9 +9342,9 @@ async function elegirAsesor(id){
     }
   }
   if(asesorSelectorOrigen === 'configuracion'){
-    mostrar('vista-privacidad');
+    mostrar('vista-config-general');
   } else {
-    entrarAlPanelConOnboarding();
+    await continuarTrasOnboarding();
   }
 }
 
@@ -8533,7 +9391,7 @@ function iniciarVueloFreaky(){
     return; // posición fija, sin vuelo ni movimiento secundario
   }
 
-  freakyVolarSiguiente();
+  freakyIrAPerchaDePantalla();
   freakyProgramarBlinkEspontaneo();
   // Saludo de bienvenida, una sola vez por sesión, justo después de aparecer.
   gsap.delayedCall(1, () => freakyTrigger('wave'));
@@ -8554,20 +9412,23 @@ function freakyMostrarPose(pose){
   });
 }
 
-let freakyIdleTween = null;
+// Antes esto era un tween de GSAP con repeat:-1 sobre #freaky-personaje —
+// nunca paraba, y desde que Freaky dejó de volar sin parar (se queda quieto
+// la mayoría del tiempo, ver freakyIrAPerchaDePantalla) ese tween corría sin
+// interrupción durante sesiones enteras, reportado como parpadeo. Ahora solo
+// alterna clases CSS sobre el contenedor interno (.freaky-cuerpo, ver CSS)
+// — la animación real vive en @keyframes, el navegador la compone aparte
+// del transform de posición que sigue controlando GSAP en el contenedor
+// externo, sin escribir estilos en cada frame desde JS.
 function freakyIniciarReposo(sentado){
-  const el = document.getElementById('freaky-personaje');
-  if(!el) return;
-  freakyIdleTween = sentado
-    // Sentado: casi sin rebote vertical (se vería como si flotara sobre la
-    // repisa en vez de estar apoyado en ella) — solo un balanceo chico.
-    ? gsap.to(el, { rotation: -3, y: '+=2', duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut' })
-    // Respiración: escala X/Y opuestas + un dejo hacia arriba, 0.7s de ida
-    // y 0.7s de vuelta (ciclo de 1.4s) — casi imperceptible, orgánico.
-    : gsap.to(el, { scaleX: 1.01, scaleY: 0.99, y: '-=5', duration: 0.7, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+  const cuerpo = document.getElementById('freaky-cuerpo');
+  if(!cuerpo) return;
+  cuerpo.classList.remove('freaky-reposo-flotando', 'freaky-reposo-sentado');
+  cuerpo.classList.add(sentado ? 'freaky-reposo-sentado' : 'freaky-reposo-flotando');
 }
 function freakyDetenerReposo(){
-  if(freakyIdleTween){ freakyIdleTween.kill(); freakyIdleTween = null; }
+  const cuerpo = document.getElementById('freaky-cuerpo');
+  if(cuerpo) cuerpo.classList.remove('freaky-reposo-flotando', 'freaky-reposo-sentado');
 }
 
 // ===== Freaky: gestos cortos (equivalentes a los triggers de una State
@@ -8658,61 +9519,64 @@ function freakyProgramarBlinkEspontaneo(){
   if(freakyReducedMotion) return;
   const espera = 4000 + Math.random() * 5000;
   setTimeout(() => {
-    if(!document.hidden && !freakyHablandoActivo && freakyIdleTween){
+    const cuerpo = document.getElementById('freaky-cuerpo');
+    const enReposo = cuerpo && (cuerpo.classList.contains('freaky-reposo-flotando') || cuerpo.classList.contains('freaky-reposo-sentado'));
+    if(!document.hidden && !freakyHablandoActivo && enReposo){
       freakyTrigger('blink');
     }
     freakyProgramarBlinkEspontaneo();
   }, espera);
 }
 
-// Busca "muebles" reales donde Freaky se pueda sentar en vez de quedarse
-// flotando en el aire: primero el chrome fijo que existe en cualquier
-// pantalla con sesión (el logo de Inicio, el botón de configuración, el FAB
-// de "+" de la barra inferior), y de la pantalla activa, tarjetas y el botón
-// de volver. Todo medido con getBoundingClientRect() en vivo, así que se
-// ajusta solo si el usuario hizo scroll o cambió de pantalla.
+// Busca "muebles" reales donde Freaky se pueda quedar, restringido a
+// elementos genuinamente position:fixed — el logo de Inicio (marca-flotante),
+// el botón de configuración y el FAB de "+" de la barra inferior. ANTES
+// también entraban .panel-tarjeta y .btn-volver, pero esos viven en el flujo
+// normal de la pantalla (se mueven con el scroll) mientras que Freaky es
+// position:fixed (nunca se mueve con el scroll) — si aterrizaba sobre una
+// tarjeta y el usuario después hacía scroll, Freaky se quedaba flotando en
+// el aire, en el punto de la pantalla donde ESA TARJETA ESTUVO, no donde
+// está ahora: por eso terminaba "en lugares donde ni siquiera está" y el
+// rastro de vuelo llevaba a un punto sin sentido (bug real reportado por el
+// usuario). Con solo chrome fijo, la posición medida con
+// getBoundingClientRect() sigue siendo válida sin importar cuánto scrollee
+// el usuario en esa pantalla — nunca se desincroniza.
 function freakyEncontrarPerchas(){
   const el = document.getElementById('freaky-personaje');
   const tam = el ? (el.offsetWidth || 74) : 74;
-  const pantallaActiva = document.querySelector('.pantalla.activa');
   const candidatosSel = [
-    { sel: '.marca-flotante', raiz: document },
-    { sel: '.btn-config-flotante', raiz: document },
-    { sel: '.nav-inferior-fab', raiz: document },
-    { sel: '.panel-tarjeta', raiz: pantallaActiva },
-    { sel: '.btn-volver', raiz: pantallaActiva },
+    // El logo es el único de donde Freaky CUELGA (agarrado del borde de
+    // abajo) en vez de sentarse encima — pedido explícito del usuario. No
+    // hay una pose de "colgando" en el set de artes (flotando/pensando/
+    // hablando/sentado/saludando/ojos_cerrados) — se usa "flotando" como la
+    // aproximación menos rara: no implica que esté parado sobre algo.
+    { sel: '.marca-flotante', tipo: 'colgar' },
+    { sel: '.btn-config-flotante', tipo: 'sentar' },
+    { sel: '.nav-inferior-fab', tipo: 'sentar' },
   ];
 
-  const rects = [];
-  candidatosSel.forEach(({ sel, raiz }) => {
-    if(!raiz) return;
-    raiz.querySelectorAll(sel).forEach(cand => {
-      // offsetParent no sirve aquí: los botones fijos (marca-flotante,
-      // btn-config-flotante) son position:fixed, y esos SIEMPRE reportan
-      // offsetParent null aunque estén visibles — no es una señal de oculto.
-      // Un rect de tamaño 0 (display:none, o un ancestro oculto) ya se filtra solo abajo.
+  const perchas = [];
+  candidatosSel.forEach(({ sel, tipo }) => {
+    document.querySelectorAll(sel).forEach(cand => {
+      // offsetParent no sirve aquí: al ser position:fixed, siempre reporta
+      // offsetParent null aunque el botón esté visible — no es señal de
+      // oculto. Un rect de tamaño 0 (display:none, o ancestro oculto) ya se
+      // filtra abajo con el chequeo de ancho/alto.
       const r = cand.getBoundingClientRect();
       if(r.width < 18 || r.height < 18) return;
-      // No deja que se salga de la pantalla visible por ningún lado (el
-      // margen contra la barra de estado se aplica después, al calcular el
-      // punto de aterrizaje — el logo mismo puede estar más arriba que eso).
       if(r.bottom > window.innerHeight - 4 || r.left < 0 || r.right > window.innerWidth) return;
-      rects.push(r);
+      const x = r.left + r.width / 2 - tam / 2;
+      const y = tipo === 'colgar'
+        ? r.bottom - tam * 0.22 // cuelga hacia abajo, agarrado del borde inferior
+        : r.top - tam * 0.72;   // sentado encima, apoyado en el borde superior
+      perchas.push({
+        tipo,
+        x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
+        y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
+      });
     });
   });
-
-  return rects.map(r => {
-    // Botones chicos (círculos de 44-60px): se sienta centrado arriba.
-    // Tarjetas/elementos más anchos: se sienta en la esquina superior derecha,
-    // como colgado del borde, que se lee más natural que estar centrado.
-    const chico = r.width < 70 && r.height < 70;
-    const x = chico ? (r.left + r.width / 2 - tam / 2) : (r.right - tam * 0.6);
-    const y = chico ? (r.top - tam * 0.72) : (r.top - tam * 0.62);
-    return {
-      x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
-      y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
-    };
-  });
+  return perchas;
 }
 
 let freakyUltimaEstela = 0;
@@ -8731,11 +9595,26 @@ function freakyDejarEstela(el){
 
 let freakyEstaSentado = false;
 
-function freakyVolarSiguiente(){
+// Antes esto se reprogramaba solo con gsap.delayedCall() al terminar cada
+// vuelo, así que Freaky nunca dejaba de moverse en toda la sesión (cada
+// 3-10s, sin importar si el usuario seguía en la misma pantalla) — pedido
+// explícito del usuario ("me está mareando... ya me volvió loco") de que
+// pare. Ahora es una función de una sola vez: busca dónde sentarse EN LA
+// PANTALLA ACTUAL y se queda ahí quieto hasta que mostrar() la vuelva a
+// llamar por un cambio real de pantalla (ver mostrar()) — nunca por un
+// temporizador. Siempre prefiere una percha real si existe (antes solo el
+// 75% de las veces) — un lugar fijo y a propósito, no flotar al azar, es
+// justo lo que se pidió ("busque un lugar para sentarse... que no estorbe").
+function freakyIrAPerchaDePantalla(){
   const el = document.getElementById('freaky-personaje');
-  if(!el || document.hidden){
-    // La pestaña está en segundo plano: no gastamos ciclos, reintenta en un momento.
-    gsap.delayedCall(2, freakyVolarSiguiente);
+  // mostrar() llama esto en cada cambio de pantalla sin saber si GSAP cargó
+  // (freakyVueloIniciado ya queda en true aunque falte, ver iniciarVueloFreaky) —
+  // sin este guard, cada navegación tiraría un error real.
+  if(!el || typeof gsap === 'undefined') return;
+  if(document.hidden){
+    // La pestaña está en segundo plano: reintenta en un momento en vez de
+    // medir un layout que nadie está viendo.
+    gsap.delayedCall(2, freakyIrAPerchaDePantalla);
     return;
   }
   freakyDetenerReposo();
@@ -8743,14 +9622,13 @@ function freakyVolarSiguiente(){
   if(!freakyHablandoActivo) freakyMostrarPose('flotando'); // despega: si estaba sentado, vuelve a la pose de vuelo
 
   const perchas = freakyEncontrarPerchas();
-  // La mayoría de las veces busca dónde sentarse de verdad; de vez en cuando
-  // sigue volando a un punto libre, para que no se sienta clavado siempre en
-  // los mismos 3-4 lugares.
-  const aterrizaEnPercha = perchas.length > 0 && Math.random() < 0.75;
+  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el logo,
+  // el botón de configuración y el "+" son chrome global, casi siempre
+  // presentes) se conforma con un punto libre de la zona segura.
+  const percha = perchas.length > 0 ? perchas[Math.floor(Math.random() * perchas.length)] : null;
   let destinoX, destinoY;
-  if(aterrizaEnPercha){
-    const p = perchas[Math.floor(Math.random() * perchas.length)];
-    destinoX = p.x; destinoY = p.y;
+  if(percha){
+    destinoX = percha.x; destinoY = percha.y;
   } else {
     const zona = freakyZonaSegura();
     destinoX = zona.left + Math.random() * (zona.right - zona.left);
@@ -8767,11 +9645,15 @@ function freakyVolarSiguiente(){
   const tl = gsap.timeline({
     onUpdate: () => freakyDejarEstela(el),
     onComplete: () => {
-      freakyEstaSentado = aterrizaEnPercha;
-      freakyIniciarReposo(aterrizaEnPercha);
-      if(aterrizaEnPercha && !freakyHablandoActivo) freakyMostrarPose('sentado');
-      const espera = aterrizaEnPercha ? (3 + Math.random() * 4) : (1 + Math.random() * 3);
-      gsap.delayedCall(espera, freakyVolarSiguiente);
+      // 'sentar' → pose sentado, quieto encima. 'colgar' o sin percha (punto
+      // libre) → pose flotando, colgando/flotando debajo o en el aire — en
+      // ningún caso parado sobre nada que no sea real.
+      const sentado = percha ? percha.tipo === 'sentar' : false;
+      freakyEstaSentado = sentado;
+      freakyIniciarReposo(sentado);
+      if(!freakyHablandoActivo) freakyMostrarPose(sentado ? 'sentado' : 'flotando');
+      // Sin reprogramar el siguiente vuelo: se queda aquí hasta el próximo
+      // cambio de pantalla real.
     }
   });
   tl.to(el, { scaleX: 0.88, scaleY: 1.16, duration: 0.18, ease: 'power1.out' }, 0)
@@ -10126,21 +11008,30 @@ async function actualizarGasto(){
   abrirGastos();
 }
 
+// Núcleo compartido de borrado -- usado tanto por el botón "Eliminar gasto"
+// de la pantalla de edición como por el swipe-to-delete en movimientos. No
+// navega a ningún lado; cada quien decide qué hacer después de borrar.
+async function eliminarGastoPorId(g){
+  const { error } = await sb.from('gastos').delete().eq('id', g.id);
+  if(error){
+    await mostrarAlerta(t('alert.error_eliminar'));
+    return false;
+  }
+  const esCompraMeses = !!(g.compra_meses_deuda_id || g.compra_meses_tarjeta);
+  if(esCompraMeses){
+    ajustarComprasMesesPorEdicion(g, null); // se resuelve en segundo plano
+  } else {
+    aplicarAjusteGasto(g, -1); // se resuelve en segundo plano
+  }
+  return true;
+}
+
 async function eliminarGasto(){
   if(!gastoActual) return;
   const ok = await mostrarConfirmacion(t('alert.confirm_eliminar_gasto'), { destructivo: true, textoConfirmar: t('comun.eliminar') });
   if(!ok) return;
-  const { error } = await sb.from('gastos').delete().eq('id', gastoActual.id);
-  if(error){
-    await mostrarAlerta(t('alert.error_eliminar'));
-    return;
-  }
-  const esCompraMeses = !!(gastoActual.compra_meses_deuda_id || gastoActual.compra_meses_tarjeta);
-  if(esCompraMeses){
-    ajustarComprasMesesPorEdicion(gastoActual, null); // se resuelve en segundo plano
-  } else {
-    aplicarAjusteGasto(gastoActual, -1); // se resuelve en segundo plano
-  }
+  const eliminado = await eliminarGastoPorId(gastoActual);
+  if(!eliminado) return;
   abrirGastos();
 }
 
@@ -10637,14 +11528,17 @@ function renderizarMovimientosGastos(){
   });
 
   const LIMITE_MOVIMIENTOS = 10;
-  const construirTarjetaGasto = (g, i) => `
-    <button type="button" class="tarjeta entrada-escalonada" style="animation-delay:${Math.min(i, LIMITE_MOVIMIENTOS) * 30}ms" data-gasto-id="${g.id}">
-      <div>
-        <div class="nombre">${escapeHtml(nombreGasto(g.categoria))}${g.subcategoria ? ' · ' + escapeHtml(nombreGasto(g.subcategoria)) : ''}</div>
-        <div class="detalle">${formatoFechaCorta(g.fecha)} · ${escapeHtml(etiquetaMedioPagoGasto(g))}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</div>
-      </div>
-      <div class="monto">-${formatoMonto(g.monto, g.moneda)}</div>
-    </button>
+  const construirTarjetaGasto = (g) => `
+    <div class="swipe-fila revelar-scroll" data-gasto-id="${g.id}">
+      <button type="button" class="swipe-accion-eliminar" data-swipe-eliminar data-gasto-id="${g.id}" data-i18n="comun.eliminar">Eliminar</button>
+      <button type="button" class="tarjeta swipe-contenido" data-gasto-id="${g.id}">
+        <div>
+          <div class="nombre">${escapeHtml(nombreGasto(g.categoria))}${g.subcategoria ? ' · ' + escapeHtml(nombreGasto(g.subcategoria)) : ''}</div>
+          <div class="detalle">${formatoFechaCorta(g.fecha)} · ${escapeHtml(etiquetaMedioPagoGasto(g))}${g.nota ? ' · ' + escapeHtml(g.nota) : ''}</div>
+        </div>
+        <div class="monto">-${formatoMonto(g.monto, g.moneda)}</div>
+      </button>
+    </div>
   `;
   const listaGastosHtml = gastosFiltrados.slice(0, LIMITE_MOVIMIENTOS).map(construirTarjetaGasto).join('');
   const restoGastosHtml = gastosFiltrados.slice(LIMITE_MOVIMIENTOS).map(construirTarjetaGasto).join('');
@@ -10655,11 +11549,124 @@ function renderizarMovimientosGastos(){
     : '';
 
   cont.innerHTML = (listaGastosHtml || `<div class="mensaje">${t('gastos.sin_gastos_mes')}</div>`) + verMasMovimientosHtml;
+  revelarAlEntrarEnVista(cont);
+  activarSwipeEliminarGasto(cont);
 
-  cont.querySelectorAll('[data-gasto-id]').forEach(btn => {
+  cont.querySelectorAll('.swipe-contenido[data-gasto-id]').forEach(btn => {
     const g = gastosMovimientosActuales.find(x => x.id === btn.dataset.gastoId);
     btn.onclick = () => abrirEditarGasto(g);
   });
+  cont.querySelectorAll('[data-swipe-eliminar]').forEach(btn => {
+    btn.onclick = () => eliminarGastoDesdeMovimiento(btn.dataset.gastoId);
+  });
+}
+
+// Pedido del usuario ("quiero poder eliminar un gasto deslizándolo hacia la
+// izquierda"): patrón swipe-to-delete estilo iOS. Se delega un solo listener
+// por contenedor (no uno por tarjeta) porque la lista se re-renderiza
+// completa en cada filtro — delegar evita tener que re-atar listeners cada
+// vez. Solo una fila puede quedar abierta a la vez.
+function activarSwipeEliminarGasto(contenedor){
+  if(contenedor.dataset.swipeListo) return; // ya tiene los listeners de una render anterior
+  contenedor.dataset.swipeListo = '1';
+
+  const ANCHO_REVELADO = 84;
+  let filaAbierta = null;
+  let arrastre = null;
+
+  function cerrarFila(fila){
+    const contenido = fila.querySelector('.swipe-contenido');
+    contenido.style.transform = 'translateX(0)';
+    fila.classList.remove('abierta');
+    if(filaAbierta === fila) filaAbierta = null;
+  }
+
+  contenedor.addEventListener('touchstart', (e) => {
+    if(window.innerWidth >= 900 || REDUCIR_MOVIMIENTO) return;
+    const fila = e.target.closest('.swipe-fila');
+    if(!fila || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    arrastre = {
+      fila,
+      contenido: fila.querySelector('.swipe-contenido'),
+      inicioX: t.clientX,
+      inicioY: t.clientY,
+      offsetInicial: fila.classList.contains('abierta') ? -ANCHO_REVELADO : 0,
+      mover: false
+    };
+  }, { passive: true });
+
+  contenedor.addEventListener('touchmove', (e) => {
+    if(!arrastre) return;
+    const t = e.touches[0];
+    const dx = t.clientX - arrastre.inicioX;
+    const dy = t.clientY - arrastre.inicioY;
+    if(!arrastre.mover){
+      if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if(Math.abs(dy) > Math.abs(dx)){ arrastre = null; return; } // scroll vertical normal, no interferir
+      arrastre.mover = true;
+      if(filaAbierta && filaAbierta !== arrastre.fila) cerrarFila(filaAbierta);
+      arrastre.contenido.classList.add('arrastrando');
+    }
+    e.preventDefault();
+    const offset = Math.max(-ANCHO_REVELADO - 14, Math.min(0, arrastre.offsetInicial + dx));
+    arrastre.contenido.style.transform = `translateX(${offset}px)`;
+  }, { passive: false });
+
+  contenedor.addEventListener('touchend', () => {
+    if(!arrastre) return;
+    if(arrastre.mover){
+      arrastre.contenido.classList.remove('arrastrando');
+      const offsetActual = Number(/translateX\((-?\d+(?:\.\d+)?)px\)/.exec(arrastre.contenido.style.transform)?.[1] || 0);
+      const abrir = offsetActual < -(ANCHO_REVELADO / 2);
+      arrastre.contenido.style.transform = abrir ? `translateX(-${ANCHO_REVELADO}px)` : 'translateX(0)';
+      arrastre.fila.classList.toggle('abierta', abrir);
+      filaAbierta = abrir ? arrastre.fila : null;
+    }
+    arrastre = null;
+  });
+
+  // Tocar la tarjeta mientras su fila está abierta la cierra en vez de abrir
+  // la edición del gasto — así no se abre por accidente al querer cerrarla.
+  contenedor.addEventListener('click', (e) => {
+    if(!filaAbierta) return;
+    if(e.target.closest('[data-swipe-eliminar]')) return;
+    const fila = e.target.closest('.swipe-fila');
+    if(fila === filaAbierta){
+      e.preventDefault();
+      e.stopPropagation();
+      cerrarFila(fila);
+    }
+  }, true);
+}
+
+// Sin modal de confirmación aquí a propósito (pedido del usuario, "triple
+// confirmación ya es demasiado"): deslizar + tocar "Eliminar" ya son 2 pasos
+// deliberados, igual que el swipe-delete nativo de Mail/Gmail. El botón
+// "Eliminar gasto" de la pantalla de edición sí conserva su confirmación —
+// ahí se puede llegar solo por estar viendo el gasto, sin intención de borrar.
+async function eliminarGastoDesdeMovimiento(id){
+  const g = gastosMovimientosActuales.find(x => x.id === id);
+  if(!g) return;
+  const eliminado = await eliminarGastoPorId(g);
+  if(!eliminado) return;
+
+  gastosMovimientosActuales = gastosMovimientosActuales.filter(x => x.id !== id);
+  const fila = document.querySelector(`#gastos-movimientos-contenido .swipe-fila[data-gasto-id="${id}"]`);
+  if(!fila) return;
+  if(gastosMovimientosActuales.length === 0 || !document.querySelector('#gastos-movimientos-contenido [data-gasto-id]:not([data-gasto-id="' + id + '"])')){
+    renderizarMovimientosGastos(); // se quedaría vacía -- re-renderiza para mostrar el mensaje "sin gastos"
+    return;
+  }
+  if(REDUCIR_MOVIMIENTO){ fila.remove(); return; }
+  fila.style.overflow = 'hidden';
+  fila.style.maxHeight = fila.offsetHeight + 'px';
+  fila.style.transition = 'max-height .25s ease, opacity .25s ease';
+  requestAnimationFrame(() => {
+    fila.style.maxHeight = '0px';
+    fila.style.opacity = '0';
+  });
+  fila.addEventListener('transitionend', () => fila.remove(), { once: true });
 }
 
 let graficaHistoricoGastos = null;
@@ -11120,9 +12127,9 @@ async function cargarPerfilFinanciero(){
     const { data } = await sb.from('perfil_financiero').select('*').maybeSingle();
     if(data){
       perfilFinanciero = {
-        umbral_amarillo: data.umbral_amarillo != null ? Number(data.umbral_amarillo) : 20,
-        umbral_rojo: data.umbral_rojo != null ? Number(data.umbral_rojo) : 35,
-        meses_cobertura_objetivo: data.meses_cobertura_objetivo != null ? Number(data.meses_cobertura_objetivo) : 3
+        umbral_amarillo: data.umbral_amarillo != null ? Number(data.umbral_amarillo) : UMBRAL_AMARILLO_RECOMENDADO,
+        umbral_rojo: data.umbral_rojo != null ? Number(data.umbral_rojo) : UMBRAL_ROJO_RECOMENDADO,
+        meses_cobertura_objetivo: data.meses_cobertura_objetivo != null ? Number(data.meses_cobertura_objetivo) : MESES_COBERTURA_RECOMENDADO
       };
     }
   }catch(e){
@@ -11147,9 +12154,11 @@ async function calcularSaludFinanciera(){
   });
 
   let activosLiquidos = 0;
+  let hayCuentaLiquidaRegistrada = false;
   (cuentas || []).forEach(c => {
     if(c.incluir_patrimonio === false) return;
     if(c.es_liquida === false) return;
+    hayCuentaLiquidaRegistrada = true;
     const ultimo = ultimoPorCuenta[c.id];
     if(ultimo) activosLiquidos += convertirAMXN(Number(ultimo.monto), c.moneda || 'MXN');
   });
@@ -11168,7 +12177,16 @@ async function calcularSaludFinanciera(){
   const mesesCobertura = compromisosMensuales > 0 ? activosLiquidos / compromisosMensuales : null;
   let estadoLiquidez;
   if(mesesCobertura === null){
-    estadoLiquidez = activosLiquidos > 0 ? 'saludable' : 'atencion';
+    // "Sin compromisos mensuales" no es lo mismo que "sin ninguna cuenta
+    // registrada" — antes, un usuario que omitió el onboarding y no ha
+    // metido NINGÚN dato (cero cuentas) caía aquí con activosLiquidos=0 y
+    // salía marcado "atención" ("tienes margen limitado") sin ninguna base
+    // real, solo por no haber capturado nada todavía. Si de plano no hay
+    // ninguna cuenta líquida capturada, no hay nada que evaluar — se deja
+    // 'saludable' aquí para que más abajo se detecte como "sin datos" en vez
+    // de disparar una alerta falsa. Si SÍ hay una cuenta capturada con saldo
+    // real en cero, eso sigue siendo una señal real y se marca 'atención'.
+    estadoLiquidez = (!hayCuentaLiquidaRegistrada || activosLiquidos > 0) ? 'saludable' : 'atencion';
   } else if(mesesCobertura >= perfilFinanciero.meses_cobertura_objetivo){
     estadoLiquidez = 'saludable';
   } else if(mesesCobertura >= 1){
@@ -11275,8 +12293,15 @@ const TOUR_PASOS = [
     titulo: 'tour.p7.titulo',
     texto: 'tour.p7.texto',
     selector: '#selector-tema',
-    fallback: '#vista-privacidad',
-    accion: async () => { mostrar('vista-privacidad'); }
+    fallback: '#vista-config-general',
+    accion: async () => { mostrar('vista-config-general'); }
+  },
+  {
+    titulo: 'tour.p7b.titulo',
+    texto: 'tour.p7b.texto',
+    selector: '#seccion-proteccion-datos',
+    fallback: '#vista-seguridad-privacidad',
+    accion: async () => { mostrar('vista-seguridad-privacidad'); }
   },
   {
     titulo: 'tour.pfreaky.titulo',
@@ -11738,9 +12763,9 @@ function precargarPerfil(){
 }
 
 async function guardarPerfil(){
-  const umbralAmarillo = Number(document.getElementById('input-umbral-amarillo').value) || 20;
-  const umbralRojo = Number(document.getElementById('input-umbral-rojo').value) || 35;
-  const mesesObjetivo = Number(document.getElementById('input-meses-objetivo').value) || 3;
+  const umbralAmarillo = Number(document.getElementById('input-umbral-amarillo').value) || UMBRAL_AMARILLO_RECOMENDADO;
+  const umbralRojo = Number(document.getElementById('input-umbral-rojo').value) || UMBRAL_ROJO_RECOMENDADO;
+  const mesesObjetivo = Number(document.getElementById('input-meses-objetivo').value) || MESES_COBERTURA_RECOMENDADO;
 
   const { error } = await sb.from('perfil_financiero').upsert({
     umbral_amarillo: umbralAmarillo,
@@ -12873,8 +13898,328 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 13;
+const VERSION_APP_ACTUAL = 43;
 const CHANGELOG_APP = [
+  {
+    version: 43,
+    fecha: '2026-08-25',
+    cambios_es: [
+      'Ahora puedes entrar a Money Freak con "Continuar con Apple", junto a Google y correo/contraseña.'
+    ],
+    cambios_en: [
+      'You can now sign in to Money Freak with "Continue with Apple", alongside Google and email/password.'
+    ]
+  },
+  {
+    version: 42,
+    fecha: '2026-08-25',
+    cambios_es: [
+      'Nueva opción en Configuración → Seguridad y privacidad: "Eliminar mi cuenta por completo" — a diferencia de "Borrar todos mis datos" (que no tocaba tu acceso), esta sí elimina también tu correo/contraseña, dejando la cuenta inexistente.'
+    ],
+    cambios_en: [
+      'New option in Settings → Security & privacy: "Delete my account completely" — unlike "Delete all my data" (which left your access untouched), this also deletes your email/password, making the account cease to exist.'
+    ]
+  },
+  {
+    version: 41,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Se corrigió un mensaje confuso al recuperar tu contraseña desde un link abierto en otra app (ej. desde dentro de Gmail): antes te decía "confirma tu correo" y te dejaba en un callejón sin salida; ahora te explica el problema real y te manda directo a pedir un link nuevo.'
+    ],
+    cambios_en: [
+      'Fixed a confusing message when recovering your password from a link opened in a different app (e.g. from inside Gmail): it used to say "confirm your email" and left you stuck; now it explains the real problem and sends you straight to request a new link.'
+    ]
+  },
+  {
+    version: 40,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Se quitó la confirmación extra al eliminar un gasto deslizándolo — deslizar y tocar "Eliminar" ya bastan, sin un tercer paso de confirmación.'
+    ],
+    cambios_en: [
+      'Removed the extra confirmation when deleting an expense by swiping — swiping and tapping "Delete" is already enough, no third confirmation step.'
+    ]
+  },
+  {
+    version: 39,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'En "Gastos" → movimientos, ahora puedes deslizar un gasto hacia la izquierda para eliminarlo directo desde la lista, sin tener que abrir la pantalla de edición.'
+    ],
+    cambios_en: [
+      'In "Expenses" → transactions, you can now swipe an expense left to delete it right from the list, without opening the edit screen.'
+    ]
+  },
+  {
+    version: 38,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'En "Gastos" → movimientos, las tarjetas ahora aparecen con un ligero deslizamiento al ir haciendo scroll hacia ellas, en vez de aparecer todas de golpe.'
+    ],
+    cambios_en: [
+      'In "Expenses" → transactions, cards now gently slide into view as you scroll to them, instead of all appearing at once.'
+    ]
+  },
+  {
+    version: 37,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'El onboarding rápido con Freaky ahora ofrece chips de rango ($1,000–$5,000, etc.) para responder de un toque en vez de escribir el número exacto.',
+      'Elegir el aspecto de Freaky ahora se pregunta después de ver tu primer resultado (no antes de empezar) — para no hacerte decidir algo visual antes de que la app te haya mostrado valor.'
+    ],
+    cambios_en: [
+      'The quick onboarding chat with Freaky now offers range chips ($1,000–$5,000, etc.) to answer with one tap instead of typing the exact number.',
+      'Choosing Freaky\'s look is now asked after you see your first result (not before you start) — so you\'re not asked to make a visual decision before the app has shown you any value.'
+    ]
+  },
+  {
+    version: 36,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'La pantalla de "Crear cuenta" ahora pide un solo dato por vez (nombre, correo, contraseña, idioma/tema, aviso de privacidad) en vez de un formulario largo, con un contador de "Paso 2 de 6" para saber siempre cuánto falta.'
+    ],
+    cambios_en: [
+      'The "Create account" screen now asks for one thing at a time (name, email, password, language/theme, privacy notice) instead of a long form, with a "Step 2 of 6" counter so you always know how much is left.'
+    ]
+  },
+  {
+    version: 35,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'El onboarding rápido con Freaky ahora muestra el progreso ("Paso 2 de 5"), tiene un botón de "No sé, calcúlalo tú" para quien no trae el número exacto en la cabeza, y el resultado final abre con un titular grande en vez de solo una lista de texto.'
+    ],
+    cambios_en: [
+      'The quick onboarding chat with Freaky now shows progress ("Step 2 of 5"), has an "I don\'t know, estimate it" option for anyone without the exact number handy, and the final result opens with a big headline instead of just a list of text.'
+    ]
+  },
+  {
+    version: 34,
+    fecha: '2026-08-22',
+    cambios_es: [
+      'Al intentar marcar "acepto el Aviso de Privacidad" sin haberlo abierto, ahora sale un aviso claro pidiendo leerlo primero — antes el check simplemente no reaccionaba, sin explicar por qué.'
+    ],
+    cambios_en: [
+      'Trying to check "I accept the Privacy Notice" without opening it first now shows a clear message asking you to read it — before, the checkbox just didn\'t respond, with no explanation.'
+    ]
+  },
+  {
+    version: 33,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que crear una cuenta nueva por correo, en el mismo navegador donde antes ya se había completado el onboarding con otra cuenta (ej. de Google), se saltara por completo la presentación de Freaky — heredaba por error el "ya lo vi" de la otra cuenta.'
+    ],
+    cambios_en: [
+      'Fixed a new email account created in the same browser where onboarding was already completed with a different account (e.g. Google) skipping the Freaky intro entirely — it was wrongly inheriting the other account\'s "already seen" flag.'
+    ]
+  },
+  {
+    version: 32,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido de raíz que "Volver" desde el Aviso de Privacidad, durante el onboarding después de darte de alta con Google, te regresara al formulario de crear cuenta en vez de al onboarding — encontrado al auditar el flujo completo de registro paso a paso.',
+      'Si el link de confirmación de correo se abre en un navegador o app distinto al que usaste para registrarte, ahora se avisa que tu correo ya quedó confirmado y que puedes iniciar sesión normal, en vez de quedarte en un login en blanco sin explicación.'
+    ],
+    cambios_en: [
+      'Fixed at the root that "Back" from the Privacy Notice, during onboarding right after signing up with Google, sent you to the create-account form instead of back to onboarding — found while auditing the full signup flow step by step.',
+      'If the email confirmation link is opened in a different browser or app than the one you signed up with, you now get a clear message that your email is confirmed and you can sign in normally, instead of a blank login screen with no explanation.'
+    ]
+  },
+  {
+    version: 31,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'El error al crear cuenta ahora dice la razón real (correo repetido, demasiados intentos, contraseña débil, correo inválido, sin conexión) en vez de un mensaje genérico que escondía el problema real.'
+    ],
+    cambios_en: [
+      'The account creation error now shows the real reason (duplicate email, too many attempts, weak password, invalid email, no connection) instead of a generic message that hid the real problem.'
+    ]
+  },
+  {
+    version: 30,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que un usuario ya dado de alta con Google pudiera terminar viendo el formulario de "Crear cuenta" pidiendo su nombre y correo otra vez.'
+    ],
+    cambios_en: [
+      'Fixed a user already signed up with Google being able to end up seeing the "Create account" form asking for their name and email again.'
+    ]
+  },
+  {
+    version: 29,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido de fondo el loop de "vuelve a pedir aceptar términos" al confirmar tu correo en un dispositivo o navegador distinto al que usaste para registrarte.',
+      'Corregido que "volver" a veces regresara al formulario de crear cuenta como si no te hubieras registrado.'
+    ],
+    cambios_en: [
+      'Properly fixed the "asks you to accept terms again" loop when confirming your email on a different device or browser than the one you signed up with.',
+      'Fixed "back" sometimes returning to the sign-up form as if you had never registered.'
+    ]
+  },
+  {
+    version: 28,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Ajuste técnico para que Google reconozca mejor la app al iniciar sesión con Google (sin cambios visibles para ti).'
+    ],
+    cambios_en: [
+      'Technical tweak so Google better recognizes the app when signing in with Google (no visible change for you).'
+    ]
+  },
+  {
+    version: 27,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que registrarte por correo te pidiera aceptar el Aviso de Privacidad dos veces (en el registro y otra vez en el onboarding).',
+      'Si el link de confirmación de tu correo ya no es válido, ahora te lo dice claramente en vez de dejarte sin explicación.',
+      'La pantalla de inicio ahora explica qué hace Money Freak y enlaza el Aviso de Privacidad.'
+    ],
+    cambios_en: [
+      'Fixed signing up by email asking you to accept the Privacy Notice twice (once at signup, again in onboarding).',
+      "If your email confirmation link isn't valid anymore, the app now tells you clearly instead of leaving you without an explanation.",
+      'The home screen now explains what Money Freak does and links the Privacy Notice.'
+    ]
+  },
+  {
+    version: 26,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que el link de "recuperar contraseña" a veces no llevara a la pantalla para poner tu contraseña nueva.',
+      'El botón de recuperar contraseña ahora te avisa claramente cuando el correo ya se envió (o si algo falló).'
+    ],
+    cambios_en: [
+      'Fixed the "reset password" link sometimes not taking you to the new-password screen.',
+      'The reset password button now clearly tells you when the email was sent (or if something failed).'
+    ]
+  },
+  {
+    version: 25,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Cada avatar de Freaky ahora tiene su propia personalidad y "habilidad especial" al elegirlo.',
+      'Configuración se dividió en 3: Configuración general, Seguridad y privacidad, y Reportes.',
+      'Aceptar el Aviso de Privacidad ahora requiere haberlo abierto y leído primero.',
+      'Corregido un consejo que decía "tienes margen limitado" sin haber capturado ningún dato todavía.'
+    ],
+    cambios_en: [
+      'Each Freaky avatar now has its own personality and "special ability" when you pick it.',
+      'Settings was split into 3: General settings, Security & privacy, and Reports.',
+      'Accepting the Privacy Notice now requires actually opening and reading it first.',
+      'Fixed a tip that said "you have limited room" before you had entered any data at all.'
+    ]
+  },
+  {
+    version: 24,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Rediseño completo de dónde y cómo se mueve Freaky: ahora solo se posa en cosas que de verdad no se mueven (el logo, el botón de configuración, el "+"), del logo se cuelga en vez de sentarse encima, y su respiración en reposo ya no debería parpadear.'
+    ],
+    cambios_en: [
+      "Complete redesign of where and how Freaky moves: he now only lands on things that truly never move (the logo, the settings button, the \"+\"), hangs from the logo instead of sitting on it, and his idle breathing shouldn't flicker anymore."
+    ]
+  },
+  {
+    version: 23,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido (de nuevo, con más margen) que el teclado del iPhone tapara lo que estabas escribiendo en el chat de Freaky.'
+    ],
+    cambios_en: [
+      "Fixed (again, with more clearance) the iPhone keyboard covering what you were typing in the Freaky chat."
+    ]
+  },
+  {
+    version: 22,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que el personaje de Freaky parpadeara y se le viera un recuadro raro detrás.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's character flickering with a weird box visible behind him."
+    ]
+  },
+  {
+    version: 21,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Los umbrales de endeudamiento en Salud financiera ahora traen una recomendación (Atención 30%, Riesgo 50%, 6 meses de cobertura de liquidez) — la puedes editar a tu gusto cuando quieras.'
+    ],
+    cambios_en: [
+      "Debt thresholds in Financial Health now come with a recommendation (Attention 30%, Risk 50%, 6 months of liquidity coverage) — you can still edit them anytime."
+    ]
+  },
+  {
+    version: 20,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Freaky ya no vuela sin parar por la pantalla — ahora se sienta quieto en un lugar que no te estorbe, y solo se mueve cuando cambias de pantalla.'
+    ],
+    cambios_en: [
+      "Freaky no longer flies around non-stop — now he sits still somewhere out of your way, and only moves when you change screens."
+    ]
+  },
+  {
+    version: 19,
+    fecha: '2026-08-20',
+    cambios_es: [
+      'Corregido que la respuesta de Freaky a veces se quedara tapada por la barra de escribir.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's replies sometimes getting hidden behind the writing bar."
+    ]
+  },
+  {
+    version: 18,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'El teclado del iPhone ya no tapa el cuadro de texto al escribirle a Freaky.',
+      'Freaky ahora te puede sugerir respuestas rápidas con un tap (como "Sí"/"No") cuando te hace una pregunta corta.'
+    ],
+    cambios_en: [
+      "The iPhone keyboard no longer covers the text box when writing to Freaky.",
+      'Freaky can now suggest quick one-tap replies (like "Yes"/"No") when he asks you a short question.'
+    ]
+  },
+  {
+    version: 17,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Freaky ya puede registrar directo cuentas, deudas/tarjetas, bienes y acciones desde el chat — antes solo te explicaba y te mandaba un link.'
+    ],
+    cambios_en: [
+      "Freaky can now directly register accounts, debts/cards, assets and stocks right from the chat — before he could only explain and send you a link."
+    ]
+  },
+  {
+    version: 16,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Nueva señal "Constancia" en tu Score Money Freak: qué tan seguido alimentas la app con información real (gastos, saldos, pagos a deuda).'
+    ],
+    cambios_en: [
+      'New "Consistency" signal in your Money Freak Score: how often you keep the app fed with real information (expenses, balances, debt payments).'
+    ]
+  },
+  {
+    version: 15,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Corregidos 3 bugs reales en compras a meses, más un nuevo aviso cuando se acerca el pago de tu tarjeta.'
+    ],
+    cambios_en: [
+      "Fixed 3 real bugs in monthly installment purchases, plus a new heads-up when your card payment is coming up."
+    ]
+  },
+  {
+    version: 14,
+    fecha: '2026-08-19',
+    cambios_es: [
+      'Corregido que el personaje de Freaky apareciera descentrado y muy arriba en la pantalla de inicio de sesión.'
+    ],
+    cambios_en: [
+      "Fixed Freaky's character appearing off-center and too high up on the login screen."
+    ]
+  },
   {
     version: 13,
     fecha: '2026-08-18',
@@ -13131,6 +14476,23 @@ inicializarIdioma();
 init();
 inicializarGestosSwipe();
 inicializarChequeoVersion();
+
+// Bug real reportado por el usuario ("loop en el onboarding... cuando le
+// das volver te regresa al formulario de crear cuenta"): el navegador
+// puede restaurar una página entera desde su caché de "atrás/adelante"
+// (bfcache) en vez de recargarla — en Safari/iOS es agresivo con esto. Si
+// eso pasa justo después de confirmar el correo o elegir el avatar, el
+// usuario ve la última pantalla que quedó visible ANTES de navegar (ej. el
+// formulario de registro ya usado), completamente desconectada del estado
+// real de la sesión. Se vuelve a revisar la sesión real cada vez que esto
+// pasa, en vez de confiar en lo que haya quedado en pantalla.
+window.addEventListener('pageshow', (event) => {
+  if(!event.persisted || !sb) return;
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if(session) entrarAlPanelConOnboarding();
+    else mostrar('vista-login');
+  });
+});
 </script>
 </body>
 </html>

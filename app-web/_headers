@@ -1,2 +1,14 @@
 /*
   Cache-Control: no-cache, must-revalidate
+
+# Universal Links de iOS (Associated Domains) -- Apple exige que este
+# archivo se sirva con Content-Type: application/json, sin extensión y sin
+# ninguna redirección, o no lo reconoce. Se deja en /.well-known/ (lo único
+# que revisan las versiones modernas de iOS) y también en la raíz (mismo
+# archivo, por compatibilidad con versiones viejas de iOS que aún lo buscan
+# ahí) -- mismo patrón que ya existe para Android (assetlinks.json).
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+
+/apple-app-site-association
+  Content-Type: application/json
