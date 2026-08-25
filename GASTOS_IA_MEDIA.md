@@ -19,13 +19,18 @@ consume crédito** — solo cuenta lo que sí llegó a generarse.
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 1, 9:16 fijo) | seedance-2.5 | kie | ❌ rechazado (HTTP 422, aspect ratio) | 0 | $0 |
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 1, fallback) | seedance-2.5 | fal | ❌ rechazado (política de contenido, parecido a persona real) | 0 | $0 |
 | 2026-08-25 | Draft vídeo presentación Freaky (intento 2, aspect auto) | seedance-2.5 | kie | ❌ rechazado (HTTP 402, sin crédito) | 0 | $0 |
+| 2026-08-25 | Draft vídeo presentación Freaky (intento 3, 8s/480p, exitoso) | seedance-2.5 | kie | ✅ éxito | 224 | $1.12 |
 
-**Gasto acumulado confirmado:** pendiente de confirmar el crédito exacto de la única
-generación exitosa (la imagen de referencia); todo lo demás fue $0 porque los proveedores
-rechazaron el request antes de generar nada.
+**Gasto acumulado confirmado:** 224 créditos ($1.12) del draft de vídeo, más el costo aún
+no capturado de la imagen de referencia (probablemente unos pocos créditos, GPT Image 2 en
+2K no es gratis pero es bastante más barato que 8s de vídeo).
 
-**Saldo estimado restante:** ~1000 créditos (~$5.00), a la espera de confirmar el costo
-real de la imagen ya generada.
+**Saldo estimado restante:** ~776 créditos (~$3.88), sin contar lo gastado en la imagen.
+
+**Ojo con el presupuesto:** el draft de 8s en 480p (la resolución y duración más baratas
+del modelo) ya se comió ~22% del saldo cargado. Ir a la versión final en 720p/15s va a
+costar bastante más — antes de lanzarla hay que confirmar que el resultado convence, porque
+un segundo intento fallido ahí sí duele.
 
 ## Cómo se actualiza este archivo
 
