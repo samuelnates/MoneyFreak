@@ -2312,6 +2312,9 @@
   <button class="btn-grande peligro btn-escritura" onclick="confirmarBorrarDatos()" data-i18n="config.borrar_datos">Borrar todos mis datos</button>
   <div class="aviso" data-i18n="config.borrar_datos_aviso">Borrar tus datos elimina para siempre tus cuentas, bienes, acciones, deudas y todo tu historial de esta app. No borra tu acceso (correo/contraseña) — solo tu información financiera.</div>
 
+  <button class="btn-grande peligro btn-escritura" onclick="confirmarEliminarCuentaCompleta()" data-i18n="config.eliminar_cuenta_boton">Eliminar mi cuenta por completo</button>
+  <div class="aviso" data-i18n="config.eliminar_cuenta_aviso">A diferencia de "Borrar todos mis datos", esto elimina también tu acceso (correo/contraseña) — tu cuenta deja de existir por completo y no podrás volver a entrar con ella.</div>
+
   <h2 data-i18n="legal.aviso_legal_h2">Aviso legal</h2>
   <div class="aviso" data-i18n="config.aviso_legal_corto">Esta app es una herramienta de organización financiera personal. No es asesoría financiera, de inversión, fiscal ni legal, y no sustituye la opinión de un profesional certificado. Los cálculos y simulaciones son estimaciones, no garantía de resultados.</div>
   <button class="btn-grande secundario" onclick="abrirAvisoLegal('privacidad')" data-i18n="config.ver_aviso_completo">Ver aviso completo</button>
@@ -4100,6 +4103,12 @@ const TRADUCCIONES = {
     'config.prompt_borrar_confirmar': 'Para confirmar, escribe {0} en mayúsculas:',
     'config.alert_no_coincidio': 'No se borró nada — el texto no coincidió.',
     'config.alert_datos_borrados': 'Tus datos se borraron. Vamos a cerrar tu sesión.',
+    'config.eliminar_cuenta_boton': 'Eliminar mi cuenta por completo',
+    'config.eliminar_cuenta_aviso': 'A diferencia de "Borrar todos mis datos", esto elimina también tu acceso (correo/contraseña) — tu cuenta deja de existir por completo y no podrás volver a entrar con ella.',
+    'config.confirm_eliminar_cuenta1': '¿Seguro que quieres eliminar tu cuenta de Money Freak por completo? Se borra todo tu historial financiero Y tu acceso (correo/contraseña) — no vas a poder volver a entrar con esta cuenta. Esta acción no se puede deshacer.',
+    'config.prompt_eliminar_cuenta_confirmar': 'Para confirmar que quieres eliminar tu cuenta por completo, escribe {0} en mayúsculas:',
+    'config.alert_cuenta_eliminada': 'Tu cuenta se eliminó por completo. Gracias por haber usado Money Freak.',
+    'alert.error_eliminar_cuenta': 'No se pudo eliminar tu cuenta. Revisa tu internet e intenta de nuevo — si el problema sigue, escribe a help@moneyfreak.app.',
     'alert.error_actualizar': 'No se pudo actualizar.',
     'alert.error_eliminar': 'No se pudo eliminar.',
     'alert.error_guardar_cuenta': 'No se pudo guardar la cuenta.',
@@ -5009,6 +5018,12 @@ const TRADUCCIONES = {
     'config.prompt_borrar_confirmar': 'To confirm, type {0} in uppercase:',
     'config.alert_no_coincidio': 'Nothing was deleted — the text did not match.',
     'config.alert_datos_borrados': 'Your data was deleted. We are going to sign you out.',
+    'config.eliminar_cuenta_boton': 'Delete my account completely',
+    'config.eliminar_cuenta_aviso': 'Unlike "Delete all my data", this also deletes your access (email/password) — your account stops existing completely and you won\'t be able to sign in with it again.',
+    'config.confirm_eliminar_cuenta1': 'Are you sure you want to completely delete your Money Freak account? This deletes all your financial history AND your access (email/password) — you won\'t be able to sign in with this account again. This action cannot be undone.',
+    'config.prompt_eliminar_cuenta_confirmar': 'To confirm you want to completely delete your account, type {0} in uppercase:',
+    'config.alert_cuenta_eliminada': 'Your account was completely deleted. Thanks for using Money Freak.',
+    'alert.error_eliminar_cuenta': 'Could not delete your account. Check your internet and try again — if it keeps happening, write to help@moneyfreak.app.',
     'alert.error_actualizar': 'Could not update.',
     'alert.error_eliminar': 'Could not delete.',
     'alert.error_guardar_cuenta': 'Could not save the account.',
@@ -5525,9 +5540,22 @@ function toggleVerPassword(idInput, idBoton){
 
 async function iniciarSesionGoogle(){
   if(window.Capacitor?.isNativePlatform?.()){
+    // Android ya regresa a la app solo con el link real (https://www.moneyfreak.app/)
+    // vía App Links verificados (ver AndroidManifest.xml). iOS necesitaría el
+    // equivalente (Associated Domains), que requiere el Team ID de Apple
+    // Developer — todavía no disponible. Mientras tanto, en iOS se usa un
+    // esquema de URL propio (com.miscuentaspro.app://), que no depende de
+    // ningún dominio verificado y ya está registrado en Info.plist
+    // (CFBundleURLTypes) — Supabase hace el segundo salto del OAuth
+    // (Google -> Supabase -> este redirectTo), así que puede ser cualquier
+    // URL que esté en la lista de Redirect URLs del proyecto, no solo https.
+    const esIOS = window.Capacitor.getPlatform?.() === 'ios';
     const { data } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://www.moneyfreak.app/', skipBrowserRedirect: true }
+      options: {
+        redirectTo: esIOS ? 'com.miscuentaspro.app://oauth-callback' : 'https://www.moneyfreak.app/',
+        skipBrowserRedirect: true
+      }
     });
     if(data?.url) await window.Capacitor.Plugins.Browser.open({ url: data.url });
     return;
@@ -6692,6 +6720,51 @@ async function borrarTodosMisDatos(){
     await filtro(sb.from(tabla).delete());
   }
   await mostrarAlerta(t('config.alert_datos_borrados'));
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// Requisito de Apple para publicar en App Store (Guideline 5.1.1(v)): si la
+// app deja crear una cuenta, tiene que dejar eliminarla por completo desde
+// dentro de la app -- "Borrar todos mis datos" no basta, porque a propósito
+// deja vivo el acceso (correo/contraseña). Esto sí lo borra todo, incluido
+// el usuario real de auth -- por eso necesita la Edge Function
+// eliminar-mi-cuenta (solo la service role key puede borrar un auth.users).
+async function confirmarEliminarCuentaCompleta(){
+  const ok1 = await mostrarConfirmacion(t('config.confirm_eliminar_cuenta1'), { destructivo: true, textoConfirmar: t('comun.continuar') });
+  if(!ok1) return;
+  const palabraConfirmacion = document.documentElement.lang === 'en' ? 'DELETE' : 'BORRAR';
+  const escrito = await mostrarPromptTexto(tf('config.prompt_eliminar_cuenta_confirmar', palabraConfirmacion), { placeholder: palabraConfirmacion, destructivo: true, textoConfirmar: t('config.eliminar_cuenta_boton') });
+  if(escrito !== palabraConfirmacion){
+    await mostrarAlerta(t('config.alert_no_coincidio'));
+    return;
+  }
+  await eliminarCuentaCompleta();
+}
+
+async function eliminarCuentaCompleta(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ await mostrarAlerta(t('alert.error_eliminar_cuenta')); return; }
+
+  let resp;
+  try{
+    resp = await fetchConTimeout(`${window.SUPABASE_URL}/functions/v1/eliminar-mi-cuenta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    }, 30000);
+  }catch(e){
+    console.error('Timeout o error de red llamando a eliminar-mi-cuenta', e);
+    await mostrarAlerta(t('alert.error_eliminar_cuenta'));
+    return;
+  }
+  if(!resp.ok){
+    const errBody = await resp.json().catch(() => ({}));
+    console.error('eliminar-mi-cuenta respondió con error:', resp.status, errBody);
+    await mostrarAlerta(t('alert.error_eliminar_cuenta'));
+    return;
+  }
+
+  await mostrarAlerta(t('config.alert_cuenta_eliminada'));
   await sb.auth.signOut();
   location.reload();
 }
@@ -13788,8 +13861,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 41;
+const VERSION_APP_ACTUAL = 42;
 const CHANGELOG_APP = [
+  {
+    version: 42,
+    fecha: '2026-08-25',
+    cambios_es: [
+      'Nueva opción en Configuración → Seguridad y privacidad: "Eliminar mi cuenta por completo" — a diferencia de "Borrar todos mis datos" (que no tocaba tu acceso), esta sí elimina también tu correo/contraseña, dejando la cuenta inexistente.'
+    ],
+    cambios_en: [
+      'New option in Settings → Security & privacy: "Delete my account completely" — unlike "Delete all my data" (which left your access untouched), this also deletes your email/password, making the account cease to exist.'
+    ]
+  },
   {
     version: 41,
     fecha: '2026-08-22',
