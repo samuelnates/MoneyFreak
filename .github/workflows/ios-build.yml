@@ -71,6 +71,10 @@ jobs:
             -configuration Release \
             -archivePath $RUNNER_TEMP/App.xcarchive \
             -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="Money Freak App Store" \
+            DEVELOPMENT_TEAM=D5GDMDV3X5 \
             archive
 
           cat > $RUNNER_TEMP/ExportOptions.plist << 'EOF'
