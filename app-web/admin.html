@@ -77,6 +77,17 @@
 
   .oculto{display:none;}
   .cargando{text-align:center;padding:60px 20px;color:var(--texto-tenue);font-family:var(--mono);font-size:13px;}
+
+  .form-negocio{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;}
+  .campo-negocio label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
+  .campo-negocio input, .campo-negocio select{
+    width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--borde);
+    background:var(--bg);color:var(--texto);font-family:var(--sans);font-size:13px;
+  }
+  .campo-negocio-check{display:flex;align-items:center;gap:6px;grid-column:span 2;}
+  .campo-negocio-check label{margin:0;text-transform:none;font-family:var(--sans);font-size:12.5px;}
+  .campo-negocio-check input{width:auto;}
+  .btn-eliminar-fila{background:none;border:1px solid var(--borde-fuerte);color:var(--alerta);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--mono);}
 </style>
 </head>
 <body>
@@ -303,6 +314,72 @@
       </table>
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Clic en un usuario para ver su detalle (encabezados con clic para ordenar). El detalle nunca incluye montos ni datos financieros reales — solo conteos y preferencias.</div>
+
+    <h2>Negocio</h2>
+    <div class="tarjeta-sub" style="margin:0 0 12px;">Esto es aparte de los datos de los usuarios — es tu propia contabilidad de Money Freak como negocio (lo invertido, gastos operativos, ingresos).</div>
+    <div class="grid-kpis" style="margin-bottom:8px;" id="grid-resumen-negocio"></div>
+
+    <div class="caja" style="margin-bottom:16px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Agregar movimiento</div>
+      <div class="form-negocio">
+        <div class="campo-negocio">
+          <label for="neg-fecha">Fecha</label>
+          <input type="date" id="neg-fecha">
+        </div>
+        <div class="campo-negocio">
+          <label for="neg-tipo">Tipo</label>
+          <select id="neg-tipo">
+            <option value="gasto">Gasto</option>
+            <option value="inversion">Inversión</option>
+            <option value="ingreso">Ingreso</option>
+          </select>
+        </div>
+        <div class="campo-negocio">
+          <label for="neg-categoria">Categoría</label>
+          <input type="text" id="neg-categoria" list="lista-categorias-negocio" placeholder="Ej. OpenAI / IA">
+          <datalist id="lista-categorias-negocio">
+            <option value="Generación de contenido">
+            <option value="Apple Developer">
+            <option value="Google Play Console">
+            <option value="Dominio y hosting">
+            <option value="OpenAI / IA">
+            <option value="WhatsApp / mensajería">
+            <option value="Publicidad (pauta)">
+            <option value="Publicidad (ingreso)">
+            <option value="Suscripciones (ingreso)">
+            <option value="Otro">
+          </datalist>
+        </div>
+        <div class="campo-negocio">
+          <label for="neg-concepto">Concepto (opcional)</label>
+          <input type="text" id="neg-concepto" placeholder="Ej. crédito prepagado, aún sin consumir">
+        </div>
+        <div class="campo-negocio">
+          <label for="neg-monto">Monto</label>
+          <input type="text" id="neg-monto" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+        </div>
+        <div class="campo-negocio">
+          <label for="neg-moneda">Moneda</label>
+          <select id="neg-moneda">
+            <option value="USD">USD</option>
+            <option value="MXN">MXN</option>
+          </select>
+        </div>
+        <div class="campo-negocio campo-negocio-check">
+          <input type="checkbox" id="neg-recurrente">
+          <label for="neg-recurrente">Es recurrente (se repite cada mes/año)</label>
+        </div>
+      </div>
+      <button id="btn-agregar-movimiento" onclick="agregarMovimientoNegocio()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Agregar</button>
+      <div class="error-login oculto" id="error-negocio"></div>
+    </div>
+
+    <div class="caja">
+      <table>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Monto</th><th>Recurrente</th><th></th></tr></thead>
+        <tbody id="tabla-negocio"></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -342,6 +419,44 @@ async function entrar(){
     return;
   }
   await cargarPanel();
+}
+
+// Mismas 4 funciones de index.html (comas de miles en vivo, ver parte 42
+// de CONTEXTO_PROYECTO.md) -- se duplican aquí porque admin.html es un
+// archivo aparte, sin acceso al script de index.html.
+function limpiarValorMonto(texto){
+  return (texto || '').replace(/,/g, '');
+}
+function valorNumericoMonto(el){
+  const limpio = limpiarValorMonto(el.value).trim();
+  return limpio === '' ? NaN : parseFloat(limpio);
+}
+function formatearNumeroMonto(valorCrudo){
+  if(valorCrudo === '' || valorCrudo === '.') return valorCrudo;
+  const negativo = valorCrudo.startsWith('-');
+  if(negativo) valorCrudo = valorCrudo.slice(1);
+  const partes = valorCrudo.split('.');
+  const entero = (partes[0] || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const decimales = partes.length > 1 ? '.' + partes[1] : '';
+  return (negativo ? '-' : '') + (entero || '0') + decimales;
+}
+function manejarInputMonto(el){
+  const cursorPos = el.selectionStart ?? el.value.length;
+  const significativosAntesDelCursor = el.value.slice(0, cursorPos).replace(/[^\d.]/g, '').length;
+  let limpio = el.value.replace(/[^\d.]/g, '');
+  const primerPunto = limpio.indexOf('.');
+  if(primerPunto !== -1){
+    limpio = limpio.slice(0, primerPunto + 1) + limpio.slice(primerPunto + 1).replace(/\./g, '').slice(0, 2);
+  }
+  const formateado = formatearNumeroMonto(limpio);
+  el.value = formateado;
+  if(significativosAntesDelCursor === 0){ el.setSelectionRange(0, 0); return; }
+  let vistos = 0, nuevaPos = formateado.length;
+  for(let i = 0; i < formateado.length; i++){
+    if(/[\d.]/.test(formateado[i])) vistos++;
+    if(vistos === significativosAntesDelCursor){ nuevaPos = i + 1; break; }
+  }
+  el.setSelectionRange(nuevaPos, nuevaPos);
 }
 
 function escapeHtmlAdmin(texto){
@@ -515,6 +630,128 @@ function inicializarCalculadoraCostoIA(){
   });
 }
 
+const ETIQUETAS_TIPO_NEGOCIO = { ingreso: 'Ingreso', gasto: 'Gasto', inversion: 'Inversión' };
+
+function formatoMonedaGenerica(n, moneda){
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: moneda || 'USD', maximumFractionDigits: 2 }).format(n);
+}
+
+async function llamarNegocio(payload){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return { error: 'sin_sesion' };
+  const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/negocio-movimientos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify(payload || {}),
+  });
+  return resp.json();
+}
+
+function pintarResumenNegocio(resumen){
+  const cont = document.getElementById('grid-resumen-negocio');
+  const monedas = Object.keys(resumen);
+  if(!monedas.length){
+    cont.innerHTML = '<div class="tarjeta"><div class="tarjeta-etiqueta">Sin movimientos todavía</div></div>';
+    return;
+  }
+  cont.innerHTML = monedas.map(moneda => {
+    const r = resumen[moneda];
+    const balance = r.ingreso - r.gasto - r.inversion;
+    return `
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Ingresos (${moneda})</div>
+        <div class="tarjeta-valor">${formatoMonedaGenerica(r.ingreso, moneda)}</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Gastos (${moneda})</div>
+        <div class="tarjeta-valor">${formatoMonedaGenerica(r.gasto, moneda)}</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Inversión (${moneda})</div>
+        <div class="tarjeta-valor">${formatoMonedaGenerica(r.inversion, moneda)}</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Balance (${moneda})</div>
+        <div class="tarjeta-valor">${formatoMonedaGenerica(balance, moneda)}</div>
+        <div class="tarjeta-sub">Ingresos − gastos − inversión</div>
+      </div>`;
+  }).join('');
+}
+
+function pintarTablaNegocio(movimientos){
+  const tbody = document.getElementById('tabla-negocio');
+  if(!movimientos.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="tarjeta-sub">Sin movimientos todavía.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = movimientos.map(m => `
+    <tr>
+      <td>${m.fecha}</td>
+      <td>${ETIQUETAS_TIPO_NEGOCIO[m.tipo] || m.tipo}</td>
+      <td>${escapeHtmlAdmin(m.categoria)}</td>
+      <td>${escapeHtmlAdmin(m.concepto || '—')}</td>
+      <td>${formatoMonedaGenerica(m.monto, m.moneda)}</td>
+      <td>${m.es_recurrente ? 'Sí' : 'No'}</td>
+      <td><button class="btn-eliminar-fila" onclick="eliminarMovimientoNegocio('${m.id}')">Eliminar</button></td>
+    </tr>
+  `).join('');
+}
+
+async function cargarNegocio(){
+  const datos = await llamarNegocio({});
+  if(datos.error){
+    console.warn('No se pudo cargar el registro de negocio:', datos.error);
+    return;
+  }
+  pintarResumenNegocio(datos.resumen || {});
+  pintarTablaNegocio(datos.movimientos || []);
+}
+
+async function agregarMovimientoNegocio(){
+  const errorEl = document.getElementById('error-negocio');
+  errorEl.classList.add('oculto');
+  const fecha = document.getElementById('neg-fecha').value;
+  const tipo = document.getElementById('neg-tipo').value;
+  const categoria = document.getElementById('neg-categoria').value.trim();
+  const concepto = document.getElementById('neg-concepto').value.trim();
+  const monto = valorNumericoMonto(document.getElementById('neg-monto'));
+  const moneda = document.getElementById('neg-moneda').value;
+  const esRecurrente = document.getElementById('neg-recurrente').checked;
+
+  if(!fecha || !categoria || !Number.isFinite(monto) || monto <= 0){
+    errorEl.textContent = 'Falta la fecha, la categoría, o el monto no es válido.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  const btn = document.getElementById('btn-agregar-movimiento');
+  btn.disabled = true;
+  const datos = await llamarNegocio({
+    accion: 'crear',
+    movimiento: { fecha, tipo, categoria, concepto, monto, moneda, es_recurrente: esRecurrente },
+  });
+  btn.disabled = false;
+
+  if(datos.error){
+    errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  document.getElementById('neg-categoria').value = '';
+  document.getElementById('neg-concepto').value = '';
+  document.getElementById('neg-monto').value = '';
+  document.getElementById('neg-recurrente').checked = false;
+  await cargarNegocio();
+}
+
+async function eliminarMovimientoNegocio(id){
+  const ok = confirm('¿Eliminar este movimiento?');
+  if(!ok) return;
+  await llamarNegocio({ accion: 'eliminar', id });
+  await cargarNegocio();
+}
+
 function inicializarInteraccionesUsuarios(){
   document.getElementById('input-buscar-usuario').addEventListener('input', pintarTablaUsuarios);
   document.querySelectorAll('.th-orden').forEach(th => {
@@ -642,6 +879,8 @@ async function cargarPanel(){
   usuariosDetalleGlobal = datos.detalleUsuarios || [];
   pintarTablaUsuarios();
 
+  await cargarNegocio();
+
   mostrar('vista-panel');
 }
 
@@ -650,6 +889,7 @@ async function cargarPanel(){
   iniciarCliente();
   inicializarInteraccionesUsuarios();
   inicializarCalculadoraCostoIA();
+  document.getElementById('neg-fecha').value = new Date().toISOString().slice(0, 10);
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     await cargarPanel();
