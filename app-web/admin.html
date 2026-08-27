@@ -168,6 +168,50 @@
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Nunca identifica usuarios individuales — solo totales de todos juntos. No incluye género/edad porque la app no los recolecta.</div>
 
+    <h2>Configuración preferida</h2>
+    <div class="caja">
+      <div class="tarjeta-etiqueta">Avatar de Freaky elegido</div>
+      <div id="lista-avatar" style="margin-top:10px;"></div>
+    </div>
+    <div class="caja">
+      <div class="tarjeta-etiqueta">Idioma</div>
+      <div id="lista-idioma" style="margin-top:10px;"></div>
+    </div>
+    <div class="caja">
+      <div class="tarjeta-etiqueta">Tema</div>
+      <div id="lista-tema" style="margin-top:10px;"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Idioma y tema solo se guardan aquí desde que el usuario los cambia en Configuración (2026-08-27) — antes vivían solo en el teléfono de cada quien, así que usuarios que no volvieron a tocar esa pantalla van a salir sin dato aunque sí tengan una preferencia real puesta.</div>
+
+    <h2>Uso por sección</h2>
+    <div class="caja">
+      <table>
+        <thead><tr><th>Sección</th><th>Usuarios con datos</th><th>Activos 30 días</th></tr></thead>
+        <tbody id="tabla-secciones"></tbody>
+      </table>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">"Usuarios con datos" = alguna vez registraron algo ahí. "Activos 30 días" = agregaron o modificaron algo ahí en el último mes. Es un proxy de qué engancha de verdad — todavía no hay un registro de qué pantallas visita cada quien.</div>
+
+    <h2>Freaky (asistente con IA)</h2>
+    <div class="grid-kpis" style="margin-bottom:24px;">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Usuarios con IA activada</div>
+        <div class="tarjeta-valor" id="kpi-freaky-acceso">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Usuarios con reporte generado</div>
+        <div class="tarjeta-valor" id="kpi-freaky-usuarios-reporte">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Radiografías generadas (total)</div>
+        <div class="tarjeta-valor" id="kpi-freaky-reportes">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Radiografías este mes</div>
+        <div class="tarjeta-valor" id="kpi-freaky-reportes-mes">—</div>
+      </div>
+    </div>
+
     <h2>Últimas altas</h2>
     <div class="caja">
       <table>
@@ -241,6 +285,30 @@ function pintarCategorias(gastoPorCategoria){
   }).join('');
 }
 
+const ETIQUETAS_AVATAR = { avatar1: 'El Sabio', avatar2: 'La Estratega', avatar3: 'El Cómplice' };
+const ETIQUETAS_IDIOMA = { es: 'Español', en: 'English' };
+const ETIQUETAS_TEMA = { light: 'Claro', dark: 'Oscuro', auto: 'Automático' };
+const ETIQUETAS_SECCION = { cuentas: 'Cuentas', gastos: 'Gastos', ingresos: 'Ingresos', deudas: 'Deudas y tarjetas', bienes: 'Bienes', acciones: 'Acciones e inversiones' };
+
+function pintarDistribucion(contenedorId, conteo, etiquetas){
+  const entradas = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
+  const cont = document.getElementById(contenedorId);
+  if(!entradas.length){
+    cont.innerHTML = '<div class="tarjeta-sub">Sin datos todavía.</div>';
+    return;
+  }
+  const total = entradas.reduce((a, [, n]) => a + n, 0);
+  const max = entradas[0][1];
+  cont.innerHTML = entradas.map(([clave, n]) => {
+    const pct = Math.max(2, Math.round((n / max) * 100));
+    const etiqueta = (etiquetas && etiquetas[clave]) || clave;
+    return `<div class="categoria-fila">
+      <div class="categoria-fila-etiqueta"><span>${etiqueta}</span><span>${formatoNumero(n)} (${Math.round((n / total) * 100)}%)</span></div>
+      <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
 function pintarGraficaRegistros(registrosPorDia){
   const dias = [];
   const hoy = new Date();
@@ -305,6 +373,21 @@ async function cargarPanel(){
   document.getElementById('kpi-ingreso-promedio').textContent = datos.audiencia.ingresoPromedioMensual === null ? '—' : formatoMoneda(datos.audiencia.ingresoPromedioMensual);
   document.getElementById('kpi-ingreso-sub').textContent = `Basado en ${formatoNumero(datos.audiencia.usuariosConIngresoDeclarado)} usuarios que lo declararon`;
   pintarCategorias(datos.audiencia.gastoPorCategoria);
+
+  pintarDistribucion('lista-avatar', datos.configuracion.avatar, ETIQUETAS_AVATAR);
+  pintarDistribucion('lista-idioma', datos.configuracion.idioma, ETIQUETAS_IDIOMA);
+  pintarDistribucion('lista-tema', datos.configuracion.tema, ETIQUETAS_TEMA);
+
+  const tablaSecciones = document.getElementById('tabla-secciones');
+  tablaSecciones.innerHTML = Object.entries(datos.usoPorSeccion)
+    .sort((a, b) => b[1].usuariosConDatos - a[1].usuariosConDatos)
+    .map(([clave, v]) => `<tr><td>${ETIQUETAS_SECCION[clave] || clave}</td><td>${formatoNumero(v.usuariosConDatos)}</td><td>${formatoNumero(v.activos30d)}</td></tr>`)
+    .join('');
+
+  document.getElementById('kpi-freaky-acceso').textContent = datos.freaky.usuariosConAccesoIA === null ? '—' : formatoNumero(datos.freaky.usuariosConAccesoIA);
+  document.getElementById('kpi-freaky-usuarios-reporte').textContent = formatoNumero(datos.freaky.usuariosConReporte);
+  document.getElementById('kpi-freaky-reportes').textContent = formatoNumero(datos.freaky.reportesGenerados);
+  document.getElementById('kpi-freaky-reportes-mes').textContent = formatoNumero(datos.freaky.reportesEsteMes);
 
   const tbody = document.getElementById('tabla-registros');
   tbody.innerHTML = datos.crecimiento.registrosRecientes.map(r => {

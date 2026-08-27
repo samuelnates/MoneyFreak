@@ -3307,6 +3307,14 @@ function aplicarTema(modo){
 
 function cambiarTema(modo){
   aplicarTema(modo);
+  if(sb && !modoDemo){
+    sb.from('perfil_financiero').upsert({
+      tema_preferido: modo,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if(error) console.warn('No se pudo guardar el tema preferido (¿ya corriste la migración?)', error);
+    });
+  }
   location.reload();
 }
 
@@ -5202,6 +5210,14 @@ function aplicarIdioma(idioma){
 
 function cambiarIdioma(idioma){
   aplicarIdioma(idioma);
+  if(sb && !modoDemo){
+    sb.from('perfil_financiero').upsert({
+      idioma_preferido: idioma,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if(error) console.warn('No se pudo guardar el idioma preferido (¿ya corriste la migración?)', error);
+    });
+  }
 }
 
 function inicializarIdioma(){

@@ -171,6 +171,75 @@ Deno.serve(async (req) => {
       ? ingresosUsuarios.reduce((a, b) => a + b, 0) / ingresosUsuarios.length
       : null;
 
+    // Configuración preferida -- avatar de Freaky (siempre se guardó server-side),
+    // e idioma/tema (recién empezaron a guardarse server-side el 2026-08-27; antes
+    // solo vivían en localStorage de cada dispositivo, así que usuarios que no
+    // hayan vuelto a tocar Configuración desde entonces van a salir en null aquí
+    // aunque sí tengan una preferencia real guardada en su teléfono).
+    const { data: preferencias, error: errorPreferencias } = await admin
+      .from("perfil_financiero")
+      .select("avatar_asesor, idioma_preferido, tema_preferido");
+    if (errorPreferencias) throw errorPreferencias;
+
+    const contarValores = (campo: "avatar_asesor" | "idioma_preferido" | "tema_preferido") => {
+      const conteo: Record<string, number> = {};
+      for (const p of preferencias || []) {
+        const valor = p[campo];
+        if (!valor) continue;
+        conteo[valor] = (conteo[valor] || 0) + 1;
+      }
+      return conteo;
+    };
+
+    // Uso por sección -- proxy honesto de "qué se usa más" a partir de datos
+    // que ya existen (no hay todavía un registro de vistas de pantalla/eventos
+    // de navegación). Por cada tabla: cuántos usuarios distintos tienen algo
+    // ahí (adopción) y cuántos escribieron algo en los últimos 30 días (uso
+    // reciente). Así se ve qué función de la app engancha de verdad.
+    const TABLAS_SECCION: { clave: string; tabla: string }[] = [
+      { clave: "cuentas", tabla: "cuentas" },
+      { clave: "gastos", tabla: "gastos" },
+      { clave: "ingresos", tabla: "ingresos" },
+      { clave: "deudas", tabla: "deudas" },
+      { clave: "bienes", tabla: "bienes" },
+      { clave: "acciones", tabla: "acciones" },
+    ];
+    const usoPorSeccion: Record<string, { usuariosConDatos: number; activos30d: number }> = {};
+    for (const { clave, tabla } of TABLAS_SECCION) {
+      const { data: filas, error: errorFilas } = await admin
+        .from(tabla)
+        .select("user_id, created_at");
+      if (errorFilas) {
+        console.error(`panel-admin-kpis: error leyendo ${tabla}:`, errorFilas);
+        continue;
+      }
+      const usuariosConDatos = new Set<string>();
+      const usuariosActivos30d = new Set<string>();
+      for (const f of filas || []) {
+        usuariosConDatos.add(f.user_id);
+        if (f.created_at && f.created_at >= hace30d) usuariosActivos30d.add(f.user_id);
+      }
+      usoPorSeccion[clave] = { usuariosConDatos: usuariosConDatos.size, activos30d: usuariosActivos30d.size };
+    }
+
+    // Freaky (asistente IA): activación (quién canjeó/tiene acceso) y reportes
+    // ("radiografía mensual") generados -- la señal más directa de que alguien
+    // de verdad usa la IA, no solo que la tiene disponible.
+    const { count: usuariosConAccesoIA, error: errorAccesoIA } = await admin
+      .from("accesos_ia_usuarios")
+      .select("user_id", { count: "exact", head: true });
+    if (errorAccesoIA) console.error("panel-admin-kpis: error contando accesos IA:", errorAccesoIA);
+
+    const { data: reportes, error: errorReportes } = await admin
+      .from("reportes_financieros")
+      .select("user_id, report_month, status, created_at");
+    if (errorReportes) console.error("panel-admin-kpis: error leyendo reportes_financieros:", errorReportes);
+
+    const reportesCompletados = (reportes || []).filter((r) => r.status === "completed");
+    const usuariosConReporte = new Set(reportesCompletados.map((r) => r.user_id));
+    const mesActual = new Date().toISOString().slice(0, 7);
+    const reportesEsteMes = reportesCompletados.filter((r) => r.report_month === mesActual).length;
+
     return jsonResponse({
       crecimiento: {
         totalUsuarios,
@@ -197,6 +266,18 @@ Deno.serve(async (req) => {
         gastoPorCategoria,
         ingresoPromedioMensual,
         usuariosConIngresoDeclarado: ingresosUsuarios.length,
+      },
+      configuracion: {
+        avatar: contarValores("avatar_asesor"),
+        idioma: contarValores("idioma_preferido"),
+        tema: contarValores("tema_preferido"),
+      },
+      usoPorSeccion,
+      freaky: {
+        usuariosConAccesoIA: usuariosConAccesoIA ?? null,
+        usuariosConReporte: usuariosConReporte.size,
+        reportesGenerados: reportesCompletados.length,
+        reportesEsteMes,
       },
     });
   } catch (e) {
