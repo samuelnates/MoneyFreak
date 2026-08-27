@@ -46,6 +46,13 @@
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-08-27 (parte 48) — 4 simplificaciones al panel, propuestas y aprobadas por el usuario ("ya está muy pesado").**
+  1. **"Uso por sección"** pasó de tabla plana a gráfica de barras (mismo patrón que "Audiencia"): la barra es "usuarios con datos", y "(N activos)" entre paréntesis junto al número.
+  2. **"Configuración preferida"** (avatar/idioma/tema) pasó de 3 cajas apiladas a una sola fila de 3 columnas (con separador vertical, se apilan de nuevo en pantallas angostas vía media query).
+  3. **"Costo de OpenAI"** ahora muestra solo 2 números grandes arriba (estimado total, este mes) -- la tabla de tokens y los 3 campos de precio quedan detrás de un "Ver detalle de tokens y precios" que se abre con clic (`toggleDetalleCostoIA()`), oculto por default.
+  4. **"Riesgo de abandono"** se movió de la pestaña Activación a Salud -- conceptualmente es una alerta ("algo necesita tu atención"), no una métrica de activación. Activación se queda con KPIs + retención + embudo; Salud con errores + pendientes + riesgo.
+  - Probado con Playwright: gráfica de secciones con datos de ejemplo, toggle del detalle de costo IA (oculto→visible), fila de 3 columnas de configuración, y confirmado que `tabla-riesgo` vive dentro de `seccion-salud` y ya no de `seccion-activacion` -- capturas en `loading-preview/admin-uso-secciones.png` y `admin-config-fila.png`.
+
 - **2026-08-27 (parte 47) — Retención, versión visual (el texto no aterrizó, van dos veces que se preguntó).** Reemplazadas las 2 tarjetas de solo-%por una barra de dos colores por ventana (7d/30d): "Siguen activos" (verde) vs. "Ya no volvieron" (rojo apagado), con la leyenda de conteos reales debajo -- mismo lenguaje visual que ya funcionó con el embudo. `panel-admin-kpis` ahora también regresa `retenidosD7`/`retenidosD30` (conteo real, no solo el %) para poder dibujar la barra. Probado con Playwright antes de desplegar -- captura en `loading-preview/admin-retencion-visual.png`.
 
 - **2026-08-27 (parte 46) — Negocio: estado de resultados de verdad, consolidado en pesos.** El usuario dijo que tener totales separados por USD/MXN era confuso y pidió la estructura clásica de estado de resultados, todo en un solo número en pesos.
