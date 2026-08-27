@@ -134,6 +134,43 @@ Deno.serve(async (req) => {
       .eq("estado", "pendiente");
     if (errorSolicitudes) console.error("panel-admin-kpis: error contando solicitudes pendientes:", errorSolicitudes);
 
+    // Estadísticas de audiencia -- SIEMPRE agregadas/anónimas, nunca por
+    // usuario individual. Sirven para decisiones de producto y, si algún día
+    // se vende espacio publicitario dentro de la app, como "media kit"
+    // (perfil de audiencia) sin exponer ni vender el dato de nadie en lo
+    // individual. No incluye género/edad porque la app no los recolecta.
+    const hace90d = new Date(ahora - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: gastos90d, error: errorGastos90d } = await admin
+      .from("gastos")
+      .select("categoria, monto")
+      .gte("created_at", hace90d);
+    if (errorGastos90d) throw errorGastos90d;
+
+    const gastoPorCategoria: Record<string, number> = {};
+    for (const g of gastos90d || []) {
+      const cat = g.categoria || "Sin categoría";
+      gastoPorCategoria[cat] = (gastoPorCategoria[cat] || 0) + Number(g.monto || 0);
+    }
+
+    // Ingreso promedio mensual: se suma el ingreso "mensual" declarado por
+    // cada usuario (puede tener más de una fuente) y luego se promedia entre
+    // los usuarios que sí capturaron al menos un ingreso -- es opcional, así
+    // que no todos lo tienen.
+    const { data: ingresosTodos, error: errorIngresos } = await admin
+      .from("ingresos")
+      .select("user_id, monto, periodicidad")
+      .eq("periodicidad", "mensual");
+    if (errorIngresos) throw errorIngresos;
+
+    const ingresoPorUsuario: Record<string, number> = {};
+    for (const i of ingresosTodos || []) {
+      ingresoPorUsuario[i.user_id] = (ingresoPorUsuario[i.user_id] || 0) + Number(i.monto || 0);
+    }
+    const ingresosUsuarios = Object.values(ingresoPorUsuario);
+    const ingresoPromedioMensual = ingresosUsuarios.length
+      ? ingresosUsuarios.reduce((a, b) => a + b, 0) / ingresosUsuarios.length
+      : null;
+
     return jsonResponse({
       crecimiento: {
         totalUsuarios,
@@ -155,6 +192,11 @@ Deno.serve(async (req) => {
       },
       salud: {
         solicitudesPendientes: solicitudesPendientes ?? null,
+      },
+      audiencia: {
+        gastoPorCategoria,
+        ingresoPromedioMensual,
+        usuariosConIngresoDeclarado: ingresosUsuarios.length,
       },
     });
   } catch (e) {
