@@ -78,6 +78,10 @@
 
   .oculto{display:none;}
   .cargando{text-align:center;padding:60px 20px;color:var(--texto-tenue);font-family:var(--mono);font-size:13px;}
+  #btn-cargando-accion{
+    display:block;margin:18px auto 0;padding:10px 18px;border-radius:8px;border:none;
+    background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;
+  }
 
   .tabs-admin{
     display:flex;gap:4px;overflow-x:auto;margin:0 calc(-1 * var(--pad-x)) 28px;padding:10px var(--pad-x) 1px;
@@ -173,7 +177,10 @@
     <div class="error-login oculto" id="error-login"></div>
   </div>
 
-  <div id="vista-cargando" class="cargando oculto">Cargando KPIs…</div>
+  <div id="vista-cargando" class="cargando oculto">
+    <div id="texto-cargando">Cargando KPIs…</div>
+    <button type="button" id="btn-cargando-accion" class="oculto"></button>
+  </div>
 
   <div id="vista-panel" class="oculto">
     <div class="marca">MONEY FREAK</div>
@@ -581,6 +588,32 @@ function mostrarSeccionAdmin(id){
     btn.classList.toggle('activo', btn.dataset.seccion === id);
   });
   try{ localStorage.setItem('admin_seccion_activa', id); }catch(e){}
+}
+
+// Todo estado de error del panel ahora ofrece una acción real, no solo el
+// mensaje -- antes "Tu sesión expiró" se quedaba ahí sin ningún botón para
+// hacer algo al respecto. 'sesion' = cerrar sesión y volver al login (para
+// problemas de identidad/token); 'reintentar' = volver a intentar la misma
+// carga (para fallas de red o del servidor, donde cerrar sesión no ayuda).
+function mostrarErrorCargando(mensaje, accion){
+  document.getElementById('texto-cargando').textContent = mensaje;
+  const btn = document.getElementById('btn-cargando-accion');
+  if(accion === 'sesion'){
+    btn.textContent = 'Cerrar sesión y volver a entrar';
+    btn.onclick = cerrarSesionAdmin;
+  }else{
+    btn.textContent = 'Reintentar';
+    btn.onclick = cargarPanel;
+  }
+  btn.classList.remove('oculto');
+}
+
+async function cerrarSesionAdmin(){
+  try{ await sb.auth.signOut(); }catch(e){}
+  document.getElementById('input-correo').value = '';
+  document.getElementById('input-clave').value = '';
+  document.getElementById('btn-cargando-accion').classList.add('oculto');
+  mostrar('vista-login');
 }
 
 async function entrar(){
@@ -1269,6 +1302,8 @@ async function pedirKpis(token){
 
 async function cargarPanel(){
   mostrar('vista-cargando');
+  document.getElementById('texto-cargando').textContent = 'Cargando KPIs…';
+  document.getElementById('btn-cargando-accion').classList.add('oculto');
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ mostrar('vista-login'); return; }
 
@@ -1276,7 +1311,7 @@ async function cargarPanel(){
   try{
     resp = await pedirKpis(session.access_token);
   }catch(e){
-    document.getElementById('vista-cargando').textContent = 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.';
+    mostrarErrorCargando('No se pudo conectar. Revisa tu conexión e intenta de nuevo.');
     return;
   }
 
@@ -1293,7 +1328,7 @@ async function cargarPanel(){
   }
 
   if(resp.status === 403){
-    document.getElementById('vista-cargando').textContent = 'Esta cuenta no tiene acceso al panel de administración.';
+    mostrarErrorCargando('Esta cuenta no tiene acceso al panel de administración.', 'sesion');
     return;
   }
   if(!resp.ok){
@@ -1303,9 +1338,9 @@ async function cargarPanel(){
       detalle = cuerpo.detalle || cuerpo.error || '';
     }catch(e){}
     if(resp.status === 401){
-      document.getElementById('vista-cargando').textContent = 'Tu sesión expiró. Cierra sesión y vuelve a entrar.';
+      mostrarErrorCargando('Tu sesión expiró. Cierra sesión y vuelve a entrar.', 'sesion');
     }else{
-      document.getElementById('vista-cargando').textContent = `Ocurrió un error cargando los KPIs (${resp.status}).${detalle ? ' ' + detalle : ''}`;
+      mostrarErrorCargando(`Ocurrió un error cargando los KPIs (${resp.status}).${detalle ? ' ' + detalle : ''}`);
     }
     return;
   }
