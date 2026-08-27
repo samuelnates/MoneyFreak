@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --crema: #f2efe0;
+    --linea: #e3ded0;
+    --tinta: #241f18;
+  }
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  html,body{
+    width:1080px; height:1920px; overflow:hidden;
+    background: var(--crema);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .stage{ position:relative; width:1080px; height:1920px; }
+  .grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--linea) 1px, transparent 1px),
+      linear-gradient(90deg, var(--linea) 1px, transparent 1px);
+    background-size: 108px 108px;
+    opacity:.6;
+  }
+
+  .slide{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0;
+  }
+  .slide.on{ opacity:1; transition: opacity .55s ease; }
+  .slide.off{ opacity:0; transition: opacity .55s ease; }
+
+  .marco{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .marco img{
+    max-width:94%; max-height:82%;
+    object-fit:contain;
+    border-radius:28px;
+    box-shadow: 0 40px 90px -30px rgba(36,31,24,.35);
+    transform: scale(1.0);
+    will-change: transform;
+  }
+  .kenburns img{ animation: kb 3.15s ease-in-out forwards; }
+  .kb-alt img{ animation-name: kb-alt; }
+  @keyframes kb{
+    from{ transform: scale(1.0) translate(0,0); }
+    to{ transform: scale(1.09) translate(-1.4%, -1.2%); }
+  }
+  @keyframes kb-alt{
+    from{ transform: scale(1.0) translate(0,0); }
+    to{ transform: scale(1.09) translate(1.4%, 1.2%); }
+  }
+
+  .caption{
+    position:absolute; left:50%; bottom:9%;
+    transform: translate(-50%, 24px);
+    background: var(--tinta);
+    color:#fdfbf3;
+    padding: 26px 44px;
+    border-radius: 999px;
+    font-size: 40px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity:0;
+    letter-spacing:.2px;
+  }
+  .slide.on .caption{
+    animation: subir .5s .18s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes subir{
+    to{ opacity:1; transform: translate(-50%, 0); }
+  }
+
+  .cierre{ flex-direction:column; gap:36px; }
+  .cierre img.icono{
+    width:220px; height:220px; border-radius:52px;
+    box-shadow: 0 30px 70px -25px rgba(36,31,24,.4);
+    transform: scale(.6); opacity:0;
+  }
+  .slide.on .cierre img.icono{
+    animation: pop .6s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes pop{ to{ transform: scale(1); opacity:1; } }
+
+  .wordmark{
+    font-size:76px; font-weight:800; color:var(--tinta);
+    opacity:0; transform: translateY(16px);
+  }
+  .slide.on .wordmark{ animation: subir2 .5s .25s ease forwards; }
+  .cta{
+    font-size:38px; font-weight:600; color:#6b6353;
+    opacity:0; transform: translateY(16px);
+  }
+  .slide.on .cta{ animation: subir2 .5s .4s ease forwards; }
+  @keyframes subir2{ to{ opacity:1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="grid"></div>
+
+    <div class="slide kenburns" data-idx="0">
+      <div class="marco"><img src="01-inicio.png"></div>
+      <div class="caption">Todo tu dinero, en un lugar</div>
+    </div>
+
+    <div class="slide kenburns kb-alt" data-idx="1">
+      <div class="marco"><img src="02-freaky.png"></div>
+      <div class="caption">Pregúntale a Freaky, tu asesor</div>
+    </div>
+
+    <div class="slide kenburns" data-idx="2">
+      <div class="marco"><img src="03-graficas.png"></div>
+      <div class="caption">Gráficas claras de tu patrimonio</div>
+    </div>
+
+    <div class="slide kenburns kb-alt" data-idx="3">
+      <div class="marco"><img src="04-cuentas.png"></div>
+      <div class="caption">Todas tus cuentas, ordenadas</div>
+    </div>
+
+    <div class="slide kenburns" data-idx="4">
+      <div class="marco"><img src="05-gastos.png"></div>
+      <div class="caption">Controla tus gastos por categoría</div>
+    </div>
+
+    <div class="slide cierre" data-idx="5">
+      <img class="icono" src="../app-icon/icon-1024.png">
+      <div class="wordmark">MoneyFreak</div>
+      <div class="cta">Descárgala hoy</div>
+    </div>
+  </div>
+
+<script>
+  const HOLD = 2600;   // ms visible por pantalla antes de cruzar a la siguiente
+  const slides = Array.from(document.querySelectorAll('.slide'));
+
+  function mostrarSlide(i){
+    slides.forEach((s, idx) => {
+      s.classList.toggle('on', idx === i);
+      s.classList.toggle('off', idx !== i);
+      if(idx === i){
+        // reinicia la animacion de ken burns/caption cada vez que entra
+        const img = s.querySelector('img:not(.icono)');
+        if(img){ img.style.animation = 'none'; void img.offsetWidth; img.style.animation = ''; }
+        const cap = s.querySelector('.caption');
+        if(cap){ cap.style.animation = 'none'; void cap.offsetWidth; cap.style.animation = ''; }
+      }
+    });
+  }
+
+  let i = 0;
+  mostrarSlide(0);
+  const total = slides.length;
+  const timer = setInterval(() => {
+    i++;
+    if(i >= total){ clearInterval(timer); window.__reelDone = true; return; }
+    mostrarSlide(i);
+  }, HOLD);
+
+  window.__reelTotalMs = HOLD * total;
+</script>
+</body>
+</html>
