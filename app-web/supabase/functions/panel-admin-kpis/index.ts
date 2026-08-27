@@ -28,15 +28,29 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-async function listarTodosLosUsuarios(admin: ReturnType<typeof createClient>) {
-  const usuarios: { id: string; email: string | undefined; created_at: string }[] = [];
+type UsuarioBasico = {
+  id: string;
+  email: string | undefined;
+  created_at: string;
+  last_sign_in_at: string | null;
+  proveedor: string | null;
+};
+
+async function listarTodosLosUsuarios(admin: ReturnType<typeof createClient>): Promise<UsuarioBasico[]> {
+  const usuarios: UsuarioBasico[] = [];
   let page = 1;
   const perPage = 1000;
   while (true) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
     for (const u of data.users) {
-      usuarios.push({ id: u.id, email: u.email, created_at: u.created_at });
+      usuarios.push({
+        id: u.id,
+        email: u.email,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+        proveedor: (u.app_metadata as { provider?: string } | undefined)?.provider ?? null,
+      });
     }
     if (data.users.length < perPage) break;
     page++;
@@ -84,37 +98,12 @@ Deno.serve(async (req) => {
     const nuevos7d = usuarios.filter((u) => u.created_at >= hace7d).length;
     const nuevos30d = usuarios.filter((u) => u.created_at >= hace30d).length;
 
-    const registrosOrdenados = [...usuarios].sort((a, b) => b.created_at.localeCompare(a.created_at));
-    const registrosRecientes = registrosOrdenados.slice(0, 20).map((u) => ({
-      correo: u.email,
-      fecha: u.created_at,
-    }));
-
     // Serie de registros por día, últimos 30 días -- para la gráfica.
     const registrosPorDia: Record<string, number> = {};
     for (const u of usuarios) {
       if (u.created_at < hace30d) continue;
       const dia = u.created_at.slice(0, 10);
       registrosPorDia[dia] = (registrosPorDia[dia] || 0) + 1;
-    }
-
-    // Uso reciente (proxy de actividad): usuarios distintos con al menos un
-    // gasto registrado en cada ventana. No hay tabla de sesiones/analytics
-    // todavía, así que "registrar un gasto" es la señal de uso real más
-    // directa que existe hoy.
-    const { data: gastosRecientes, error: errorGastos } = await admin
-      .from("gastos")
-      .select("user_id, created_at")
-      .gte("created_at", hace30d);
-    if (errorGastos) throw errorGastos;
-
-    const activos24h = new Set<string>();
-    const activos7d = new Set<string>();
-    const activos30d = new Set<string>();
-    for (const g of gastosRecientes || []) {
-      activos30d.add(g.user_id);
-      if (g.created_at >= hace7d) activos7d.add(g.user_id);
-      if (g.created_at >= hace24h) activos24h.add(g.user_id);
     }
 
     // Activación: de todos los usuarios registrados, ¿cuántos alguna vez
@@ -201,7 +190,7 @@ Deno.serve(async (req) => {
     // aunque sí tengan una preferencia real guardada en su teléfono).
     const { data: preferencias, error: errorPreferencias } = await admin
       .from("perfil_financiero")
-      .select("avatar_asesor, idioma_preferido, tema_preferido");
+      .select("user_id, avatar_asesor, idioma_preferido, tema_preferido");
     if (errorPreferencias) throw errorPreferencias;
 
     const contarValores = (campo: "avatar_asesor" | "idioma_preferido" | "tema_preferido") => {
@@ -228,6 +217,18 @@ Deno.serve(async (req) => {
       { clave: "acciones", tabla: "acciones" },
     ];
     const usoPorSeccion: Record<string, { usuariosConDatos: number; activos30d: number }> = {};
+    // Conteo de filas por usuario en cada tabla -- se reutiliza abajo para el
+    // detalle por usuario (cuántas cuentas/gastos/etc. tiene cada quien), sin
+    // repetir estas mismas consultas.
+    const conteoPorTablaPorUsuario: Record<string, Record<string, number>> = {};
+    // Uso reciente (proxy de actividad general, no solo de "gastos"):
+    // usuarios distintos con al menos un gasto registrado en cada ventana.
+    // No hay tabla de sesiones/analytics todavía, así que "registrar un
+    // gasto" es la señal de uso real más directa que existe hoy. Se calcula
+    // aquí mismo, reutilizando la consulta de la tabla "gastos" de abajo.
+    const activos24h = new Set<string>();
+    const activos7d = new Set<string>();
+    const activos30d = new Set<string>();
     for (const { clave, tabla } of TABLAS_SECCION) {
       const { data: filas, error: errorFilas } = await admin
         .from(tabla)
@@ -238,20 +239,29 @@ Deno.serve(async (req) => {
       }
       const usuariosConDatos = new Set<string>();
       const usuariosActivos30d = new Set<string>();
+      const conteoUsuario: Record<string, number> = {};
       for (const f of filas || []) {
         usuariosConDatos.add(f.user_id);
+        conteoUsuario[f.user_id] = (conteoUsuario[f.user_id] || 0) + 1;
         if (f.created_at && f.created_at >= hace30d) usuariosActivos30d.add(f.user_id);
+        if (clave === "gastos" && f.created_at >= hace30d) {
+          activos30d.add(f.user_id);
+          if (f.created_at >= hace7d) activos7d.add(f.user_id);
+          if (f.created_at >= hace24h) activos24h.add(f.user_id);
+        }
       }
       usoPorSeccion[clave] = { usuariosConDatos: usuariosConDatos.size, activos30d: usuariosActivos30d.size };
+      conteoPorTablaPorUsuario[clave] = conteoUsuario;
     }
 
     // Freaky (asistente IA): activación (quién canjeó/tiene acceso) y reportes
     // ("radiografía mensual") generados -- la señal más directa de que alguien
     // de verdad usa la IA, no solo que la tiene disponible.
-    const { count: usuariosConAccesoIA, error: errorAccesoIA } = await admin
+    const { data: accesoIAFilas, error: errorAccesoIA } = await admin
       .from("accesos_ia_usuarios")
-      .select("user_id", { count: "exact", head: true });
-    if (errorAccesoIA) console.error("panel-admin-kpis: error contando accesos IA:", errorAccesoIA);
+      .select("user_id");
+    if (errorAccesoIA) console.error("panel-admin-kpis: error leyendo accesos IA:", errorAccesoIA);
+    const usuariosConAccesoIASet = new Set((accesoIAFilas || []).map((a) => a.user_id));
 
     const { data: reportes, error: errorReportes } = await admin
       .from("reportes_financieros")
@@ -263,6 +273,42 @@ Deno.serve(async (req) => {
     const mesActual = new Date().toISOString().slice(0, 7);
     const reportesEsteMes = reportesCompletados.filter((r) => r.report_month === mesActual).length;
 
+    const reportesPorUsuario: Record<string, number> = {};
+    for (const r of reportesCompletados) {
+      reportesPorUsuario[r.user_id] = (reportesPorUsuario[r.user_id] || 0) + 1;
+    }
+
+    const preferenciasPorUsuario: Record<string, { avatar_asesor: string | null; idioma_preferido: string | null; tema_preferido: string | null }> = {};
+    for (const p of preferencias || []) {
+      preferenciasPorUsuario[p.user_id] = p;
+    }
+
+    // Detalle por usuario -- para soporte/entender uso real. A propósito NO
+    // incluye montos ni información financiera real de nadie (saldos,
+    // deudas, ingresos en pesos): solo conteos y metadatos de cuenta. Ver
+    // nota de privacidad en la parte 40 de CONTEXTO_PROYECTO.md.
+    const detalleUsuarios = usuarios.map((u) => {
+      const pref = preferenciasPorUsuario[u.id];
+      return {
+        id: u.id,
+        correo: u.email ?? null,
+        fechaAlta: u.created_at,
+        ultimoLogin: u.last_sign_in_at,
+        proveedor: u.proveedor,
+        cuentas: conteoPorTablaPorUsuario.cuentas?.[u.id] || 0,
+        gastos: conteoPorTablaPorUsuario.gastos?.[u.id] || 0,
+        ingresos: conteoPorTablaPorUsuario.ingresos?.[u.id] || 0,
+        deudas: conteoPorTablaPorUsuario.deudas?.[u.id] || 0,
+        bienes: conteoPorTablaPorUsuario.bienes?.[u.id] || 0,
+        acciones: conteoPorTablaPorUsuario.acciones?.[u.id] || 0,
+        avatarAsesor: pref?.avatar_asesor ?? null,
+        idioma: pref?.idioma_preferido ?? null,
+        tema: pref?.tema_preferido ?? null,
+        accesoIA: usuariosConAccesoIASet.has(u.id),
+        reportesGenerados: reportesPorUsuario[u.id] || 0,
+      };
+    });
+
     return jsonResponse({
       crecimiento: {
         totalUsuarios,
@@ -270,7 +316,6 @@ Deno.serve(async (req) => {
         nuevos7d,
         nuevos30d,
         registrosPorDia,
-        registrosRecientes,
       },
       activacion: {
         usuariosConCuenta: usuariosConCuenta.size,
@@ -299,11 +344,12 @@ Deno.serve(async (req) => {
       },
       usoPorSeccion,
       freaky: {
-        usuariosConAccesoIA: usuariosConAccesoIA ?? null,
+        usuariosConAccesoIA: usuariosConAccesoIASet.size,
         usuariosConReporte: usuariosConReporte.size,
         reportesGenerados: reportesCompletados.length,
         reportesEsteMes,
       },
+      detalleUsuarios,
     });
   } catch (e) {
     console.error("panel-admin-kpis: error calculando KPIs:", e);

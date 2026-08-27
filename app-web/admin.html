@@ -223,13 +223,24 @@
       </div>
     </div>
 
-    <h2>Últimas altas</h2>
+    <h2>Usuarios</h2>
+    <div class="caja" style="margin-bottom:8px;">
+      <input type="text" id="input-buscar-usuario" placeholder="Buscar por correo…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--sans);font-size:13px;">
+    </div>
     <div class="caja">
       <table>
-        <thead><tr><th>Correo</th><th>Fecha</th></tr></thead>
-        <tbody id="tabla-registros"></tbody>
+        <thead>
+          <tr>
+            <th class="th-orden" data-campo="correo">Correo</th>
+            <th class="th-orden" data-campo="fechaAlta">Alta</th>
+            <th class="th-orden" data-campo="ultimoLogin">Último login</th>
+            <th>Entra con</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-usuarios"></tbody>
       </table>
     </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Clic en un usuario para ver su detalle (encabezados con clic para ordenar). El detalle nunca incluye montos ni datos financieros reales — solo conteos y preferencias.</div>
   </div>
 
 </div>
@@ -326,6 +337,87 @@ function pintarDistribucion(contenedorId, conteo, etiquetas){
   }).join('');
 }
 
+const ETIQUETAS_PROVEEDOR = { email: 'Correo', google: 'Google', apple: 'Apple' };
+
+function formatoFechaHora(iso){
+  if(!iso) return 'Nunca';
+  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+let usuariosDetalleGlobal = [];
+let ordenUsuarios = { campo: 'fechaAlta', asc: false };
+
+function pintarTablaUsuarios(){
+  const filtro = document.getElementById('input-buscar-usuario').value.trim().toLowerCase();
+  const campo = ordenUsuarios.campo;
+  const filtrados = usuariosDetalleGlobal.filter(u => !filtro || (u.correo || '').toLowerCase().includes(filtro));
+  filtrados.sort((a, b) => {
+    const cmp = String(a[campo] || '').localeCompare(String(b[campo] || ''));
+    return ordenUsuarios.asc ? cmp : -cmp;
+  });
+  const tbody = document.getElementById('tabla-usuarios');
+  if(!filtrados.length){
+    tbody.innerHTML = '<tr><td colspan="4" class="tarjeta-sub">Sin resultados.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtrados.map(u => `
+    <tr class="fila-usuario" data-id="${u.id}" style="cursor:pointer;">
+      <td>${escapeHtmlAdmin(u.correo || '—')}</td>
+      <td>${formatoFechaHora(u.fechaAlta)}</td>
+      <td>${formatoFechaHora(u.ultimoLogin)}</td>
+      <td>${ETIQUETAS_PROVEEDOR[u.proveedor] || u.proveedor || '—'}</td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('.fila-usuario').forEach(fila => {
+    fila.addEventListener('click', () => toggleDetalleUsuario(fila));
+  });
+}
+
+function toggleDetalleUsuario(fila){
+  const siguiente = fila.nextElementSibling;
+  if(siguiente && siguiente.classList.contains('fila-detalle')){
+    siguiente.remove();
+    return;
+  }
+  document.querySelectorAll('.fila-detalle').forEach(f => f.remove());
+  const u = usuariosDetalleGlobal.find(x => x.id === fila.dataset.id);
+  if(!u) return;
+  const campoDetalle = (etiqueta, valor) => `<div><span class="tarjeta-etiqueta">${etiqueta}</span><br>${valor}</div>`;
+  const tr = document.createElement('tr');
+  tr.className = 'fila-detalle';
+  const celda = document.createElement('td');
+  celda.colSpan = 4;
+  celda.style.background = 'var(--bg)';
+  celda.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:10px;padding:6px 0;font-size:12px;">
+    ${campoDetalle('Cuentas', formatoNumero(u.cuentas))}
+    ${campoDetalle('Gastos', formatoNumero(u.gastos))}
+    ${campoDetalle('Ingresos', formatoNumero(u.ingresos))}
+    ${campoDetalle('Deudas', formatoNumero(u.deudas))}
+    ${campoDetalle('Bienes', formatoNumero(u.bienes))}
+    ${campoDetalle('Acciones', formatoNumero(u.acciones))}
+    ${campoDetalle('Avatar Freaky', ETIQUETAS_AVATAR[u.avatarAsesor] || u.avatarAsesor || '—')}
+    ${campoDetalle('Idioma', ETIQUETAS_IDIOMA[u.idioma] || u.idioma || '—')}
+    ${campoDetalle('Tema', ETIQUETAS_TEMA[u.tema] || u.tema || '—')}
+    ${campoDetalle('IA activada', u.accesoIA ? 'Sí' : 'No')}
+    ${campoDetalle('Radiografías', formatoNumero(u.reportesGenerados))}
+  </div>`;
+  tr.appendChild(celda);
+  fila.after(tr);
+}
+
+function inicializarInteraccionesUsuarios(){
+  document.getElementById('input-buscar-usuario').addEventListener('input', pintarTablaUsuarios);
+  document.querySelectorAll('.th-orden').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const campo = th.dataset.campo;
+      if(ordenUsuarios.campo === campo) ordenUsuarios.asc = !ordenUsuarios.asc;
+      else { ordenUsuarios.campo = campo; ordenUsuarios.asc = false; }
+      pintarTablaUsuarios();
+    });
+  });
+}
+
 function pintarGraficaRegistros(registrosPorDia){
   const dias = [];
   const hoy = new Date();
@@ -415,11 +507,8 @@ async function cargarPanel(){
   document.getElementById('kpi-freaky-reportes').textContent = formatoNumero(datos.freaky.reportesGenerados);
   document.getElementById('kpi-freaky-reportes-mes').textContent = formatoNumero(datos.freaky.reportesEsteMes);
 
-  const tbody = document.getElementById('tabla-registros');
-  tbody.innerHTML = datos.crecimiento.registrosRecientes.map(r => {
-    const fecha = new Date(r.fecha).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
-    return `<tr><td>${r.correo || '—'}</td><td>${fecha}</td></tr>`;
-  }).join('');
+  usuariosDetalleGlobal = datos.detalleUsuarios || [];
+  pintarTablaUsuarios();
 
   mostrar('vista-panel');
 }
@@ -427,6 +516,7 @@ async function cargarPanel(){
 (async function init(){
   if(!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return;
   iniciarCliente();
+  inicializarInteraccionesUsuarios();
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     await cargarPanel();
