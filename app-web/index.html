@@ -2316,6 +2316,11 @@
     <label for="input-dias-aviso-tarjeta" data-i18n="freaky.dias_aviso_tarjeta_label">Avisarme de un pago de tarjeta con cuántos días de anticipación</label>
     <input type="number" id="input-dias-aviso-tarjeta" min="1" max="30" step="1" placeholder="5" onchange="guardarDiasAvisoTarjeta()">
   </div>
+
+  <div id="seccion-redes-sociales" style="display:none;margin-top:14px;">
+    <h2 data-i18n="config.redes_h2">Síguenos</h2>
+    <div id="botones-redes-sociales"></div>
+  </div>
 </div>
 
 <div id="vista-seguridad-privacidad" class="pantalla">
@@ -2975,6 +2980,37 @@
 </div>
 
 <script src="config.js"></script>
+<script>
+// Banner de "Abrir en la app" de Safari (solo cuando la app ya esté
+// aprobada y publicada -- window.APPLE_APP_STORE_ID vacío/ausente en
+// config.js hasta entonces, así que esto no hace nada todavía). No aplica
+// dentro de la app nativa (ya estás en la app), Safari lo detecta solo por
+// user-agent. El id es el "Apple ID" numérico de App Information en App
+// Store Connect (no el Bundle ID).
+// Enlaces a redes sociales en Configuración -- ocultos hasta que
+// window.TIKTOK_URL/INSTAGRAM_URL existan en config.js (todavía no hay
+// cuentas reales que enlazar).
+function inicializarRedesSociales(){
+  const sec = document.getElementById('seccion-redes-sociales');
+  const cont = document.getElementById('botones-redes-sociales');
+  if(!sec || !cont) return;
+  const redes = [];
+  if(window.TIKTOK_URL) redes.push({ nombre: 'TikTok', url: window.TIKTOK_URL });
+  if(window.INSTAGRAM_URL) redes.push({ nombre: 'Instagram', url: window.INSTAGRAM_URL });
+  if(!redes.length) return;
+  cont.innerHTML = redes.map(r =>
+    `<a class="btn-grande secundario" style="text-decoration:none;" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.nombre)}</a>`
+  ).join('');
+  sec.style.display = '';
+}
+
+if(window.APPLE_APP_STORE_ID && !window.Capacitor?.isNativePlatform?.()){
+  const metaSmartBanner = document.createElement('meta');
+  metaSmartBanner.name = 'apple-itunes-app';
+  metaSmartBanner.content = 'app-id=' + window.APPLE_APP_STORE_ID;
+  document.head.appendChild(metaSmartBanner);
+}
+</script>
 <script>
 // Registro propio de errores/crasheos (antes Sentry -- se quitó porque nunca
 // se terminó de configurar). No usa ningún servicio externo: inserta
@@ -3835,6 +3871,7 @@ const TRADUCCIONES = {
     'radiografia.aviso_cache': 'Este es el reporte que ya se había generado este mes.',
     'config.ayuda_ia_h2': 'Freaky, tu mentor financiero',
     'config.ayuda_ia_aviso': 'Pregúntale a Freaky cómo usar la app o sobre tu situación financiera — ve tus cifras reales para darte respuestas concretas.',
+    'config.redes_h2': 'Síguenos',
     'config.ayuda_ia_boton': 'Hablar con Freaky',
     'freaky.desactivar_vuelo_label': 'Volver a Freaky un botón quieto (sin volar por la pantalla)',
     'freaky.aviso_ver': 'Ver',
@@ -4752,6 +4789,7 @@ const TRADUCCIONES = {
     'radiografia.aviso_cache': 'This is the report already generated this month.',
     'config.ayuda_ia_h2': 'Freaky, your financial mentor',
     'config.ayuda_ia_aviso': "Ask Freaky how to use the app or about your financial situation — it sees your real numbers to give you concrete answers.",
+    'config.redes_h2': 'Follow us',
     'config.ayuda_ia_boton': 'Talk to Freaky',
     'freaky.desactivar_vuelo_label': "Turn Freaky back into a still button (no flying around)",
     'freaky.aviso_ver': 'View',
@@ -6776,12 +6814,29 @@ async function generarRadiografiaAutomatica(regenerar){
     const { report, cached } = resultado.data;
     if(!report){ await mostrarAlerta(t('config.radiografia_error')); return; }
     renderizarRadiografiaAutomatica(report, !!cached);
+    if(!cached && !regenerar) solicitarResenaSiAplica();
   }catch(e){
     console.error('Error generando la radiografía automática', e);
     await mostrarAlerta(t('config.radiografia_error'));
   }finally{
     botones.forEach((b, i) => { b.disabled = false; b.textContent = textosOriginales[i]; });
   }
+}
+
+// Pide calificar la app en el momento nativo de Apple/Google (nunca
+// preguntando antes "¿te gustó?" -- Apple prohíbe condicionar la solicitud
+// al estado de ánimo detectado del usuario). Se dispara una sola vez en la
+// vida de la instalación, justo después de que alguien recibe su primera
+// radiografía financiera real (un momento objetivo de valor entregado, no
+// una encuesta de satisfacción). El sistema operativo decide si en verdad
+// muestra el diálogo -- lo limita a unas pocas veces al año sin avisarnos.
+async function solicitarResenaSiAplica(){
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  if(localStorage.getItem('resena_solicitada_v1') === '1') return;
+  localStorage.setItem('resena_solicitada_v1', '1');
+  try{
+    await window.Capacitor.Plugins.InAppReview.requestReview();
+  }catch(e){}
 }
 
 async function confirmarBorrarDatos(){
@@ -14535,6 +14590,7 @@ function inicializarChequeoVersion(){
 
 inicializarTema();
 inicializarIdioma();
+inicializarRedesSociales();
 init();
 inicializarGestosSwipe();
 inicializarChequeoVersion();
