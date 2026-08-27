@@ -963,6 +963,12 @@
   .fila-balance.subtotal{font-weight:600;color:var(--texto);border-bottom:1px solid var(--texto-tenue-2);border-top:1px solid var(--borde);margin-top:2px;}
   .fila-balance .valor.positivo{color:var(--texto);font-weight:500;font-family:var(--mono);}
   .fila-balance .valor.negativo{color:var(--neg);font-weight:500;font-family:var(--mono);}
+  .fila-balance-etiqueta{
+    background:none;border:none;padding:0;margin:0;font:inherit;color:inherit;
+    cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+  }
+  .fila-balance-etiqueta:hover, .fila-balance-etiqueta:focus-visible{color:var(--texto);text-decoration:underline;}
+  .fila-balance-etiqueta .flecha-fila{opacity:.5;font-size:11px;}
   .aviso{
     background:none;border:none;border-left:2px solid var(--texto-tenue-2);color:var(--texto-tenue);
     border-radius:0;padding:4px 0 4px 14px;font-family:var(--sans);font-size:12px;margin-bottom:18px;line-height:1.6;
@@ -13251,15 +13257,15 @@ async function abrirBalance(){
     <div class="grid-2col">
       <div>
         <h2>${t('balance.activos')}</h2>
-        <div class="fila-balance"><span>${t('balance.cuentas_inversion')}</span><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
-        <div class="fila-balance"><span>${t('balance.bienes')}</span><span class="valor positivo">${formatoMonto(b.totalBienes, 'MXN')}</span></div>
-        <div class="fila-balance"><span>${t('balance.acciones')}</span><span class="valor positivo">${formatoMonto(b.totalAcciones, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-inversion')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-bienes')">${t('balance.bienes')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalBienes, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-acciones')">${t('balance.acciones')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalAcciones, 'MXN')}</span></div>
         ${b.accionesSinPrecio.length > 0 ? `<div class="aviso estado-atencion">${tf('balance.acciones_sin_precio', b.accionesSinPrecio.join(', '))}</div>` : ''}
         <div class="fila-balance subtotal"><span>${t('balance.total_activos')}</span><span class="valor positivo">${formatoMonto(b.totalActivos, 'MXN')}</span></div>
       </div>
       <div>
         <h2>${t('balance.pasivos')}</h2>
-        <div class="fila-balance"><span>${t('balance.deudas')}</span><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-deudas')">${t('balance.deudas')}<span class="flecha-fila">›</span></button><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
         <div class="fila-balance subtotal"><span>${t('balance.total_pasivos')}</span><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
       </div>
     </div>
