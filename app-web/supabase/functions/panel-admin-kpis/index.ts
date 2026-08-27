@@ -134,6 +134,29 @@ Deno.serve(async (req) => {
       .eq("estado", "pendiente");
     if (errorSolicitudes) console.error("panel-admin-kpis: error contando solicitudes pendientes:", errorSolicitudes);
 
+    // Errores/crasheos de la app (registro propio, ver tabla errores_app) --
+    // se agrupan por mensaje para ver qué falla más, no una lista plana.
+    const { count: errores24h, error: errorErrores24h } = await admin
+      .from("errores_app")
+      .select("id", { count: "exact", head: true })
+      .gte("creado_en", hace24h);
+    if (errorErrores24h) console.error("panel-admin-kpis: error contando errores 24h:", errorErrores24h);
+
+    const { data: errores7dDetalle, error: errorErrores7d } = await admin
+      .from("errores_app")
+      .select("mensaje")
+      .gte("creado_en", hace7d);
+    if (errorErrores7d) console.error("panel-admin-kpis: error leyendo errores 7d:", errorErrores7d);
+
+    const conteoErrores: Record<string, number> = {};
+    for (const e of errores7dDetalle || []) {
+      conteoErrores[e.mensaje] = (conteoErrores[e.mensaje] || 0) + 1;
+    }
+    const erroresTop7d = Object.entries(conteoErrores)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([mensaje, veces]) => ({ mensaje, veces }));
+
     // Estadísticas de audiencia -- SIEMPRE agregadas/anónimas, nunca por
     // usuario individual. Sirven para decisiones de producto y, si algún día
     // se vende espacio publicitario dentro de la app, como "media kit"
@@ -261,6 +284,8 @@ Deno.serve(async (req) => {
       },
       salud: {
         solicitudesPendientes: solicitudesPendientes ?? null,
+        errores24h: errores24h ?? null,
+        erroresTop7d,
       },
       audiencia: {
         gastoPorCategoria,

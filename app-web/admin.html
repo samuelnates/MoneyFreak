@@ -146,12 +146,23 @@
     <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo (todavía no hay analítica de sesiones, así que es la señal de uso real más directa que existe hoy).</div>
 
     <h2>Salud</h2>
-    <div class="grid-kpis" style="margin-bottom:32px;">
+    <div class="grid-kpis" style="margin-bottom:8px;">
       <div class="tarjeta">
         <div class="tarjeta-etiqueta">Aprobaciones pendientes</div>
         <div class="tarjeta-valor" id="kpi-pendientes">—</div>
         <div class="tarjeta-sub">Fotos de tickets sin revisar (Freaky)</div>
       </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Errores últimas 24h</div>
+        <div class="tarjeta-valor" id="kpi-errores-24h">—</div>
+      </div>
+    </div>
+    <div class="caja" style="margin-bottom:32px;">
+      <div class="tarjeta-etiqueta">Errores más frecuentes (últimos 7 días)</div>
+      <table style="margin-top:8px;">
+        <thead><tr><th>Mensaje</th><th>Veces</th></tr></thead>
+        <tbody id="tabla-errores"></tbody>
+      </table>
     </div>
 
     <h2>Audiencia (agregado, anónimo)</h2>
@@ -258,6 +269,12 @@ async function entrar(){
     return;
   }
   await cargarPanel();
+}
+
+function escapeHtmlAdmin(texto){
+  const div = document.createElement('div');
+  div.textContent = texto;
+  return div.innerHTML;
 }
 
 function formatoNumero(n){
@@ -369,6 +386,15 @@ async function cargarPanel(){
   document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
 
   document.getElementById('kpi-pendientes').textContent = datos.salud.solicitudesPendientes === null ? '—' : formatoNumero(datos.salud.solicitudesPendientes);
+  document.getElementById('kpi-errores-24h').textContent = datos.salud.errores24h === null ? '—' : formatoNumero(datos.salud.errores24h);
+  const tablaErrores = document.getElementById('tabla-errores');
+  if(!datos.salud.erroresTop7d.length){
+    tablaErrores.innerHTML = '<tr><td colspan="2" class="tarjeta-sub">Sin errores registrados en los últimos 7 días.</td></tr>';
+  }else{
+    tablaErrores.innerHTML = datos.salud.erroresTop7d.map(e =>
+      `<tr><td>${escapeHtmlAdmin(e.mensaje)}</td><td>${formatoNumero(e.veces)}</td></tr>`
+    ).join('');
+  }
 
   document.getElementById('kpi-ingreso-promedio').textContent = datos.audiencia.ingresoPromedioMensual === null ? '—' : formatoMoneda(datos.audiencia.ingresoPromedioMensual);
   document.getElementById('kpi-ingreso-sub').textContent = `Basado en ${formatoNumero(datos.audiencia.usuariosConIngresoDeclarado)} usuarios que lo declararon`;

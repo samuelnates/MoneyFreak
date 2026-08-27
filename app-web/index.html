@@ -2975,15 +2975,38 @@
 </div>
 
 <script src="config.js"></script>
-<script src="https://browser.sentry-cdn.com/7.120.0/bundle.min.js" crossorigin="anonymous"></script>
 <script>
-if(window.SENTRY_DSN && window.Sentry){
-  Sentry.init({
-    dsn: window.SENTRY_DSN,
-    environment: ['abuelo-inversiones-pro.pages.dev', 'moneyfreak.app', 'www.moneyfreak.app'].includes(location.hostname) ? 'production' : 'preview',
-    tracesSampleRate: 0
-  });
+// Registro propio de errores/crasheos (antes Sentry -- se quitó porque nunca
+// se terminó de configurar). No usa ningún servicio externo: inserta
+// directo en Supabase (tabla errores_app, solo INSERT permitido desde el
+// cliente, ver migración) y se lee agregado desde el panel de admin.
+let erroresRegistradosEnEstaSesion = 0;
+const MAX_ERRORES_POR_SESION = 20;
+const mensajesYaRegistrados = new Set();
+
+function registrarErrorApp(mensaje, stackObjeto){
+  if(!sb || erroresRegistradosEnEstaSesion >= MAX_ERRORES_POR_SESION) return;
+  const mensajeTexto = String(mensaje || 'error sin mensaje').slice(0, 500);
+  if(mensajesYaRegistrados.has(mensajeTexto)) return;
+  mensajesYaRegistrados.add(mensajeTexto);
+  erroresRegistradosEnEstaSesion++;
+  try{
+    sb.from('errores_app').insert({
+      mensaje: mensajeTexto,
+      stack: stackObjeto && stackObjeto.stack ? String(stackObjeto.stack).slice(0, 2000) : null,
+      url: location.pathname,
+      user_agent: navigator.userAgent.slice(0, 300)
+    }).then(() => {}, () => {});
+  }catch(e){}
 }
+
+window.addEventListener('error', (ev) => {
+  registrarErrorApp(ev.message, ev.error);
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  const razon = ev.reason;
+  registrarErrorApp('promesa sin atrapar: ' + (razon && razon.message ? razon.message : razon), razon);
+});
 </script>
 <script>
 let sb = null;
