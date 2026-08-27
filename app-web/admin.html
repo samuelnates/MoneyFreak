@@ -120,6 +120,14 @@
   .er-subtotal td{font-weight:600;border-top:1px solid var(--borde-fuerte);}
   .er-total td{font-weight:700;font-size:14.5px;border-top:2px solid var(--texto);border-bottom:none;padding-top:10px;}
   .er-negativo{color:var(--color-riesgo);}
+
+  .retencion-fila-titulo{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px;}
+  .retencion-barra-fondo{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--borde);}
+  .retencion-segmento-activo{background:var(--acento);}
+  .retencion-segmento-perdido{background:var(--color-riesgo);opacity:.35;}
+  .retencion-leyenda{display:flex;gap:16px;margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--texto-tenue);}
+  .retencion-leyenda span{display:inline-flex;align-items:center;gap:5px;}
+  .retencion-punto{width:8px;height:8px;border-radius:2px;display:inline-block;}
 </style>
 </head>
 <body>
@@ -202,19 +210,12 @@
     </div>
     <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo (todavía no hay analítica de sesiones, así que es la señal de uso real más directa que existe hoy).</div>
 
-    <div class="grid-kpis" style="margin-bottom:8px;">
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Retención 7 días</div>
-        <div class="tarjeta-valor" id="kpi-retencion-7d">—</div>
-        <div class="tarjeta-sub" id="kpi-retencion-7d-sub"></div>
-      </div>
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Retención 30 días</div>
-        <div class="tarjeta-valor" id="kpi-retencion-30d">—</div>
-        <div class="tarjeta-sub" id="kpi-retencion-30d-sub"></div>
-      </div>
+    <div class="caja" style="margin-bottom:24px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:12px;">Retención — de los que ya llevan tiempo registrados, ¿siguen aquí o se fueron?</div>
+      <div id="retencion-visual-7d" style="margin-bottom:16px;"></div>
+      <div id="retencion-visual-30d"></div>
+      <div class="tarjeta-sub" style="margin-top:12px;">Solo cuenta a quienes ya llevan más de 7/30 días registrados (a alguien de ayer no le ha dado tiempo de "irse"). Distinto de "activos" de arriba: ahí no importa cuándo se registraron, aquí sí — esto mide si la gente se queda con el tiempo, no solo si hay actividad hoy.</div>
     </div>
-    <div class="tarjeta-sub" style="margin:-4px 0 24px;">De los usuarios con antigüedad suficiente (registrados hace más de 7/30 días), qué % sigue activo. Distinto de "activos": ahí no importa cuándo se registraron, aquí sí.</div>
 
     <div class="caja" style="margin-bottom:8px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:14px;">Embudo de activación</div>
@@ -622,6 +623,33 @@ function pintarEmbudoVisual(e){
   }).join('');
 }
 
+// Retención como una barra de "se quedaron vs. ya no volvieron" -- se
+// intentó primero solo con el % en una tarjeta y el usuario lo preguntó dos
+// veces sin entenderlo. Mostrar los dos grupos uno junto al otro (como el
+// embudo) es lo que sí aterriza: "de esta gente, esta parte sigue, esta
+// otra se fue".
+function pintarRetencionVisual(contenedorId, etiqueta, retenidos, elegibles){
+  const cont = document.getElementById(contenedorId);
+  if(!elegibles){
+    cont.innerHTML = `<div class="retencion-fila-titulo">${etiqueta}</div><div class="tarjeta-sub">Todavía no hay usuarios con la antigüedad suficiente para medir esto.</div>`;
+    return;
+  }
+  const perdidos = elegibles - retenidos;
+  const pctRetenidos = Math.round((retenidos / elegibles) * 100);
+  const anchoRetenidos = Math.max(6, pctRetenidos);
+  cont.innerHTML = `
+    <div class="retencion-fila-titulo"><span>${etiqueta}</span><span>${pctRetenidos}% sigue aquí</span></div>
+    <div class="retencion-barra-fondo">
+      <div class="retencion-segmento-activo" style="width:${anchoRetenidos}%;"></div>
+      <div class="retencion-segmento-perdido" style="width:${100 - anchoRetenidos}%;"></div>
+    </div>
+    <div class="retencion-leyenda">
+      <span><span class="retencion-punto" style="background:var(--acento);"></span>Siguen activos: ${formatoNumero(retenidos)}</span>
+      <span><span class="retencion-punto" style="background:var(--color-riesgo);opacity:.6;"></span>Ya no volvieron: ${formatoNumero(perdidos)}</span>
+      <span>de ${formatoNumero(elegibles)} con antigüedad suficiente</span>
+    </div>`;
+}
+
 function pintarDistribucion(contenedorId, conteo, etiquetas){
   const entradas = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
   const cont = document.getElementById(contenedorId);
@@ -962,10 +990,8 @@ async function cargarPanel(){
   document.getElementById('kpi-activos-7d').textContent = formatoNumero(datos.uso.activos7d);
   document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
 
-  document.getElementById('kpi-retencion-7d').textContent = datos.uso.retencionD7 === null ? '—' : `${Math.round(datos.uso.retencionD7 * 100)}%`;
-  document.getElementById('kpi-retencion-7d-sub').textContent = `De ${formatoNumero(datos.uso.elegiblesRetencionD7)} con más de 7 días registrados`;
-  document.getElementById('kpi-retencion-30d').textContent = datos.uso.retencionD30 === null ? '—' : `${Math.round(datos.uso.retencionD30 * 100)}%`;
-  document.getElementById('kpi-retencion-30d-sub').textContent = `De ${formatoNumero(datos.uso.elegiblesRetencionD30)} con más de 30 días registrados`;
+  pintarRetencionVisual('retencion-visual-7d', 'Retención 7 días', datos.uso.retenidosD7, datos.uso.elegiblesRetencionD7);
+  pintarRetencionVisual('retencion-visual-30d', 'Retención 30 días', datos.uso.retenidosD30, datos.uso.elegiblesRetencionD30);
 
   pintarEmbudoVisual(datos.embudoActivacion);
 

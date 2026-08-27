@@ -275,12 +275,10 @@ Deno.serve(async (req) => {
     // vez y se va -- distinto de "activos" (que no distingue antigüedad).
     const elegiblesD7 = usuarios.filter((u) => u.created_at <= hace7d);
     const elegiblesD30 = usuarios.filter((u) => u.created_at <= hace30d);
-    const retencionD7 = elegiblesD7.length
-      ? elegiblesD7.filter((u) => activos7d.has(u.id)).length / elegiblesD7.length
-      : null;
-    const retencionD30 = elegiblesD30.length
-      ? elegiblesD30.filter((u) => activos30d.has(u.id)).length / elegiblesD30.length
-      : null;
+    const retenidosD7 = elegiblesD7.filter((u) => activos7d.has(u.id)).length;
+    const retenidosD30 = elegiblesD30.filter((u) => activos30d.has(u.id)).length;
+    const retencionD7 = elegiblesD7.length ? retenidosD7 / elegiblesD7.length : null;
+    const retencionD30 = elegiblesD30.length ? retenidosD30 / elegiblesD30.length : null;
 
     // Riesgo de abandono: se activaron (llegaron a crear una cuenta) pero
     // no registran un gasto hace más de 10 días, o nunca -- lista accionable
@@ -413,6 +411,8 @@ Deno.serve(async (req) => {
         retencionD30,
         elegiblesRetencionD7: elegiblesD7.length,
         elegiblesRetencionD30: elegiblesD30.length,
+        retenidosD7,
+        retenidosD30,
       },
       riesgo: {
         usuarios: usuariosRiesgo,
