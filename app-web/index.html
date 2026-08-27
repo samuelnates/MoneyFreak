@@ -5368,7 +5368,13 @@ async function init(){
       if(codigo){
         window.Capacitor.Plugins.Browser.close().catch(() => {});
         const { error } = await sb.auth.exchangeCodeForSession(codigo);
-        if(!error){
+        // Mismo bug que ya se corrigió del lado web (ver flujoRecuperacionActivo
+        // más abajo), pero en este camino nativo aparte: exchangeCodeForSession
+        // también deja una sesión válida cuando el link es de RECUPERACIÓN de
+        // contraseña (así funciona Supabase), y sin este chequeo se metía
+        // directo al panel en vez de pedir la contraseña nueva -- justo lo que
+        // reportó el usuario ("me inicia sesión directo y no puedo cambiarla").
+        if(!error && !flujoRecuperacionActivo){
           entrarAlPanelConOnboarding();
         }
         return;
