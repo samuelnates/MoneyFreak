@@ -57,26 +57,6 @@
     to{ transform: scale(1.09) translate(1.4%, 1.2%); }
   }
 
-  .caption{
-    position:absolute; left:50%; bottom:9%;
-    transform: translate(-50%, 24px);
-    background: var(--tinta);
-    color:#fdfbf3;
-    padding: 26px 44px;
-    border-radius: 999px;
-    font-size: 40px;
-    font-weight: 600;
-    white-space: nowrap;
-    opacity:0;
-    letter-spacing:.2px;
-  }
-  .slide.on .caption{
-    animation: subir .5s .18s cubic-bezier(.2,.8,.2,1) forwards;
-  }
-  @keyframes subir{
-    to{ opacity:1; transform: translate(-50%, 0); }
-  }
-
   .cierre{ flex-direction:column; gap:36px; }
   .cierre img.icono{
     width:220px; height:220px; border-radius:52px;
@@ -107,27 +87,22 @@
 
     <div class="slide kenburns" data-idx="0">
       <div class="marco"><img src="01-inicio.png"></div>
-      <div class="caption">Todo tu dinero, en un lugar</div>
     </div>
 
     <div class="slide kenburns kb-alt" data-idx="1">
       <div class="marco"><img src="02-freaky.png"></div>
-      <div class="caption">Pregúntale a Freaky, tu asesor</div>
     </div>
 
     <div class="slide kenburns" data-idx="2">
       <div class="marco"><img src="03-graficas.png"></div>
-      <div class="caption">Gráficas claras de tu patrimonio</div>
     </div>
 
     <div class="slide kenburns kb-alt" data-idx="3">
       <div class="marco"><img src="04-cuentas.png"></div>
-      <div class="caption">Todas tus cuentas, ordenadas</div>
     </div>
 
     <div class="slide kenburns" data-idx="4">
       <div class="marco"><img src="05-gastos.png"></div>
-      <div class="caption">Controla tus gastos por categoría</div>
     </div>
 
     <div class="slide cierre" data-idx="5">
@@ -149,8 +124,6 @@
         // reinicia la animacion de ken burns/caption cada vez que entra
         const img = s.querySelector('img:not(.icono)');
         if(img){ img.style.animation = 'none'; void img.offsetWidth; img.style.animation = ''; }
-        const cap = s.querySelector('.caption');
-        if(cap){ cap.style.animation = 'none'; void cap.offsetWidth; cap.style.animation = ''; }
       }
     });
   }
