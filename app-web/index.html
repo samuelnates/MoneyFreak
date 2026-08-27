@@ -1573,7 +1573,7 @@
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
   <div id="onb-chat-input-area" class="onb-chat-input" style="display:none;">
-    <input type="number" id="input-onb-chat-respuesta" min="0" inputmode="decimal" placeholder="0.00" step="0.01" onkeydown="if(event.key==='Enter') avanzarOnboardingChat()">
+    <input type="text" id="input-onb-chat-respuesta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00" onkeydown="if(event.key==='Enter') avanzarOnboardingChat()">
     <button type="button" class="chat-btn-enviar" onclick="avanzarOnboardingChat()" aria-label="Siguiente" data-i18n-aria-label="onboarding_rapido.chat_siguiente">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
     </button>
@@ -1584,11 +1584,11 @@
   </div>
 
   <div style="display:none;">
-    <input type="number" id="input-onb-ingreso">
-    <input type="number" id="input-onb-liquido">
-    <input type="number" id="input-onb-deuda">
-    <input type="number" id="input-onb-gastos">
-    <input type="number" id="input-onb-ahorro">
+    <input type="text" id="input-onb-ingreso" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-onb-liquido" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-onb-deuda" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-onb-gastos" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-onb-ahorro" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
 
   <button type="button" class="btn-grande" id="btn-onb-evaluar" onclick="verEvaluacionRapida()" style="display:none;" data-i18n="onboarding_rapido.ver_evaluacion">Ver mi primera evaluación</button>
@@ -1765,7 +1765,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-transferencia" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-transferencia" min="0" inputmode="decimal" placeholder="0.00" step="0.01">
+    <input type="text" id="input-monto-transferencia" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-transferencia" data-i18n="campo.moneda">Moneda</label>
@@ -1811,7 +1811,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-transferencia-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-transferencia-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-monto-transferencia-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="select-moneda-transferencia-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2032,11 +2032,11 @@
     </div>
     <div class="campo">
       <label for="input-monto-simulador" data-i18n="simulador.monto_label">Monto del crédito que quieres pedir</label>
-      <input type="number" id="input-monto-simulador" min="0" inputmode="decimal" placeholder="Ej. 1500000" step="0.01">
+      <input type="text" id="input-monto-simulador" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 1500000">
     </div>
     <div class="campo">
       <label for="input-enganche-simulador" data-i18n="simulador.enganche_label">Enganche o pago inicial (opcional)</label>
-      <input type="number" id="input-enganche-simulador" min="0" inputmode="decimal" placeholder="Ej. 300000" step="0.01">
+      <input type="text" id="input-enganche-simulador" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 300000">
     </div>
     <div class="campo">
       <label for="input-tasa-simulador" data-i18n="simulador.tasa_label">Tasa de interés anual %</label>
@@ -2123,7 +2123,7 @@
   </div>
   <div class="campo requerido">
     <label for="input-monto-gasto" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-gasto" min="0" inputmode="decimal" placeholder="0.00" step="0.01" autofocus>
+    <input type="text" id="input-monto-gasto" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00" autofocus>
   </div>
 
   <label data-i18n="gastos.categoria_label">Categoría</label>
@@ -2193,7 +2193,7 @@
   </div>
   <div class="campo requerido">
     <label for="input-monto-gasto-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-gasto-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-monto-gasto-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="select-categoria-gasto-editar" data-i18n="gastos.categoria_label">Categoría</label>
@@ -2446,7 +2446,7 @@
     </div>
     <div class="campo">
       <label for="input-aportacion-cuenta" data-i18n="campo.aportacion_opcional">Aportación mensual comprometida (opcional)</label>
-      <input type="number" id="input-aportacion-cuenta" min="0" inputmode="decimal" placeholder="Ej. 5000" step="0.01">
+      <input type="text" id="input-aportacion-cuenta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 5000">
     </div>
     <div class="campo">
       <label for="input-diaaportacion-cuenta" data-i18n="campo.dia_descuento_opcional">Día del mes en que se descuenta (opcional)</label>
@@ -2477,7 +2477,7 @@
   <div id="editar-cuenta-referencia" class="aviso" style="display:none;"></div>
   <div class="campo requerido">
     <label for="input-saldo-cuenta" data-i18n="cuenta.saldo_hoy_label">Saldo de hoy</label>
-    <input type="number" id="input-saldo-cuenta" min="0" inputmode="decimal" placeholder="0.00" step="0.01">
+    <input type="text" id="input-saldo-cuenta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
   </div>
 
   <div class="campo">
@@ -2511,7 +2511,7 @@
     </div>
     <div class="campo">
       <label for="input-aportacion-cuenta-editar" data-i18n="campo.aportacion_opcional">Aportación mensual comprometida (opcional)</label>
-      <input type="number" id="input-aportacion-cuenta-editar" min="0" inputmode="decimal" placeholder="Ej. 5000" step="0.01">
+      <input type="text" id="input-aportacion-cuenta-editar" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 5000">
     </div>
     <div class="campo">
       <label for="input-diaaportacion-cuenta-editar" data-i18n="campo.dia_descuento_opcional">Día del mes en que se descuenta (opcional)</label>
@@ -2559,7 +2559,7 @@
   <div id="campos-precio-manual" style="display:none;">
     <div class="campo">
       <label for="input-precio-manual" data-i18n="accion.precio_label">Precio por acción</label>
-      <input type="number" id="input-precio-manual" min="0" inputmode="decimal" placeholder="Ej. 68.50" step="0.01">
+      <input type="text" id="input-precio-manual" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 68.50">
     </div>
     <div class="campo">
       <label for="select-moneda-manual" data-i18n="campo.moneda">Moneda</label>
@@ -2597,7 +2597,7 @@
   <div id="campos-precio-manual-editar" style="display:none;">
     <div class="campo">
       <label for="input-precio-manual-editar" data-i18n="accion.precio_label">Precio por acción</label>
-      <input type="number" id="input-precio-manual-editar" min="0" inputmode="decimal" step="0.01">
+      <input type="text" id="input-precio-manual-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
     </div>
     <div class="campo">
       <label for="select-moneda-manual-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2674,7 +2674,7 @@
   </div>
   <div class="campo">
     <label for="input-valor-bien" data-i18n="bien.valor_label">Valor estimado</label>
-    <input type="number" id="input-valor-bien" min="0" inputmode="decimal" placeholder="0.00" step="0.01">
+    <input type="text" id="input-valor-bien" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-bien" data-i18n="campo.moneda">Moneda</label>
@@ -2710,7 +2710,7 @@
   </div>
   <div class="campo">
     <label for="input-valor-bien-editar" data-i18n="bien.valor_label">Valor estimado</label>
-    <input type="number" id="input-valor-bien-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-valor-bien-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="select-moneda-bien-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2738,7 +2738,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-ingreso" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-ingreso" min="0" inputmode="decimal" placeholder="0.00" step="0.01">
+    <input type="text" id="input-monto-ingreso" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-ingreso" data-i18n="campo.moneda">Moneda</label>
@@ -2790,7 +2790,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-ingreso-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="number" id="input-monto-ingreso-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-monto-ingreso-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="select-moneda-ingreso-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2849,7 +2849,7 @@
   </div>
   <div class="campo">
     <label for="input-saldo-deuda" data-i18n="deuda.saldo_label">Saldo actual (lo que debes)</label>
-    <input type="number" id="input-saldo-deuda" min="0" inputmode="decimal" placeholder="0.00" step="0.01">
+    <input type="text" id="input-saldo-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-deuda" data-i18n="campo.moneda">Moneda</label>
@@ -2865,7 +2865,7 @@
   </div>
   <div class="campo">
     <label for="input-pago-mensual-deuda" data-i18n="deuda.pago_mensual_label">Pago mensual (opcional)</label>
-    <input type="number" id="input-pago-mensual-deuda" min="0" inputmode="decimal" placeholder="Ej. 2500" step="0.01">
+    <input type="text" id="input-pago-mensual-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 2500">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_cobertura">Se usa para calcular tu cobertura de liquidez y tu tasa de endeudamiento.</div>
   <div class="campo">
@@ -2874,17 +2874,17 @@
   </div>
   <div class="campo">
     <label for="input-proximopago-deuda" data-i18n="deuda.proximo_pago_label">Monto a pagar en tu próxima fecha de pago (opcional)</label>
-    <input type="number" id="input-proximopago-deuda" min="0" inputmode="decimal" placeholder="Ej. 4500" step="0.01">
+    <input type="text" id="input-proximopago-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 4500">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_proximo_pago">El día y el monto de tu próximo pago alimentan tu flujo de efectivo del mes. Si no capturas el monto, usamos tu pago mensual.</div>
   <div id="campos-tarjeta" style="display:block;">
     <div class="campo">
       <label for="input-limite-deuda" data-i18n="deuda.limite_credito_label">Límite de crédito (opcional)</label>
-      <input type="number" id="input-limite-deuda" min="0" inputmode="decimal" placeholder="Ej. 50000" step="0.01">
+      <input type="text" id="input-limite-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 50000">
     </div>
     <div class="campo">
       <label for="input-anualidad-deuda" data-i18n="deuda.anualidad_label">Anualidad / cuota anual (opcional)</label>
-      <input type="number" id="input-anualidad-deuda" min="0" inputmode="decimal" placeholder="Ej. 1200" step="0.01">
+      <input type="text" id="input-anualidad-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 1200">
     </div>
     <div class="campo">
       <label for="input-cashback-deuda" data-i18n="deuda.cashback_label">% de cashback o recompensas (opcional)</label>
@@ -2892,7 +2892,7 @@
     </div>
     <div class="campo">
       <label for="input-gasto-deuda" data-i18n="deuda.gasto_promedio_label">Gasto mensual promedio en esta tarjeta (opcional)</label>
-      <input type="number" id="input-gasto-deuda" min="0" inputmode="decimal" placeholder="Ej. 8000" step="0.01">
+      <input type="text" id="input-gasto-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 8000">
     </div>
     <div class="campo">
       <label for="input-diacorte-deuda" data-i18n="deuda.dia_corte_label">Día de corte del mes (opcional)</label>
@@ -2925,7 +2925,7 @@
   </div>
   <div class="campo">
     <label for="input-saldo-deuda-editar" data-i18n="deuda.saldo_label">Saldo actual (lo que debes)</label>
-    <input type="number" id="input-saldo-deuda-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-saldo-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="select-moneda-deuda-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2941,7 +2941,7 @@
   </div>
   <div class="campo">
     <label for="input-pago-mensual-deuda-editar" data-i18n="deuda.pago_mensual_label">Pago mensual (opcional)</label>
-    <input type="number" id="input-pago-mensual-deuda-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-pago-mensual-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="campo">
     <label for="input-diapago-deuda-editar" data-i18n="deuda.dia_limite_label">Día límite de pago del mes (opcional)</label>
@@ -2949,17 +2949,17 @@
   </div>
   <div class="campo">
     <label for="input-proximopago-deuda-editar" data-i18n="deuda.proximo_pago_label">Monto a pagar en tu próxima fecha de pago (opcional)</label>
-    <input type="number" id="input-proximopago-deuda-editar" min="0" inputmode="decimal" step="0.01">
+    <input type="text" id="input-proximopago-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_proximo_pago_editar">El día y el monto de tu próximo pago alimentan tu flujo de efectivo del mes.</div>
   <div id="campos-tarjeta-editar" style="display:none;">
     <div class="campo">
       <label for="input-limite-deuda-editar" data-i18n="deuda.limite_credito_label">Límite de crédito (opcional)</label>
-      <input type="number" id="input-limite-deuda-editar" min="0" inputmode="decimal" step="0.01">
+      <input type="text" id="input-limite-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
     </div>
     <div class="campo">
       <label for="input-anualidad-deuda-editar" data-i18n="deuda.anualidad_label">Anualidad / cuota anual (opcional)</label>
-      <input type="number" id="input-anualidad-deuda-editar" min="0" inputmode="decimal" step="0.01">
+      <input type="text" id="input-anualidad-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
     </div>
     <div class="campo">
       <label for="input-cashback-deuda-editar" data-i18n="deuda.cashback_label">% de cashback o recompensas (opcional)</label>
@@ -2967,7 +2967,7 @@
     </div>
     <div class="campo">
       <label for="input-gasto-deuda-editar" data-i18n="deuda.gasto_promedio_label">Gasto mensual promedio en esta tarjeta (opcional)</label>
-      <input type="number" id="input-gasto-deuda-editar" min="0" inputmode="decimal" step="0.01">
+      <input type="text" id="input-gasto-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
     </div>
     <div class="campo">
       <label for="input-diacorte-deuda-editar" data-i18n="deuda.dia_corte_label">Día de corte del mes (opcional)</label>
@@ -3311,6 +3311,67 @@ function manejarSalir(){
   } else {
     cerrarSesion();
   }
+}
+
+// Formato en vivo con comas de miles en los campos de montos grandes --
+// pedido real de un usuario probando la app (le costaba contar los ceros de
+// un monto en millones y le generaba ansiedad equivocarse). Los campos
+// afectados pasan de type="number" (no soporta texto con comas) a
+// type="text" inputmode="decimal", y usan estas 4 funciones para no perder
+// la posición del cursor mientras se escribe.
+function limpiarValorMonto(texto){
+  return (texto || '').replace(/,/g, '');
+}
+
+function valorNumericoMonto(el){
+  const limpio = limpiarValorMonto(el.value).trim();
+  return limpio === '' ? NaN : parseFloat(limpio);
+}
+
+function formatearNumeroMonto(valorCrudo){
+  if(valorCrudo === '' || valorCrudo === '.') return valorCrudo;
+  const negativo = valorCrudo.startsWith('-');
+  if(negativo) valorCrudo = valorCrudo.slice(1);
+  const partes = valorCrudo.split('.');
+  const entero = (partes[0] || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const decimales = partes.length > 1 ? '.' + partes[1] : '';
+  return (negativo ? '-' : '') + (entero || '0') + decimales;
+}
+
+function establecerValorMonto(el, numero){
+  if(numero === null || numero === undefined || numero === ''){ el.value = ''; return; }
+  el.value = formatearNumeroMonto(limpiarValorMonto(String(numero)));
+}
+
+function manejarInputMonto(el){
+  // El cursor se reubica contando dígitos Y el punto decimal (no solo
+  // dígitos) antes de la posición original -- las comas son puramente
+  // cosméticas y se pueden mover libremente, pero el punto SÍ es parte del
+  // valor real y tiene que contarse igual, o un punto recién escrito queda
+  // mal ubicado (el siguiente dígito se cuela antes del punto en vez de
+  // después).
+  const cursorPos = el.selectionStart ?? el.value.length;
+  const significativosAntesDelCursor = el.value.slice(0, cursorPos).replace(/[^\d.]/g, '').length;
+
+  let limpio = el.value.replace(/[^\d.]/g, '');
+  const primerPunto = limpio.indexOf('.');
+  if(primerPunto !== -1){
+    limpio = limpio.slice(0, primerPunto + 1) + limpio.slice(primerPunto + 1).replace(/\./g, '').slice(0, 2);
+  }
+
+  const formateado = formatearNumeroMonto(limpio);
+  el.value = formateado;
+
+  if(significativosAntesDelCursor === 0){
+    el.setSelectionRange(0, 0);
+    return;
+  }
+  let vistos = 0, nuevaPos = formateado.length;
+  for(let i = 0; i < formateado.length; i++){
+    if(/[\d.]/.test(formateado[i])) vistos++;
+    if(vistos === significativosAntesDelCursor){ nuevaPos = i + 1; break; }
+  }
+  el.setSelectionRange(nuevaPos, nuevaPos);
 }
 
 function formatoMonto(numero, moneda){
@@ -6102,7 +6163,7 @@ function mostrarPreguntaOnboarding(){
 
 function registrarRespuestaOnboarding(valor, textoBurbuja){
   const paso = PASOS_ONB_CHAT[onbPasoActual];
-  document.getElementById(`input-onb-${paso.campo}`).value = String(valor);
+  establecerValorMonto(document.getElementById(`input-onb-${paso.campo}`), valor);
   agregarBurbujaOnboarding('usuario', escapeHtml(textoBurbuja ?? formatoMonto(valor, 'MXN')));
   onbPasoActual++;
   if(onbPasoActual < PASOS_ONB_CHAT.length){
@@ -6118,7 +6179,7 @@ function registrarRespuestaOnboarding(valor, textoBurbuja){
 
 function avanzarOnboardingChat(){
   const input = document.getElementById('input-onb-chat-respuesta');
-  const valor = input.value === '' ? 0 : Number(input.value);
+  const valor = input.value === '' ? 0 : valorNumericoMonto(input);
   if(Number.isNaN(valor) || valor < 0) return;
   registrarRespuestaOnboarding(valor);
 }
@@ -6129,7 +6190,7 @@ function avanzarOnboardingChat(){
 // en vez de forzar a adivinar un número o abandonar aquí mismo.
 function noSePreguntaOnboarding(){
   const campo = PASOS_ONB_CHAT[onbPasoActual].campo;
-  const ingresoActual = Number(document.getElementById('input-onb-ingreso').value) || 0;
+  const ingresoActual = Number(limpiarValorMonto(document.getElementById('input-onb-ingreso').value)) || 0;
   let valor = 0;
   if(campo === 'ingreso'){
     valor = 12000; // referencia aproximada de ingreso mensual en México
@@ -6195,11 +6256,11 @@ function titularEvaluacionRapida(items){
 
 function verEvaluacionRapida(){
   if(!validarConfigInicialOnboarding()) return;
-  const ingreso = Number(document.getElementById('input-onb-ingreso').value) || 0;
-  const liquido = Number(document.getElementById('input-onb-liquido').value) || 0;
-  const deuda = Number(document.getElementById('input-onb-deuda').value) || 0;
-  const gastos = Number(document.getElementById('input-onb-gastos').value) || 0;
-  const ahorro = Number(document.getElementById('input-onb-ahorro').value) || 0;
+  const ingreso = Number(limpiarValorMonto(document.getElementById('input-onb-ingreso').value)) || 0;
+  const liquido = Number(limpiarValorMonto(document.getElementById('input-onb-liquido').value)) || 0;
+  const deuda = Number(limpiarValorMonto(document.getElementById('input-onb-deuda').value)) || 0;
+  const gastos = Number(limpiarValorMonto(document.getElementById('input-onb-gastos').value)) || 0;
+  const ahorro = Number(limpiarValorMonto(document.getElementById('input-onb-ahorro').value)) || 0;
   onbUltimosValores = { ingreso, liquido, deuda, gastos, ahorro };
 
   const items = calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro);
@@ -7797,7 +7858,7 @@ async function guardarCuenta(){
   const esLiquida = document.getElementById('check-liquida-cuenta').checked;
   const incluirPatrimonio = document.getElementById('check-incluir-cuenta').checked;
   const notas = document.getElementById('input-notas-cuenta').value.trim() || null;
-  const aportacionValor = document.getElementById('input-aportacion-cuenta').value;
+  const aportacionValor = limpiarValorMonto(document.getElementById('input-aportacion-cuenta').value);
   const aportacionMensual = aportacionValor === '' ? null : Number(aportacionValor);
   const diaAportacionValor = document.getElementById('input-diaaportacion-cuenta').value;
   const diaAportacion = diaAportacionValor === '' ? null : Number(diaAportacionValor);
@@ -7829,7 +7890,7 @@ function abrirEditarCuenta(c){
   document.getElementById('check-liquida-cuenta-editar').checked = c.es_liquida !== false;
   document.getElementById('check-incluir-cuenta-editar').checked = c.incluir_patrimonio !== false;
   document.getElementById('input-notas-cuenta-editar').value = c.notas || '';
-  document.getElementById('input-aportacion-cuenta-editar').value = (c.aportacion_mensual !== null && c.aportacion_mensual !== undefined) ? c.aportacion_mensual : '';
+  establecerValorMonto(document.getElementById('input-aportacion-cuenta-editar'), (c.aportacion_mensual !== null && c.aportacion_mensual !== undefined) ? c.aportacion_mensual : '');
   document.getElementById('input-diaaportacion-cuenta-editar').value = (c.dia_aportacion !== null && c.dia_aportacion !== undefined) ? c.dia_aportacion : '';
 
   const hoyISO = new Date().toISOString().slice(0,10);
@@ -7851,7 +7912,7 @@ function abrirEditarCuenta(c){
 }
 
 async function guardarCuentaCompleta(){
-  const valor = document.getElementById('input-saldo-cuenta').value;
+  const valor = limpiarValorMonto(document.getElementById('input-saldo-cuenta').value);
   if(valor === '' || isNaN(valor)) return;
   const hoyISO = new Date().toISOString().slice(0,10);
 
@@ -7862,7 +7923,7 @@ async function guardarCuentaCompleta(){
   const esLiquida = document.getElementById('check-liquida-cuenta-editar').checked;
   const incluirPatrimonio = document.getElementById('check-incluir-cuenta-editar').checked;
   const notas = document.getElementById('input-notas-cuenta-editar').value.trim() || null;
-  const aportacionValor = document.getElementById('input-aportacion-cuenta-editar').value;
+  const aportacionValor = limpiarValorMonto(document.getElementById('input-aportacion-cuenta-editar').value);
   const aportacionMensual = aportacionValor === '' ? null : Number(aportacionValor);
   const diaAportacionValor = document.getElementById('input-diaaportacion-cuenta-editar').value;
   const diaAportacion = diaAportacionValor === '' ? null : Number(diaAportacionValor);
@@ -8305,7 +8366,7 @@ async function guardarAccion(){
   if(!simbolo || cantidad === '') return;
 
   const esManual = document.getElementById('check-precio-manual').checked;
-  const precioManualValor = document.getElementById('input-precio-manual').value;
+  const precioManualValor = limpiarValorMonto(document.getElementById('input-precio-manual').value);
   if(esManual && precioManualValor === '') return;
   const precioManual = esManual ? Number(precioManualValor) : null;
   const monedaManual = esManual ? document.getElementById('select-moneda-manual').value : null;
@@ -8342,7 +8403,7 @@ function abrirEditarAccion(a){
   const esManual = a.precio_manual != null;
   document.getElementById('check-precio-manual-editar').checked = esManual;
   document.getElementById('campos-precio-manual-editar').style.display = esManual ? 'block' : 'none';
-  document.getElementById('input-precio-manual-editar').value = esManual ? a.precio_manual : '';
+  establecerValorMonto(document.getElementById('input-precio-manual-editar'), esManual ? a.precio_manual : '');
   document.getElementById('select-moneda-manual-editar').value = a.moneda_manual || 'MXN';
   document.getElementById('precio-manual-fecha-editar').textContent = esManual
     ? tf('accion.ultima_actualizacion', a.precio_manual_fecha || t('accion.sin_fecha'))
@@ -8356,7 +8417,7 @@ async function actualizarAccion(){
   if(!simbolo || cantidad === '') return;
 
   const esManual = document.getElementById('check-precio-manual-editar').checked;
-  const precioManualValor = document.getElementById('input-precio-manual-editar').value;
+  const precioManualValor = limpiarValorMonto(document.getElementById('input-precio-manual-editar').value);
   if(esManual && precioManualValor === '') return;
   const precioManual = esManual ? Number(precioManualValor) : null;
   const monedaManual = esManual ? document.getElementById('select-moneda-manual-editar').value : null;
@@ -8504,7 +8565,7 @@ async function cargarDeudas(){
 async function guardarBien(){
   const nombre = document.getElementById('input-nombre-bien').value.trim();
   const tipo = document.getElementById('select-tipo-bien').value;
-  const valor = document.getElementById('input-valor-bien').value;
+  const valor = limpiarValorMonto(document.getElementById('input-valor-bien').value);
   const moneda = document.getElementById('select-moneda-bien').value;
   if(!nombre || valor === '') return;
 
@@ -8523,7 +8584,7 @@ function abrirEditarBien(b){
   bienActual = b;
   document.getElementById('input-nombre-bien-editar').value = b.nombre;
   document.getElementById('select-tipo-bien-editar').value = b.tipo;
-  document.getElementById('input-valor-bien-editar').value = b.valor;
+  establecerValorMonto(document.getElementById('input-valor-bien-editar'), b.valor);
   document.getElementById('select-moneda-bien-editar').value = b.moneda || 'MXN';
   mostrar('vista-editar-bien');
 }
@@ -8531,7 +8592,7 @@ function abrirEditarBien(b){
 async function actualizarBien(){
   const nombre = document.getElementById('input-nombre-bien-editar').value.trim();
   const tipo = document.getElementById('select-tipo-bien-editar').value;
-  const valor = document.getElementById('input-valor-bien-editar').value;
+  const valor = limpiarValorMonto(document.getElementById('input-valor-bien-editar').value);
   const moneda = document.getElementById('select-moneda-bien-editar').value;
   if(!nombre || valor === '') return;
 
@@ -8569,7 +8630,7 @@ function toggleCamposPeriodicidadIngreso(sufijo){
 
 async function guardarIngreso(){
   const nombre = document.getElementById('input-nombre-ingreso').value.trim();
-  const monto = document.getElementById('input-monto-ingreso').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-ingreso').value);
   const moneda = document.getElementById('select-moneda-ingreso').value;
   const diaValor = document.getElementById('input-dia-ingreso').value;
   const dia = diaValor === '' ? null : Number(diaValor);
@@ -8593,7 +8654,7 @@ async function guardarIngreso(){
 function abrirEditarIngreso(ing){
   ingresoActual = ing;
   document.getElementById('input-nombre-ingreso-editar').value = ing.nombre;
-  document.getElementById('input-monto-ingreso-editar').value = ing.monto;
+  establecerValorMonto(document.getElementById('input-monto-ingreso-editar'), ing.monto);
   document.getElementById('select-moneda-ingreso-editar').value = ing.moneda || 'MXN';
   document.getElementById('input-dia-ingreso-editar').value = ing.dia_del_mes != null ? ing.dia_del_mes : '';
   document.getElementById('select-periodicidad-ingreso-editar').value = ing.periodicidad || 'mensual';
@@ -8604,7 +8665,7 @@ function abrirEditarIngreso(ing){
 
 async function actualizarIngreso(){
   const nombre = document.getElementById('input-nombre-ingreso-editar').value.trim();
-  const monto = document.getElementById('input-monto-ingreso-editar').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-ingreso-editar').value);
   const moneda = document.getElementById('select-moneda-ingreso-editar').value;
   const diaValor = document.getElementById('input-dia-ingreso-editar').value;
   const dia = diaValor === '' ? null : Number(diaValor);
@@ -8893,7 +8954,7 @@ async function abrirAgregarGasto(){
 async function abrirAgregarGastoDesdeSolicitud(solicitud){
   await abrirAgregarGasto();
   solicitudPendienteActualId = solicitud.id;
-  if(solicitud.monto_sugerido != null) document.getElementById('input-monto-gasto').value = solicitud.monto_sugerido;
+  if(solicitud.monto_sugerido != null) establecerValorMonto(document.getElementById('input-monto-gasto'), solicitud.monto_sugerido);
   if(solicitud.fecha_sugerida) document.getElementById('input-fecha-gasto').value = solicitud.fecha_sugerida;
   if(solicitud.nota_sugerida) document.getElementById('input-nota-gasto').value = solicitud.nota_sugerida;
   if(solicitud.categoria_sugerida && CATALOGO_GASTOS[solicitud.categoria_sugerida]){
@@ -11024,7 +11085,7 @@ async function guardarGasto(){
   const subcategoria = subSelectValor === '__otro__'
     ? (document.getElementById('input-concepto-personalizado-gasto').value.trim() || null)
     : subSelectValor;
-  const monto = document.getElementById('input-monto-gasto').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-gasto').value);
   const moneda = document.getElementById('select-moneda-gasto').value;
   const nota = document.getElementById('input-nota-gasto').value.trim() || null;
   const { cuenta_pago_id, deuda_pago_id } = leerMetodoPagoSeleccionado(document.getElementById('select-pago-gasto'));
@@ -11063,7 +11124,7 @@ async function abrirEditarGasto(g){
   document.getElementById('input-concepto-personalizado-gasto-editar').value = esCatalogo ? '' : (g.subcategoria || '');
   toggleConceptoPersonalizado('-editar');
   document.getElementById('input-fecha-gasto-editar').value = g.fecha;
-  document.getElementById('input-monto-gasto-editar').value = g.monto;
+  establecerValorMonto(document.getElementById('input-monto-gasto-editar'), g.monto);
   document.getElementById('select-moneda-gasto-editar').value = g.moneda || 'MXN';
   document.getElementById('input-nota-gasto-editar').value = g.nota || '';
   const selectPagoEditar = document.getElementById('select-pago-gasto-editar');
@@ -11115,7 +11176,7 @@ async function actualizarGasto(){
   const subcategoria = subSelectValor === '__otro__'
     ? (document.getElementById('input-concepto-personalizado-gasto-editar').value.trim() || null)
     : subSelectValor;
-  const monto = document.getElementById('input-monto-gasto-editar').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-gasto-editar').value);
   const moneda = document.getElementById('select-moneda-gasto-editar').value;
   const nota = document.getElementById('input-nota-gasto-editar').value.trim() || null;
   const { cuenta_pago_id, deuda_pago_id } = leerMetodoPagoSeleccionado(document.getElementById('select-pago-gasto-editar'));
@@ -11285,7 +11346,7 @@ async function guardarTransferencia(){
   const cuenta_origen_id = document.getElementById('select-origen-transferencia').value;
   const cuenta_destino_id = tipo === 'transferencia' ? document.getElementById('select-cuenta-destino-transferencia').value : null;
   const deuda_destino_id = tipo === 'pago_deuda' ? document.getElementById('select-deuda-destino-transferencia').value : null;
-  const monto = document.getElementById('input-monto-transferencia').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-transferencia').value);
   const moneda = document.getElementById('select-moneda-transferencia').value;
   const fecha = document.getElementById('input-fecha-transferencia').value;
   const nota = document.getElementById('input-nota-transferencia').value.trim() || null;
@@ -11323,7 +11384,7 @@ async function abrirEditarTransferencia(mov){
   } else {
     document.getElementById('select-cuenta-destino-transferencia-editar').value = mov.cuenta_destino_id;
   }
-  document.getElementById('input-monto-transferencia-editar').value = mov.monto;
+  establecerValorMonto(document.getElementById('input-monto-transferencia-editar'), mov.monto);
   document.getElementById('select-moneda-transferencia-editar').value = mov.moneda || 'MXN';
   document.getElementById('input-fecha-transferencia-editar').value = mov.fecha;
   document.getElementById('input-nota-transferencia-editar').value = mov.nota || '';
@@ -11335,7 +11396,7 @@ async function actualizarTransferencia(){
   const cuenta_origen_id = document.getElementById('select-origen-transferencia-editar').value;
   const cuenta_destino_id = tipo === 'transferencia' ? document.getElementById('select-cuenta-destino-transferencia-editar').value : null;
   const deuda_destino_id = tipo === 'pago_deuda' ? document.getElementById('select-deuda-destino-transferencia-editar').value : null;
-  const monto = document.getElementById('input-monto-transferencia-editar').value;
+  const monto = limpiarValorMonto(document.getElementById('input-monto-transferencia-editar').value);
   const moneda = document.getElementById('select-moneda-transferencia-editar').value;
   const fecha = document.getElementById('input-fecha-transferencia-editar').value;
   const nota = document.getElementById('input-nota-transferencia-editar').value.trim() || null;
@@ -11949,7 +12010,7 @@ async function cargarPresupuestoCampos(){
       return `
         <div class="presupuesto-campo-fila">
           <label for="input-presupuesto-${id}">${nombreGasto(sub)}</label>
-          <input type="number" id="input-presupuesto-${id}" inputmode="decimal" step="0.01" value="${p.monto != null ? p.monto : ''}" placeholder="0.00" oninput="actualizarSubtotalPresupuestoCategoria('${idCat}')">
+          <input type="text" id="input-presupuesto-${id}" inputmode="decimal" value="${p.monto != null ? formatearNumeroMonto(String(p.monto)) : ''}" placeholder="0.00" oninput="manejarInputMonto(this);actualizarSubtotalPresupuestoCategoria('${idCat}')">
           <select id="select-periodicidad-${id}" onchange="actualizarSubtotalPresupuestoCategoria('${idCat}')">
             <option value="mensual" ${p.periodicidad === 'mensual' || !p.periodicidad ? 'selected' : ''}>${t('ingresos.mensual')}</option>
             <option value="semestral" ${p.periodicidad === 'semestral' ? 'selected' : ''}>${t('ingresos.semestral')}</option>
@@ -11982,7 +12043,7 @@ function actualizarSubtotalPresupuestoCategoria(idCat){
   let totalMensual = 0;
   subs.forEach(sub => {
     const id = idCampoPresupuesto(cat, sub);
-    const valor = document.getElementById(`input-presupuesto-${id}`).value;
+    const valor = limpiarValorMonto(document.getElementById(`input-presupuesto-${id}`).value);
     const periodicidad = document.getElementById(`select-periodicidad-${id}`).value;
     if(valor === '') return;
     totalMensual += Number(valor) / (MESES_POR_PERIODICIDAD[periodicidad] || 1);
@@ -11996,7 +12057,7 @@ async function guardarPresupuesto(){
   Object.entries(CATALOGO_GASTOS).forEach(([cat, subs]) => {
     subs.forEach(sub => {
       const id = idCampoPresupuesto(cat, sub);
-      const valor = document.getElementById(`input-presupuesto-${id}`).value;
+      const valor = limpiarValorMonto(document.getElementById(`input-presupuesto-${id}`).value);
       const periodicidad = document.getElementById(`select-periodicidad-${id}`).value;
       filas.push({ categoria: cat, subcategoria: sub, monto: valor === '' ? 0 : Number(valor), periodicidad, moneda: 'MXN', updated_at: new Date().toISOString() });
     });
@@ -12013,11 +12074,11 @@ async function guardarPresupuesto(){
 async function guardarDeuda(){
   const nombre = document.getElementById('input-nombre-deuda').value.trim();
   const tipo = document.getElementById('select-tipo-deuda').value;
-  const saldo = document.getElementById('input-saldo-deuda').value;
+  const saldo = limpiarValorMonto(document.getElementById('input-saldo-deuda').value);
   const moneda = document.getElementById('select-moneda-deuda').value;
   const tasaValor = document.getElementById('input-tasa-deuda').value;
   const tasa = tasaValor === '' ? null : Number(tasaValor);
-  const pagoValor = document.getElementById('input-pago-mensual-deuda').value;
+  const pagoValor = limpiarValorMonto(document.getElementById('input-pago-mensual-deuda').value);
   const pagoMensual = pagoValor === '' ? null : Number(pagoValor);
   if(!nombre || saldo === '') return;
 
@@ -12040,7 +12101,7 @@ function toggleCamposTarjeta(sufijo){
 
 function leerCamposTarjeta(sufijo, tipo){
   const leer = id => {
-    const v = document.getElementById(id + sufijo).value;
+    const v = limpiarValorMonto(document.getElementById(id + sufijo).value);
     return v === '' ? null : Number(v);
   };
   const comun = {
@@ -12135,17 +12196,17 @@ function abrirEditarDeuda(d){
   deudaActual = d;
   document.getElementById('input-nombre-deuda-editar').value = d.nombre;
   document.getElementById('select-tipo-deuda-editar').value = d.tipo;
-  document.getElementById('input-saldo-deuda-editar').value = d.saldo;
+  establecerValorMonto(document.getElementById('input-saldo-deuda-editar'), d.saldo);
   document.getElementById('select-moneda-deuda-editar').value = d.moneda || 'MXN';
   document.getElementById('input-tasa-deuda-editar').value = d.tasa_interes !== null ? d.tasa_interes : '';
-  document.getElementById('input-pago-mensual-deuda-editar').value = (d.pago_mensual !== null && d.pago_mensual !== undefined) ? d.pago_mensual : '';
-  document.getElementById('input-limite-deuda-editar').value = d.limite_credito != null ? d.limite_credito : '';
-  document.getElementById('input-anualidad-deuda-editar').value = d.anualidad != null ? d.anualidad : '';
+  establecerValorMonto(document.getElementById('input-pago-mensual-deuda-editar'), (d.pago_mensual !== null && d.pago_mensual !== undefined) ? d.pago_mensual : '');
+  establecerValorMonto(document.getElementById('input-limite-deuda-editar'), d.limite_credito != null ? d.limite_credito : '');
+  establecerValorMonto(document.getElementById('input-anualidad-deuda-editar'), d.anualidad != null ? d.anualidad : '');
   document.getElementById('input-cashback-deuda-editar').value = d.cashback_pct != null ? d.cashback_pct : '';
-  document.getElementById('input-gasto-deuda-editar').value = d.gasto_mensual_promedio != null ? d.gasto_mensual_promedio : '';
+  establecerValorMonto(document.getElementById('input-gasto-deuda-editar'), d.gasto_mensual_promedio != null ? d.gasto_mensual_promedio : '');
   document.getElementById('input-diacorte-deuda-editar').value = d.dia_corte != null ? d.dia_corte : '';
   document.getElementById('input-diapago-deuda-editar').value = d.dia_limite_pago != null ? d.dia_limite_pago : '';
-  document.getElementById('input-proximopago-deuda-editar').value = d.monto_proximo_pago != null ? d.monto_proximo_pago : '';
+  establecerValorMonto(document.getElementById('input-proximopago-deuda-editar'), d.monto_proximo_pago != null ? d.monto_proximo_pago : '');
   toggleCamposTarjeta('-editar');
   renderAnalisisTarjeta(d);
   mostrar('vista-editar-deuda');
@@ -12154,11 +12215,11 @@ function abrirEditarDeuda(d){
 async function actualizarDeuda(){
   const nombre = document.getElementById('input-nombre-deuda-editar').value.trim();
   const tipo = document.getElementById('select-tipo-deuda-editar').value;
-  const saldo = document.getElementById('input-saldo-deuda-editar').value;
+  const saldo = limpiarValorMonto(document.getElementById('input-saldo-deuda-editar').value);
   const moneda = document.getElementById('select-moneda-deuda-editar').value;
   const tasaValor = document.getElementById('input-tasa-deuda-editar').value;
   const tasa = tasaValor === '' ? null : Number(tasaValor);
-  const pagoValor = document.getElementById('input-pago-mensual-deuda-editar').value;
+  const pagoValor = limpiarValorMonto(document.getElementById('input-pago-mensual-deuda-editar').value);
   const pagoMensual = pagoValor === '' ? null : Number(pagoValor);
   if(!nombre || saldo === '') return;
 
@@ -12940,8 +13001,8 @@ function cargarPresetCredito(nombre){
   const p = PRESETS_CREDITO[nombre];
   if(!p) return;
   document.getElementById('select-tipo-simulador').value = p.tipo;
-  document.getElementById('input-monto-simulador').value = p.monto;
-  document.getElementById('input-enganche-simulador').value = p.enganche;
+  establecerValorMonto(document.getElementById('input-monto-simulador'), p.monto);
+  establecerValorMonto(document.getElementById('input-enganche-simulador'), p.enganche);
   document.getElementById('input-tasa-simulador').value = p.tasa;
   document.getElementById('input-plazo-simulador').value = p.plazo;
   calcularSimulador();
@@ -12979,8 +13040,8 @@ async function calcularSimulador(){
   const tipo = document.getElementById('select-tipo-simulador').value;
   const cont = document.getElementById('simulador-resultado');
 
-  const montoValor = document.getElementById('input-monto-simulador').value;
-  const engancheValor = document.getElementById('input-enganche-simulador').value;
+  const montoValor = limpiarValorMonto(document.getElementById('input-monto-simulador').value);
+  const engancheValor = limpiarValorMonto(document.getElementById('input-enganche-simulador').value);
   const tasaValor = document.getElementById('input-tasa-simulador').value;
   const plazoValor = document.getElementById('input-plazo-simulador').value;
 
