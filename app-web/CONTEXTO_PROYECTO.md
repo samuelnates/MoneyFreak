@@ -46,6 +46,8 @@
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-08-27 (parte 45) — Embudo de activación, versión gráfica de verdad.** El usuario no entendía el concepto con solo 2 tarjetas de porcentaje ("Registrados → 1ª cuenta" / "1ª cuenta → 1er gasto") -- pidió un embudo dibujado tal cual. Se reemplazaron esas tarjetas por 3 barras centradas que se van angostando (ancho = % del total de registrados que llegó a ese paso), con el texto "↓ X días en promedio" como puente entre cada par de barras. Probado con Playwright con datos de ejemplo (20 registrados → 14 con cuenta → 6 con gasto) antes de desplegar -- captura en `loading-preview/admin-embudo-solo.png` del scratchpad de esta sesión.
+
 - **2026-08-27 (parte 44) — Panel de admin dividido en pestañas.** Con 10 secciones (`<h2>`) ya era una sola página con demasiado scroll. Se agrupó en 7 pestañas (barra horizontal debajo del título, con scroll si no caben): Crecimiento · Activación y retención (incluye retención D7/D30, embudo, riesgo de abandono) · Salud · Audiencia y perfil (audiencia + configuración preferida + de dónde vienen) · Uso y Freaky (uso por sección + IA/costo) · Usuarios · Negocio.
   - Los datos se siguen cargando todos de una sola vez en `cargarPanel()` (una sola llamada a `panel-admin-kpis` + una a `negocio-movimientos`, igual que antes) -- cambiar de pestaña es instantáneo, nunca vuelve a pedir nada al servidor, solo muestra/oculta lo que ya está pintado.
   - La pestaña activa se recuerda en `localStorage` (por dispositivo/navegador) para que abrir el panel te regrese a donde te quedaste la última vez.

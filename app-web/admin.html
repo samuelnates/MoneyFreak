@@ -88,6 +88,17 @@
   .tab-admin:hover{color:var(--texto);}
   .tab-admin.activo{color:var(--texto);border-bottom-color:var(--acento);}
 
+  .embudo-barra-cont{display:flex;justify-content:center;}
+  .embudo-barra{
+    background:var(--acento);color:var(--acento-texto);
+    padding:14px 16px;border-radius:6px;text-align:center;
+    transition:width .4s var(--ease-out, ease);box-sizing:border-box;
+  }
+  .embudo-etiqueta{font-family:var(--sans);font-size:13px;font-weight:700;}
+  .embudo-cifra{font-family:var(--mono);font-size:11px;opacity:.8;margin-top:2px;}
+  .embudo-puente{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0;font-family:var(--mono);font-size:11px;color:var(--texto-tenue);}
+  .embudo-puente::before, .embudo-puente::after{content:'';flex:1;max-width:60px;border-top:1px dashed var(--borde-fuerte);}
+
   .form-negocio{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;}
   .campo-negocio label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
   .campo-negocio input, .campo-negocio select{
@@ -194,19 +205,11 @@
     </div>
     <div class="tarjeta-sub" style="margin:-4px 0 24px;">De los usuarios con antigüedad suficiente (registrados hace más de 7/30 días), qué % sigue activo. Distinto de "activos": ahí no importa cuándo se registraron, aquí sí.</div>
 
-    <div class="grid-kpis" style="margin-bottom:8px;">
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Registrados → 1ª cuenta</div>
-        <div class="tarjeta-valor" id="kpi-embudo-cuenta">—</div>
-        <div class="tarjeta-sub" id="kpi-embudo-cuenta-sub"></div>
-      </div>
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">1ª cuenta → 1er gasto</div>
-        <div class="tarjeta-valor" id="kpi-embudo-gasto">—</div>
-        <div class="tarjeta-sub" id="kpi-embudo-gasto-sub"></div>
-      </div>
+    <div class="caja" style="margin-bottom:8px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:14px;">Embudo de activación</div>
+      <div id="embudo-visual"></div>
     </div>
-    <div class="tarjeta-sub" style="margin:-4px 0 24px;">Embudo de activación: cuántos llegan a cada paso y cuánto tardan en promedio — mide fricción real del onboarding.</div>
+    <div class="tarjeta-sub" style="margin:-4px 0 24px;">Cada barra es más angosta que la anterior porque no todos pasan al siguiente paso — entre barras, cuántos días tardan en promedio los que sí avanzan. Mide fricción real del onboarding.</div>
 
     <div class="caja" style="margin-bottom:32px;">
       <div class="tarjeta-etiqueta">Riesgo de abandono</div>
@@ -552,6 +555,33 @@ const ETIQUETAS_IDIOMA = { es: 'Español', en: 'English' };
 const ETIQUETAS_TEMA = { light: 'Claro', dark: 'Oscuro', auto: 'Automático' };
 const ETIQUETAS_SECCION = { cuentas: 'Cuentas', gastos: 'Gastos', ingresos: 'Ingresos', deudas: 'Deudas y tarjetas', bienes: 'Bienes', acciones: 'Acciones e inversiones' };
 
+// Embudo de activación, versión gráfica -- 3 barras centradas, cada una
+// más angosta que la anterior (el ancho es proporcional a cuántos llegaron
+// a ese paso, sobre el total de registrados). Antes eran 2 tarjetas con
+// solo el %, pero un usuario probando el panel no entendía el concepto
+// hasta verlo dibujado como embudo de verdad.
+function pintarEmbudoVisual(e){
+  const cont = document.getElementById('embudo-visual');
+  const total = e.registrados || 1;
+  const pasos = [
+    { etiqueta: 'Se registraron', valor: e.registrados, dias: null },
+    { etiqueta: 'Agregaron su 1ª cuenta', valor: e.conCuenta, dias: e.diasPromedioRegistroACuenta },
+    { etiqueta: 'Registraron su 1er gasto', valor: e.conGasto, dias: e.diasPromedioCuentaAGasto },
+  ];
+  cont.innerHTML = pasos.map((p, i) => {
+    const anchoPct = Math.max(18, Math.round((p.valor / total) * 100));
+    const pctDelTotal = e.registrados ? Math.round((p.valor / e.registrados) * 100) : 0;
+    const puente = i === 0 ? '' : `<div class="embudo-puente">↓ ${p.dias === null || p.dias === undefined ? 'sin datos suficientes' : p.dias.toFixed(1) + ' días en promedio'}</div>`;
+    return `${puente}
+      <div class="embudo-barra-cont">
+        <div class="embudo-barra" style="width:${anchoPct}%;">
+          <div class="embudo-etiqueta">${p.etiqueta}</div>
+          <div class="embudo-cifra">${formatoNumero(p.valor)} de ${formatoNumero(e.registrados)} (${pctDelTotal}%)</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 function pintarDistribucion(contenedorId, conteo, etiquetas){
   const entradas = Object.entries(conteo).sort((a, b) => b[1] - a[1]);
   const cont = document.getElementById(contenedorId);
@@ -886,11 +916,7 @@ async function cargarPanel(){
   document.getElementById('kpi-retencion-30d').textContent = datos.uso.retencionD30 === null ? '—' : `${Math.round(datos.uso.retencionD30 * 100)}%`;
   document.getElementById('kpi-retencion-30d-sub').textContent = `De ${formatoNumero(datos.uso.elegiblesRetencionD30)} con más de 30 días registrados`;
 
-  const e = datos.embudoActivacion;
-  document.getElementById('kpi-embudo-cuenta').textContent = e.registrados ? `${Math.round((e.conCuenta / e.registrados) * 100)}%` : '—';
-  document.getElementById('kpi-embudo-cuenta-sub').textContent = `${formatoNumero(e.conCuenta)} de ${formatoNumero(e.registrados)}` + (e.diasPromedioRegistroACuenta === null ? '' : ` · ${e.diasPromedioRegistroACuenta.toFixed(1)} días en promedio`);
-  document.getElementById('kpi-embudo-gasto').textContent = e.conCuenta ? `${Math.round((e.conGasto / e.conCuenta) * 100)}%` : '—';
-  document.getElementById('kpi-embudo-gasto-sub').textContent = `${formatoNumero(e.conGasto)} de ${formatoNumero(e.conCuenta)}` + (e.diasPromedioCuentaAGasto === null ? '' : ` · ${e.diasPromedioCuentaAGasto.toFixed(1)} días en promedio`);
+  pintarEmbudoVisual(datos.embudoActivacion);
 
   const tablaRiesgo = document.getElementById('tabla-riesgo');
   if(!datos.riesgo.usuarios.length){
