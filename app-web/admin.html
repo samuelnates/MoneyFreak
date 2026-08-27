@@ -65,6 +65,11 @@
   .barra{flex:1;background:var(--acento);border-radius:2px 2px 0 0;min-height:2px;position:relative;}
   .grafica-ejes{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--texto-tenue);margin-top:6px;}
 
+  .categoria-fila{margin-bottom:12px;}
+  .categoria-fila-etiqueta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
+  .categoria-fila-barra-fondo{background:var(--borde);border-radius:3px;height:6px;overflow:hidden;}
+  .categoria-fila-barra{background:var(--acento);height:100%;border-radius:3px;}
+
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--texto-tenue);padding:8px 6px;border-bottom:1px solid var(--borde);}
   td{padding:8px 6px;border-bottom:1px solid var(--borde);}
@@ -149,6 +154,20 @@
       </div>
     </div>
 
+    <h2>Audiencia (agregado, anónimo)</h2>
+    <div class="grid-kpis" style="margin-bottom:8px;">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Ingreso mensual promedio</div>
+        <div class="tarjeta-valor" id="kpi-ingreso-promedio">—</div>
+        <div class="tarjeta-sub" id="kpi-ingreso-sub"></div>
+      </div>
+    </div>
+    <div class="caja">
+      <div class="tarjeta-etiqueta">Gasto total por categoría (últimos 90 días, todos los usuarios)</div>
+      <div id="lista-categorias" style="margin-top:10px;"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Nunca identifica usuarios individuales — solo totales de todos juntos. No incluye género/edad porque la app no los recolecta.</div>
+
     <h2>Últimas altas</h2>
     <div class="caja">
       <table>
@@ -199,6 +218,27 @@ async function entrar(){
 
 function formatoNumero(n){
   return new Intl.NumberFormat('es-MX').format(n);
+}
+
+function formatoMoneda(n){
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+}
+
+function pintarCategorias(gastoPorCategoria){
+  const entradas = Object.entries(gastoPorCategoria).sort((a, b) => b[1] - a[1]);
+  const cont = document.getElementById('lista-categorias');
+  if(!entradas.length){
+    cont.innerHTML = '<div class="tarjeta-sub">Sin gastos registrados en los últimos 90 días.</div>';
+    return;
+  }
+  const max = entradas[0][1];
+  cont.innerHTML = entradas.map(([categoria, total]) => {
+    const pct = Math.max(2, Math.round((total / max) * 100));
+    return `<div class="categoria-fila">
+      <div class="categoria-fila-etiqueta"><span>${categoria}</span><span>${formatoMoneda(total)}</span></div>
+      <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
 }
 
 function pintarGraficaRegistros(registrosPorDia){
@@ -261,6 +301,10 @@ async function cargarPanel(){
   document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
 
   document.getElementById('kpi-pendientes').textContent = datos.salud.solicitudesPendientes === null ? '—' : formatoNumero(datos.salud.solicitudesPendientes);
+
+  document.getElementById('kpi-ingreso-promedio').textContent = datos.audiencia.ingresoPromedioMensual === null ? '—' : formatoMoneda(datos.audiencia.ingresoPromedioMensual);
+  document.getElementById('kpi-ingreso-sub').textContent = `Basado en ${formatoNumero(datos.audiencia.usuariosConIngresoDeclarado)} usuarios que lo declararon`;
+  pintarCategorias(datos.audiencia.gastoPorCategoria);
 
   const tbody = document.getElementById('tabla-registros');
   tbody.innerHTML = datos.crecimiento.registrosRecientes.map(r => {
