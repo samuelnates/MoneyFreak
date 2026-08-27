@@ -78,6 +78,16 @@
   .oculto{display:none;}
   .cargando{text-align:center;padding:60px 20px;color:var(--texto-tenue);font-family:var(--mono);font-size:13px;}
 
+  .tabs-admin{display:flex;gap:4px;overflow-x:auto;margin:16px 0 28px;padding-bottom:1px;border-bottom:1px solid var(--borde);-webkit-overflow-scrolling:touch;}
+  .tab-admin{
+    flex:0 0 auto;padding:9px 14px;border:none;background:none;
+    color:var(--texto-tenue);font-family:var(--mono);font-size:11px;letter-spacing:.03em;
+    text-transform:uppercase;cursor:pointer;white-space:nowrap;
+    border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tab-admin:hover{color:var(--texto);}
+  .tab-admin.activo{color:var(--texto);border-bottom-color:var(--acento);}
+
   .form-negocio{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;}
   .campo-negocio label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
   .campo-negocio input, .campo-negocio select{
@@ -108,6 +118,17 @@
     <div class="marca">MONEY FREAK</div>
     <h1>Panel de administración</h1>
 
+    <div class="tabs-admin" id="tabs-admin">
+      <button class="tab-admin" data-seccion="crecimiento" onclick="mostrarSeccionAdmin('crecimiento')">Crecimiento</button>
+      <button class="tab-admin" data-seccion="activacion" onclick="mostrarSeccionAdmin('activacion')">Activación y retención</button>
+      <button class="tab-admin" data-seccion="salud" onclick="mostrarSeccionAdmin('salud')">Salud</button>
+      <button class="tab-admin" data-seccion="audiencia" onclick="mostrarSeccionAdmin('audiencia')">Audiencia y perfil</button>
+      <button class="tab-admin" data-seccion="uso" onclick="mostrarSeccionAdmin('uso')">Uso y Freaky</button>
+      <button class="tab-admin" data-seccion="usuarios" onclick="mostrarSeccionAdmin('usuarios')">Usuarios</button>
+      <button class="tab-admin" data-seccion="negocio" onclick="mostrarSeccionAdmin('negocio')">Negocio</button>
+    </div>
+
+    <div class="seccion-admin" id="seccion-crecimiento">
     <h2>Crecimiento</h2>
     <div class="grid-kpis">
       <div class="tarjeta">
@@ -134,6 +155,9 @@
       <div class="grafica-ejes"><span id="eje-inicio"></span><span id="eje-fin"></span></div>
     </div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-activacion">
     <h2>Activación y uso</h2>
     <div class="grid-kpis">
       <div class="tarjeta">
@@ -193,6 +217,9 @@
       </table>
     </div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-salud">
     <h2>Salud</h2>
     <div class="grid-kpis" style="margin-bottom:8px;">
       <div class="tarjeta">
@@ -213,6 +240,9 @@
       </table>
     </div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-audiencia">
     <h2>Audiencia (agregado, anónimo)</h2>
     <div class="grid-kpis" style="margin-bottom:8px;">
       <div class="tarjeta">
@@ -248,6 +278,9 @@
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Se captura una sola vez, al registrarse (link con "?utm_source=..." o el sitio desde el que llegaron; "directo" = sin referrer, ej. escribió la URL directo). Cuentas creadas antes del 2026-08-27, o desde la app nativa, salen sin dato — todavía no se rastreaba, no es lo mismo que "directo".</div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-uso">
     <h2>Uso por sección</h2>
     <div class="caja">
       <table>
@@ -296,6 +329,9 @@
       <div class="tarjeta-sub" style="margin-top:12px;">Estimado total: <strong id="costo-total">—</strong> · Este mes: <strong id="costo-mes">—</strong></div>
     </div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-usuarios">
     <h2>Usuarios</h2>
     <div class="caja" style="margin-bottom:8px;">
       <input type="text" id="input-buscar-usuario" placeholder="Buscar por correo…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--sans);font-size:13px;">
@@ -315,6 +351,9 @@
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Clic en un usuario para ver su detalle (encabezados con clic para ordenar). El detalle nunca incluye montos ni datos financieros reales — solo conteos y preferencias.</div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-negocio">
     <h2>Negocio</h2>
     <div class="tarjeta-sub" style="margin:0 0 12px;">Esto es aparte de los datos de los usuarios — es tu propia contabilidad de Money Freak como negocio (lo invertido, gastos operativos, ingresos).</div>
     <div class="grid-kpis" style="margin-bottom:8px;" id="grid-resumen-negocio"></div>
@@ -380,6 +419,7 @@
         <tbody id="tabla-negocio"></tbody>
       </table>
     </div>
+    </div>
   </div>
 
 </div>
@@ -399,6 +439,23 @@ function mostrar(id){
   ['vista-login', 'vista-cargando', 'vista-panel'].forEach(v => {
     document.getElementById(v).classList.toggle('oculto', v !== id);
   });
+}
+
+// El panel ya tenía demasiado scroll con todas las secciones juntas -- se
+// separan en pestañas. Los datos se cargan una sola vez para todas (ver
+// cargarPanel) así que cambiar de pestaña es instantáneo, sin volver a
+// pedir nada al servidor.
+const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'negocio'];
+
+function mostrarSeccionAdmin(id){
+  if(!SECCIONES_ADMIN.includes(id)) id = SECCIONES_ADMIN[0];
+  SECCIONES_ADMIN.forEach(s => {
+    document.getElementById('seccion-' + s).classList.toggle('oculto', s !== id);
+  });
+  document.querySelectorAll('.tab-admin').forEach(btn => {
+    btn.classList.toggle('activo', btn.dataset.seccion === id);
+  });
+  try{ localStorage.setItem('admin_seccion_activa', id); }catch(e){}
 }
 
 async function entrar(){
@@ -880,6 +937,13 @@ async function cargarPanel(){
   pintarTablaUsuarios();
 
   await cargarNegocio();
+
+  let seccionInicial = SECCIONES_ADMIN[0];
+  try{
+    const guardada = localStorage.getItem('admin_seccion_activa');
+    if(guardada && SECCIONES_ADMIN.includes(guardada)) seccionInicial = guardada;
+  }catch(e){}
+  mostrarSeccionAdmin(seccionInicial);
 
   mostrar('vista-panel');
 }

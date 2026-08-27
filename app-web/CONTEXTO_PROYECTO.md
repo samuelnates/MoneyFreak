@@ -46,6 +46,11 @@
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-08-27 (parte 44) — Panel de admin dividido en pestañas.** Con 10 secciones (`<h2>`) ya era una sola página con demasiado scroll. Se agrupó en 7 pestañas (barra horizontal debajo del título, con scroll si no caben): Crecimiento · Activación y retención (incluye retención D7/D30, embudo, riesgo de abandono) · Salud · Audiencia y perfil (audiencia + configuración preferida + de dónde vienen) · Uso y Freaky (uso por sección + IA/costo) · Usuarios · Negocio.
+  - Los datos se siguen cargando todos de una sola vez en `cargarPanel()` (una sola llamada a `panel-admin-kpis` + una a `negocio-movimientos`, igual que antes) -- cambiar de pestaña es instantáneo, nunca vuelve a pedir nada al servidor, solo muestra/oculta lo que ya está pintado.
+  - La pestaña activa se recuerda en `localStorage` (por dispositivo/navegador) para que abrir el panel te regrese a donde te quedaste la última vez.
+  - Probado con Playwright: una sola sección visible a la vez, cambio de pestaña funciona, sin errores JS -- capturas en `loading-preview/admin-tabs-*.png` del scratchpad de esta sesión.
+
 - **2026-08-27 (parte 43) — Registro de negocio de Money Freak (aparte de los datos de usuarios).** El usuario pidió poder llevar su propia contabilidad como negocio: lo invertido, gastos operativos (generación de contenido, Apple Developer, Google Play Console, dominio, crédito de OpenAI aunque no se haya consumido todavía, próximamente WhatsApp→Freaky) e ingresos (publicidad/suscripciones, cuando existan).
   - **Nueva tabla `negocio_movimientos`** (migración `20260827030000_negocio_movimientos.sql`): `fecha`, `tipo` ('ingreso'/'gasto'/'inversion'), `categoria`, `concepto`, `monto`, `moneda`, `es_recurrente`. RLS habilitado **sin ninguna policy** a propósito -- no tiene `user_id` porque no es de ningún usuario, es del negocio, y nadie con la llave anon/authenticated puede tocarla ni para leer; solo la Edge Function la toca (service role).
   - **Nueva Edge Function `negocio-movimientos`**: mismo candado de correo admin que `panel-admin-kpis`. Tres acciones: `crear`, `eliminar`, y default `listar` (trae todos los movimientos + resumen de ingreso/gasto/inversión agrupado por moneda).
