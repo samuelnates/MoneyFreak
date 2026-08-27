@@ -149,6 +149,8 @@
   .retencion-leyenda span{display:inline-flex;align-items:center;gap:5px;}
   .retencion-punto{width:8px;height:8px;border-radius:2px;display:inline-block;}
 
+  .subetiqueta{font-size:11px;color:var(--texto-tenue);margin-bottom:6px;}
+  .stat-inline{display:flex;align-items:baseline;gap:8px;}
   .config-preferida-fila{display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;}
   .config-preferida-col:not(:last-child){border-right:1px solid var(--borde);padding-right:20px;}
   @media (max-width: 560px){
@@ -339,7 +341,18 @@
       </div>
       <div class="config-preferida-col">
         <div class="tarjeta-etiqueta">Freaky y tarjetas</div>
-        <div id="notif-otros" style="margin-top:10px;font-size:12.5px;line-height:1.9;"></div>
+        <div style="margin-top:10px;">
+          <div class="subetiqueta">Aviso de reporte mensual</div>
+          <div id="lista-notif-reporte"></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="subetiqueta">¿Freaky vuela?</div>
+          <div id="lista-freaky-vuelo"></div>
+        </div>
+        <div class="stat-inline" style="margin-top:16px;">
+          <div class="tarjeta-valor" id="dias-aviso-tarjeta" style="font-size:22px;">—</div>
+          <div class="tarjeta-sub" id="dias-aviso-tarjeta-sub" style="margin:0;">días de aviso de tarjeta, en promedio</div>
+        </div>
       </div>
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Como con idioma/tema: solo se guardan aquí desde que el usuario toca esa opción en Configuración (2026-08-27) — cuentas que no la han tocado salen sin dato, no es lo mismo que "desactivado".</div>
@@ -844,14 +857,18 @@ function pintarClicsSociales(clics){
   ).join('');
 }
 
+const ETIQUETAS_BOOL_SI_NO = { si: 'Sí', no: 'No', sinDato: 'Sin tocar' };
+const ETIQUETAS_FREAKY_VUELO = { vuela: 'Vuela', quieto: 'Quieto', sinDato: 'Sin tocar' };
+
 function pintarNotifOtros(cfg){
-  const cont = document.getElementById('notif-otros');
   const reporte = cfg.notifReporteMes;
+  pintarDistribucion('lista-notif-reporte', { si: reporte.si, no: reporte.no, sinDato: reporte.sinDato }, ETIQUETAS_BOOL_SI_NO);
+
   const vuelo = cfg.freakyVueloDesactivado;
-  cont.innerHTML = `
-    <div>Aviso de reporte mensual: <strong>${formatoNumero(reporte.si)}</strong> sí, <strong>${formatoNumero(reporte.no)}</strong> no (${formatoNumero(reporte.sinDato)} sin tocar)</div>
-    <div>Freaky vuela: <strong>${formatoNumero(vuelo.no)}</strong> sí vuela, <strong>${formatoNumero(vuelo.si)}</strong> lo pusieron quieto (${formatoNumero(vuelo.sinDato)} sin tocar)</div>
-    <div>Días de aviso de tarjeta: <strong>${cfg.diasAvisoTarjetaPromedio === null ? '—' : cfg.diasAvisoTarjetaPromedio.toFixed(1)}</strong> en promedio (${formatoNumero(cfg.usuariosConDiasAvisoTarjeta)} lo cambiaron)</div>`;
+  pintarDistribucion('lista-freaky-vuelo', { vuela: vuelo.no, quieto: vuelo.si, sinDato: vuelo.sinDato }, ETIQUETAS_FREAKY_VUELO);
+
+  document.getElementById('dias-aviso-tarjeta').textContent = cfg.diasAvisoTarjetaPromedio === null ? '—' : cfg.diasAvisoTarjetaPromedio.toFixed(1);
+  document.getElementById('dias-aviso-tarjeta-sub').textContent = `días de aviso de tarjeta, en promedio (${formatoNumero(cfg.usuariosConDiasAvisoTarjeta)} lo cambiaron)`;
 }
 
 function pintarGraficaSecciones(usoPorSeccion){
