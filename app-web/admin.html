@@ -150,6 +150,8 @@
   .retencion-punto{width:8px;height:8px;border-radius:2px;display:inline-block;}
 
   .subetiqueta{font-size:11px;color:var(--texto-tenue);margin-bottom:6px;}
+  .tag-pills{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag-pill{background:var(--bg);border:1px solid var(--borde);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--texto-tenue);}
   .stat-inline{display:flex;align-items:baseline;gap:8px;}
   .config-preferida-fila{display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;}
   .config-preferida-col:not(:last-child){border-right:1px solid var(--borde);padding-right:20px;}
@@ -815,14 +817,19 @@ function pintarPantallasSinUso(pantallas){
 
   let html = '';
   if(sinVisitas.length){
-    html += `<div class="tarjeta-etiqueta" style="margin-bottom:6px;">Cero visitas registradas (${sinVisitas.length} de ${TODAS_LAS_PANTALLAS.length})</div>`;
-    html += `<div style="font-size:13px;line-height:1.9;margin-bottom:16px;">${sinVisitas.map(id => escapeHtmlAdmin(ETIQUETAS_PANTALLA[id] || id)).join(' · ')}</div>`;
+    html += `<div class="tarjeta-etiqueta" style="margin-bottom:8px;">Cero visitas registradas (${sinVisitas.length} de ${TODAS_LAS_PANTALLAS.length})</div>`;
+    html += `<div class="tag-pills" style="margin-bottom:16px;">${sinVisitas.map(id => `<span class="tag-pill">${escapeHtmlAdmin(ETIQUETAS_PANTALLA[id] || id)}</span>`).join('')}</div>`;
   }
   if(pocasVisitas.length){
+    const maxPocas = Math.max(...pocasVisitas.map(p => p.vistas));
     html += `<div class="tarjeta-etiqueta" style="margin-bottom:6px;">Muy pocas visitas</div>`;
-    html += pocasVisitas.map(p =>
-      `<div class="categoria-fila-etiqueta"><span>${escapeHtmlAdmin(ETIQUETAS_PANTALLA[p.pantalla] || p.pantalla)}</span><span>${formatoNumero(p.vistas)} visita${p.vistas === 1 ? '' : 's'}</span></div>`
-    ).join('');
+    html += pocasVisitas.map(p => {
+      const pct = Math.max(2, Math.round((p.vistas / maxPocas) * 100));
+      return `<div class="categoria-fila">
+        <div class="categoria-fila-etiqueta"><span>${escapeHtmlAdmin(ETIQUETAS_PANTALLA[p.pantalla] || p.pantalla)}</span><span>${formatoNumero(p.vistas)} visita${p.vistas === 1 ? '' : 's'}</span></div>
+        <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
   }
   cont.innerHTML = html || '<div class="tarjeta-sub">Todas las pantallas tienen uso razonable.</div>';
 }
@@ -847,14 +854,19 @@ function pintarGraficaPantallas(pantallas){
 
 function pintarClicsSociales(clics){
   const cont = document.getElementById('lista-clics-sociales');
-  const entradas = Object.entries(clics);
+  const entradas = Object.entries(clics).sort((a, b) => b[1] - a[1]);
   if(!entradas.length){
     cont.innerHTML = '<div class="tarjeta-sub">Nadie le ha dado clic a los enlaces de redes sociales todavía.</div>';
     return;
   }
-  cont.innerHTML = entradas.sort((a, b) => b[1] - a[1]).map(([red, n]) =>
-    `<div class="categoria-fila-etiqueta"><span style="text-transform:capitalize;">${escapeHtmlAdmin(red)}</span><span>${formatoNumero(n)} clics</span></div>`
-  ).join('');
+  const max = entradas[0][1];
+  cont.innerHTML = entradas.map(([red, n]) => {
+    const pct = Math.max(2, Math.round((n / max) * 100));
+    return `<div class="categoria-fila">
+      <div class="categoria-fila-etiqueta"><span style="text-transform:capitalize;">${escapeHtmlAdmin(red)}</span><span>${formatoNumero(n)} clics</span></div>
+      <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
 }
 
 const ETIQUETAS_BOOL_SI_NO = { si: 'Sí', no: 'No', sinDato: 'Sin tocar' };
