@@ -17,6 +17,13 @@ import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, type Medi
 const MODEL = "gpt-5.4-mini-2026-03-17";
 const MODEL_TRANSCRIPCION = "gpt-4o-mini-transcribe";
 
+// Control de acceso por código de canje, temporalmente desactivado
+// (2026-08-27): se abrió el acceso a todos los usuarios sin necesitar
+// canjear un código. Si el uso satura la cuenta de OpenAI, se reactiva
+// cambiando esto a `true` y volviendo a desplegar -- no hace falta
+// reescribir nada más, el resto del control de acceso sigue intacto.
+const GATE_CODIGO_IA_ACTIVO = false;
+
 // Pantallas reales a las que Freaky puede mandar un link. Debe coincidir
 // exactamente con DESTINOS_CHAT en index.html (ahí vive qué función de
 // navegación se llama para cada clave).
@@ -352,17 +359,19 @@ Deno.serve(async (req) => {
   }
   const userId = userData.user.id;
 
-  const { data: acceso, error: accesoError } = await admin
-    .from("accesos_ia_usuarios")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (accesoError) {
-    console.error("Error verificando acceso:", accesoError);
-    return jsonResponse({ error: "access_check_failed" }, 500);
-  }
-  if (!acceso) {
-    return jsonResponse({ error: "sin_acceso" }, 403);
+  if (GATE_CODIGO_IA_ACTIVO) {
+    const { data: acceso, error: accesoError } = await admin
+      .from("accesos_ia_usuarios")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (accesoError) {
+      console.error("Error verificando acceso:", accesoError);
+      return jsonResponse({ error: "access_check_failed" }, 500);
+    }
+    if (!acceso) {
+      return jsonResponse({ error: "sin_acceso" }, 403);
+    }
   }
 
   let body: {

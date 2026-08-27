@@ -17,6 +17,13 @@ import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, type Medi
 
 const MODEL_TEXTO = "gpt-5.4-mini-2026-03-17";
 
+// Control de acceso por código de canje, temporalmente desactivado
+// (2026-08-27): se abrió el acceso a todos los usuarios sin necesitar
+// canjear un código. Si el uso satura la cuenta de OpenAI, se reactiva
+// cambiando esto a `true` y volviendo a desplegar -- no hace falta
+// reescribir nada más, el resto del control de acceso sigue intacto.
+const GATE_CODIGO_IA_ACTIVO = false;
+
 const SolicitudGastoSchema = z.object({
   monto: z.number().nullable(),
   categoria: z.enum(CATEGORIAS_VALIDAS as [string, ...string[]]).nullable(),
@@ -106,17 +113,19 @@ Deno.serve(async (req) => {
   const userId = userData.user.id;
 
   // Mismo control de acceso que la radiografía: cualquier llamada aquí cuesta OpenAI.
-  const { data: acceso, error: accesoError } = await admin
-    .from("accesos_ia_usuarios")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (accesoError) {
-    console.error("Error verificando acceso:", accesoError);
-    return jsonResponse({ error: "access_check_failed" }, 500);
-  }
-  if (!acceso) {
-    return jsonResponse({ error: "sin_acceso" }, 403);
+  if (GATE_CODIGO_IA_ACTIVO) {
+    const { data: acceso, error: accesoError } = await admin
+      .from("accesos_ia_usuarios")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (accesoError) {
+      console.error("Error verificando acceso:", accesoError);
+      return jsonResponse({ error: "access_check_failed" }, 500);
+    }
+    if (!acceso) {
+      return jsonResponse({ error: "sin_acceso" }, 403);
+    }
   }
 
   let body: {
