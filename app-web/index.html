@@ -1221,6 +1221,13 @@
     body.con-sesion .btn-fab-agregar{bottom:calc(88px + env(safe-area-inset-bottom));}
     body.con-sesion .menu-agregar{bottom:calc(150px + env(safe-area-inset-bottom));}
     body.con-sesion .aviso-flotante-version{bottom:calc(88px + env(safe-area-inset-bottom));}
+    /* En móvil el "+" central de la barra inferior ya cubre agregar cuenta/
+       bien/acción/deuda (ver toggleMenuAgregarCentral) -- este botón de
+       escritorio se oculta para no duplicar el mismo "+" dos veces en la
+       misma pantalla, y su menú se centra para quedar bajo el "+" central
+       en vez de la esquina donde vivía este botón. */
+    .btn-fab-agregar{display:none !important;}
+    #menu-agregar{right:auto;left:50%;transform:translateX(-50%);}
   }
 </style>
 </head>
@@ -1265,7 +1272,7 @@
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/><path d="M3 9h18"/></svg></span>
     <span data-i18n="navinf.cuentas">Cuentas</span>
   </button>
-  <button type="button" class="nav-inferior-fab" id="btn-nav-fab-gasto" onclick="toggleMenuAgregarGastoCentral()" aria-label="Registrar gasto" data-i18n-aria-label="panel.accion_gasto">
+  <button type="button" class="nav-inferior-fab" id="btn-nav-fab-gasto" onclick="toggleMenuAgregarCentral()" aria-label="Agregar" data-i18n-aria-label="cuentas.agregar_fab_aria">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
   </button>
   <button type="button" class="nav-inferior-boton" data-vista="vista-gastos" onclick="abrirGastos()">
@@ -7080,8 +7087,21 @@ function cerrarMenuAgregar(){
   document.getElementById('btn-fab-cuentas').classList.remove('abierto');
 }
 
-function toggleMenuAgregarGastoCentral(){
-  const menu = document.getElementById('menu-agregar-gasto-central');
+// El "+" central de la barra inferior (móvil): antes siempre abría el
+// menú de Registrar gasto sin importar la pantalla -- reportado como
+// confuso cuando estás dentro de Cuentas/Deudas/Acciones/Bienes y
+// esperas agregar justo eso, no un gasto. Ahora es un solo "+" que se
+// adapta: dentro del área de Cuentas abre el menú de agregar cuenta/
+// bien/acción/deuda/ingreso/transferencia (el mismo que usa el botón de
+// escritorio); en el resto de la app sigue abriendo Registrar gasto
+// como siempre. En modo demo se queda con el comportamiento de gasto
+// de siempre (el menú de cuentas ya está deshabilitado en demo).
+function toggleMenuAgregarCentral(){
+  const enCuentas = estaEnAreaDeCuentas() && !modoDemo;
+  const idMenu = enCuentas ? 'menu-agregar' : 'menu-agregar-gasto-central';
+  const idOtro = enCuentas ? 'menu-agregar-gasto-central' : 'menu-agregar';
+  document.getElementById(idOtro).style.display = 'none';
+  const menu = document.getElementById(idMenu);
   const abierto = menu.style.display === 'block';
   menu.style.display = abierto ? 'none' : 'block';
 }
@@ -7090,10 +7110,20 @@ function cerrarMenuAgregarGastoCentral(){
   document.getElementById('menu-agregar-gasto-central').style.display = 'none';
 }
 
+function estaEnAreaDeCuentas(){
+  return document.getElementById('vista-cuentas').classList.contains('activa') || !!document.querySelector('.cuentas-sub.activa');
+}
+
+// Este botón (esquina inferior derecha) solo se ve en escritorio -- en
+// móvil el "+" central de la barra inferior ya cubre lo mismo, ver
+// toggleMenuAgregarCentral(). Antes solo aparecía en el hub de "Mis
+// cuentas" y se escondía justo al entrar a Deudas/Acciones/Bienes/etc.,
+// que es donde más se necesita (reportado por un usuario: el único "+"
+// que le quedaba visible ahí lo mandaba a Registrar gasto).
 function actualizarVisibilidadBotonFab(){
   const btn = document.getElementById('btn-fab-cuentas');
   if(!btn) return;
-  const enCuentas = document.getElementById('vista-cuentas').classList.contains('activa');
+  const enCuentas = estaEnAreaDeCuentas();
   btn.style.display = (enCuentas && !modoDemo) ? 'flex' : 'none';
   if(!enCuentas) cerrarMenuAgregar();
 }
@@ -14137,8 +14167,28 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 43;
+const VERSION_APP_ACTUAL = 45;
 const CHANGELOG_APP = [
+  {
+    version: 45,
+    fecha: '2026-08-27',
+    cambios_es: [
+      'El botón "+" ya no siempre te manda a registrar un gasto: si lo tocas estando dentro de Cuentas, Deudas, Acciones o Bienes, ahora te ofrece agregar justo eso; en el resto de la app sigue abriendo Registrar gasto como siempre.'
+    ],
+    cambios_en: [
+      'The "+" button no longer always sends you to log an expense: if you tap it while inside Accounts, Debts, Stocks, or Property, it now offers to add exactly that; everywhere else it still opens Log expense as always.'
+    ]
+  },
+  {
+    version: 44,
+    fecha: '2026-08-27',
+    cambios_es: [
+      'En Balance general, ahora puedes tocar "Cuentas de inversión", "Bienes", "Acciones" o "Deudas" para ir directo a esa sección, en vez de solo ver el número.'
+    ],
+    cambios_en: [
+      'In Balance sheet, you can now tap "Investment accounts", "Property", "Stocks", or "Debts" to jump straight to that section, instead of just seeing the number.'
+    ]
+  },
   {
     version: 43,
     fecha: '2026-08-25',
