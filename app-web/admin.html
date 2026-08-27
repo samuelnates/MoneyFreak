@@ -305,6 +305,23 @@
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Se captura una sola vez, al registrarse (link con "?utm_source=..." o el sitio desde el que llegaron; "directo" = sin referrer, ej. escribió la URL directo). Cuentas creadas antes del 2026-08-27, o desde la app nativa, salen sin dato — todavía no se rastreaba, no es lo mismo que "directo".</div>
 
+    <h2>Preferencias de notificaciones y Freaky</h2>
+    <div class="caja config-preferida-fila">
+      <div class="config-preferida-col">
+        <div class="tarjeta-etiqueta">Recordar registrar gastos</div>
+        <div id="lista-notif-gastos" style="margin-top:10px;"></div>
+      </div>
+      <div class="config-preferida-col">
+        <div class="tarjeta-etiqueta">Recordar actualizar saldos</div>
+        <div id="lista-notif-saldos" style="margin-top:10px;"></div>
+      </div>
+      <div class="config-preferida-col">
+        <div class="tarjeta-etiqueta">Freaky y tarjetas</div>
+        <div id="notif-otros" style="margin-top:10px;font-size:12.5px;line-height:1.9;"></div>
+      </div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Como con idioma/tema: solo se guardan aquí desde que el usuario toca esa opción en Configuración (2026-08-27) — cuentas que no la han tocado salen sin dato, no es lo mismo que "desactivado".</div>
+
     </div>
 
     <div class="seccion-admin oculto" id="seccion-uso">
@@ -312,7 +329,18 @@
     <div class="caja">
       <div id="grafica-secciones"></div>
     </div>
-    <div class="tarjeta-sub" style="margin:8px 0 24px;">La barra es "usuarios con datos" (alguna vez registraron algo ahí); el número chico entre paréntesis es cuántos de esos siguen activos ahí en los últimos 30 días. Es un proxy de qué engancha de verdad — todavía no hay un registro de qué pantallas visita cada quien.</div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">La barra es "usuarios con datos" (alguna vez registraron algo ahí); el número chico entre paréntesis es cuántos de esos siguen activos ahí en los últimos 30 días.</div>
+
+    <h2>Dónde pasan tiempo</h2>
+    <div class="caja">
+      <div id="grafica-pantallas"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Registro propio (sin herramientas de terceros, sin grabar pantalla): cada vez que alguien cambia de pantalla dentro de la app se guarda cuánto duró la anterior. La barra es el tiempo total acumulado de todos los usuarios; el número chico es el promedio por visita.</div>
+
+    <h2>Clics en redes sociales</h2>
+    <div class="caja" style="margin-bottom:32px;">
+      <div id="lista-clics-sociales"></div>
+    </div>
 
     <h2>Freaky (asistente con IA)</h2>
     <div class="grid-kpis" style="margin-bottom:24px;">
@@ -594,6 +622,25 @@ const ETIQUETAS_AVATAR = { avatar1: 'El Sabio', avatar2: 'La Estratega', avatar3
 const ETIQUETAS_IDIOMA = { es: 'Español', en: 'English' };
 const ETIQUETAS_TEMA = { light: 'Claro', dark: 'Oscuro', auto: 'Automático' };
 const ETIQUETAS_SECCION = { cuentas: 'Cuentas', gastos: 'Gastos', ingresos: 'Ingresos', deudas: 'Deudas y tarjetas', bienes: 'Bienes', acciones: 'Acciones e inversiones' };
+const ETIQUETAS_NOTIF_GASTOS = { nunca: 'Nunca', dia: 'Cada día', semana: 'Cada semana' };
+const ETIQUETAS_NOTIF_SALDOS = { nunca: 'Nunca', semana: 'Cada semana', 'dos-semanas': 'Cada 2 semanas', mes: 'Cada mes' };
+const ETIQUETAS_PANTALLA = {
+  'vista-inicio': 'Inicio', 'vista-cuentas': 'Cuentas y patrimonio', 'vista-agregar-gasto': 'Agregar gasto',
+  'vista-agregar-ingreso': 'Agregar ingreso', 'vista-cuentas-deudas': 'Deudas', 'vista-cuentas-bienes': 'Bienes',
+  'vista-cuentas-acciones': 'Acciones', 'vista-cuentas-transferencias': 'Transferencias', 'vista-salud': 'Salud financiera',
+  'vista-simulador': 'Simulador de crédito', 'vista-config-general': 'Configuración general', 'vista-seguridad-privacidad': 'Seguridad y privacidad',
+  'vista-reportes': 'Reportes', 'vista-ayuda-ia': 'Chat con Freaky', 'vista-login': 'Login',
+};
+
+function formatoDuracion(ms){
+  const totalSeg = Math.round(ms / 1000);
+  const horas = Math.floor(totalSeg / 3600);
+  const min = Math.floor((totalSeg % 3600) / 60);
+  const seg = totalSeg % 60;
+  if(horas > 0) return `${horas}h ${min}min`;
+  if(min > 0) return `${min}min ${seg}s`;
+  return `${seg}s`;
+}
 
 // Embudo de activación, versión gráfica -- 3 barras centradas, cada una
 // más angosta que la anterior (el ancho es proporcional a cuántos llegaron
@@ -666,6 +713,46 @@ function pintarRetencionVisual(contenedorId, etiqueta, retenidos, elegibles){
       <span><span class="retencion-punto" style="background:var(--color-riesgo);opacity:.6;"></span>Ya no volvieron: ${formatoNumero(perdidos)}</span>
       <span>de ${formatoNumero(elegibles)} con antigüedad suficiente</span>
     </div>`;
+}
+
+function pintarGraficaPantallas(pantallas){
+  const cont = document.getElementById('grafica-pantallas');
+  if(!pantallas.length){
+    cont.innerHTML = '<div class="tarjeta-sub">Sin datos todavía.</div>';
+    return;
+  }
+  const top = pantallas.slice(0, 12);
+  const max = top[0].duracionTotalMs || 1;
+  cont.innerHTML = top.map(p => {
+    const pct = Math.max(2, Math.round((p.duracionTotalMs / max) * 100));
+    const etiqueta = ETIQUETAS_PANTALLA[p.pantalla] || p.pantalla;
+    return `<div class="categoria-fila">
+      <div class="categoria-fila-etiqueta"><span>${escapeHtmlAdmin(etiqueta)}</span><span>${formatoDuracion(p.duracionTotalMs)} <span style="color:var(--texto-tenue);">(prom. ${formatoDuracion(p.duracionPromedioMs)}, ${formatoNumero(p.vistas)} visitas)</span></span></div>
+      <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function pintarClicsSociales(clics){
+  const cont = document.getElementById('lista-clics-sociales');
+  const entradas = Object.entries(clics);
+  if(!entradas.length){
+    cont.innerHTML = '<div class="tarjeta-sub">Nadie le ha dado clic a los enlaces de redes sociales todavía.</div>';
+    return;
+  }
+  cont.innerHTML = entradas.sort((a, b) => b[1] - a[1]).map(([red, n]) =>
+    `<div class="categoria-fila-etiqueta"><span style="text-transform:capitalize;">${escapeHtmlAdmin(red)}</span><span>${formatoNumero(n)} clics</span></div>`
+  ).join('');
+}
+
+function pintarNotifOtros(cfg){
+  const cont = document.getElementById('notif-otros');
+  const reporte = cfg.notifReporteMes;
+  const vuelo = cfg.freakyVueloDesactivado;
+  cont.innerHTML = `
+    <div>Aviso de reporte mensual: <strong>${formatoNumero(reporte.si)}</strong> sí, <strong>${formatoNumero(reporte.no)}</strong> no (${formatoNumero(reporte.sinDato)} sin tocar)</div>
+    <div>Freaky vuela: <strong>${formatoNumero(vuelo.no)}</strong> sí vuela, <strong>${formatoNumero(vuelo.si)}</strong> lo pusieron quieto (${formatoNumero(vuelo.sinDato)} sin tocar)</div>
+    <div>Días de aviso de tarjeta: <strong>${cfg.diasAvisoTarjetaPromedio === null ? '—' : cfg.diasAvisoTarjetaPromedio.toFixed(1)}</strong> en promedio (${formatoNumero(cfg.usuariosConDiasAvisoTarjeta)} lo cambiaron)</div>`;
 }
 
 function pintarGraficaSecciones(usoPorSeccion){
@@ -1063,8 +1150,13 @@ async function cargarPanel(){
   pintarDistribucion('lista-idioma', datos.configuracion.idioma, ETIQUETAS_IDIOMA);
   pintarDistribucion('lista-tema', datos.configuracion.tema, ETIQUETAS_TEMA);
   pintarDistribucion('lista-adquisicion', datos.adquisicion.fuentes, {});
+  pintarDistribucion('lista-notif-gastos', datos.configuracion.notifGastos, ETIQUETAS_NOTIF_GASTOS);
+  pintarDistribucion('lista-notif-saldos', datos.configuracion.notifSaldos, ETIQUETAS_NOTIF_SALDOS);
+  pintarNotifOtros(datos.configuracion);
 
   pintarGraficaSecciones(datos.usoPorSeccion);
+  pintarGraficaPantallas(datos.usoPantallas.pantallas);
+  pintarClicsSociales(datos.usoPantallas.clicsSociales);
 
   document.getElementById('kpi-freaky-acceso').textContent = datos.freaky.usuariosConAccesoIA === null ? '—' : formatoNumero(datos.freaky.usuariosConAccesoIA);
   document.getElementById('kpi-freaky-usuarios-reporte').textContent = formatoNumero(datos.freaky.usuariosConReporte);

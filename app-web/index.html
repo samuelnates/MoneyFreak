@@ -2999,7 +2999,7 @@ function inicializarRedesSociales(){
   if(window.INSTAGRAM_URL) redes.push({ nombre: 'Instagram', url: window.INSTAGRAM_URL });
   if(!redes.length) return;
   cont.innerHTML = redes.map(r =>
-    `<a class="btn-grande secundario" style="text-decoration:none;" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.nombre)}</a>`
+    `<a class="btn-grande secundario" style="text-decoration:none;" href="${escapeHtml(r.url)}" target="_blank" rel="noopener" onclick="registrarEventoUso('clic_social', '${r.nombre.toLowerCase()}')">${escapeHtml(r.nombre)}</a>`
   ).join('');
   sec.style.display = '';
 }
@@ -3197,12 +3197,43 @@ const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta
 
 let scrollGuardadoCuentas = null;
 
+// Registro propio de uso (reemplaza cualquier "pixel"/session-replay de
+// terceros -- ver decisión en CONTEXTO_PROYECTO.md parte 49): al cambiar de
+// pantalla se calcula cuánto duró la pantalla ANTERIOR activa y se manda un
+// solo evento con esa duración. Nunca graba contenido de pantalla, solo
+// "estuviste en X pantalla Y milisegundos".
+let ultimaPantallaTimestamp = Date.now();
+let eventosUsoRegistradosEnEstaSesion = 0;
+const MAX_EVENTOS_USO_POR_SESION = 400;
+
+function registrarEventoUso(tipo, detalle, duracionMs){
+  if(!sb || modoDemo || eventosUsoRegistradosEnEstaSesion >= MAX_EVENTOS_USO_POR_SESION) return;
+  eventosUsoRegistradosEnEstaSesion++;
+  const fila = { tipo, detalle };
+  if(duracionMs !== undefined) fila.duracion_ms = Math.min(Math.max(0, Math.round(duracionMs)), 30 * 60 * 1000);
+  sb.from('eventos_uso').insert(fila).then(() => {}, () => {});
+}
+
+// Mismo patrón de idioma_preferido/tema_preferido: la preferencia sigue
+// viviendo en localStorage para uso inmediato en el dispositivo, y además
+// se guarda aquí para poder verla agregada en el panel de admin.
+function sincronizarPreferenciaPerfil(campo, valor){
+  if(!sb || modoDemo) return;
+  sb.from('perfil_financiero').upsert({ [campo]: valor, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    .then(({ error }) => { if(error) console.warn(`No se pudo guardar ${campo} (¿ya corriste la migración?)`, error); });
+}
+
 function mostrar(idVista){
   const vistaAnteriorEl = document.querySelector('.pantalla.activa');
   const vistaAnterior = vistaAnteriorEl ? vistaAnteriorEl.id : null;
   if(vistaAnterior === 'vista-cuentas' && idVista !== 'vista-cuentas'){
     scrollGuardadoCuentas = window.scrollY;
   }
+  if(vistaAnterior && vistaAnterior !== idVista){
+    const duracion = Date.now() - ultimaPantallaTimestamp;
+    if(duracion >= 400) registrarEventoUso('pantalla', vistaAnterior, duracion);
+  }
+  ultimaPantallaTimestamp = Date.now();
 
   document.querySelectorAll('.pantalla').forEach(el => el.classList.remove('activa'));
   document.getElementById(idVista).classList.add('activa');
@@ -5864,12 +5895,15 @@ async function inicializarSeccionNotificaciones(){
 
 async function elegirFrecuenciaNotif(tipo, valor){
   localStorage.setItem(`notif_${tipo}_frecuencia`, valor);
+  sincronizarPreferenciaPerfil(`notif_${tipo}_frecuencia`, valor);
   document.querySelectorAll(`#rango-notif-${tipo} button`).forEach(b => b.classList.toggle('activo', b.dataset.valor === valor));
   await reprogramarNotificaciones();
 }
 
 async function toggleNotifReporteMes(){
-  localStorage.setItem('notif_reporte_mes', document.getElementById('check-notif-reporte-mes').checked ? '1' : '0');
+  const activo = document.getElementById('check-notif-reporte-mes').checked;
+  localStorage.setItem('notif_reporte_mes', activo ? '1' : '0');
+  sincronizarPreferenciaPerfil('notif_reporte_mes', activo);
   await reprogramarNotificaciones();
 }
 
@@ -9905,6 +9939,7 @@ function toggleFreakyVuelo(){
   const desactivado = document.getElementById('check-freaky-vuelo-desactivado').checked;
   document.body.classList.toggle('freaky-vuelo-desactivado', desactivado);
   localStorage.setItem('freaky_vuelo_desactivado', desactivado ? '1' : '0');
+  sincronizarPreferenciaPerfil('freaky_vuelo_desactivado', desactivado);
 }
 
 function aplicarPreferenciaFreakyVuelo(){
@@ -9946,6 +9981,7 @@ function guardarDiasAvisoTarjeta(){
   const valor = Math.min(30, Math.max(1, Number(input.value) || 5));
   input.value = valor;
   localStorage.setItem('freaky_dias_aviso_tarjeta', String(valor));
+  sincronizarPreferenciaPerfil('freaky_dias_aviso_tarjeta', valor);
 }
 
 function cargarPreferenciaAvisoTarjeta(){

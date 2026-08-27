@@ -190,10 +190,22 @@ Deno.serve(async (req) => {
     // aunque sí tengan una preferencia real guardada en su teléfono).
     const { data: preferencias, error: errorPreferencias } = await admin
       .from("perfil_financiero")
-      .select("user_id, avatar_asesor, idioma_preferido, tema_preferido, origen_registro");
+      .select(
+        "user_id, avatar_asesor, idioma_preferido, tema_preferido, origen_registro, " +
+          "notif_gastos_frecuencia, notif_saldos_frecuencia, notif_reporte_mes, " +
+          "freaky_vuelo_desactivado, freaky_dias_aviso_tarjeta",
+      );
     if (errorPreferencias) throw errorPreferencias;
 
-    const contarValores = (campo: "avatar_asesor" | "idioma_preferido" | "tema_preferido" | "origen_registro") => {
+    type CampoPreferencia =
+      | "avatar_asesor"
+      | "idioma_preferido"
+      | "tema_preferido"
+      | "origen_registro"
+      | "notif_gastos_frecuencia"
+      | "notif_saldos_frecuencia";
+
+    const contarValores = (campo: CampoPreferencia) => {
       const conteo: Record<string, number> = {};
       for (const p of preferencias || []) {
         const valor = p[campo];
@@ -202,6 +214,26 @@ Deno.serve(async (req) => {
       }
       return conteo;
     };
+
+    // Campos booleanos (notif_reporte_mes, freaky_vuelo_desactivado): null =
+    // nunca tocó esa opción (no es lo mismo que "no", así que se cuenta aparte).
+    const contarBooleano = (campo: "notif_reporte_mes" | "freaky_vuelo_desactivado") => {
+      let siCount = 0, noCount = 0, sinDato = 0;
+      for (const p of preferencias || []) {
+        const valor = p[campo];
+        if (valor === true) siCount++;
+        else if (valor === false) noCount++;
+        else sinDato++;
+      }
+      return { si: siCount, no: noCount, sinDato };
+    };
+
+    const diasAvisoTarjeta = (preferencias || [])
+      .map((p) => p.freaky_dias_aviso_tarjeta)
+      .filter((v): v is number => v !== null && v !== undefined);
+    const diasAvisoTarjetaPromedio = diasAvisoTarjeta.length
+      ? diasAvisoTarjeta.reduce((a, b) => a + b, 0) / diasAvisoTarjeta.length
+      : null;
 
     // Uso por sección -- proxy honesto de "qué se usa más" a partir de datos
     // que ya existen (no hay todavía un registro de vistas de pantalla/eventos
@@ -316,6 +348,35 @@ Deno.serve(async (req) => {
       diasPromedioRegistroACuenta: promedio(tiemposRegistroACuenta),
       diasPromedioCuentaAGasto: promedio(tiemposCuentaAGasto),
     };
+
+    // Uso real por pantalla y clics en redes sociales -- registro propio
+    // (tabla eventos_uso, ver parte 49 de CONTEXTO_PROYECTO.md), reemplaza
+    // cualquier "pixel"/session-replay de terceros. Nunca incluye contenido
+    // de pantalla, solo "cuánto duró cada pantalla activa".
+    const { data: eventos, error: errorEventos } = await admin
+      .from("eventos_uso")
+      .select("tipo, detalle, duracion_ms");
+    if (errorEventos) console.error("panel-admin-kpis: error leyendo eventos_uso:", errorEventos);
+
+    const tiempoPorPantalla: Record<string, { vistas: number; duracionTotalMs: number }> = {};
+    const clicsSociales: Record<string, number> = {};
+    for (const ev of eventos || []) {
+      if (ev.tipo === "pantalla") {
+        if (!tiempoPorPantalla[ev.detalle]) tiempoPorPantalla[ev.detalle] = { vistas: 0, duracionTotalMs: 0 };
+        tiempoPorPantalla[ev.detalle].vistas++;
+        tiempoPorPantalla[ev.detalle].duracionTotalMs += Number(ev.duracion_ms || 0);
+      } else if (ev.tipo === "clic_social") {
+        clicsSociales[ev.detalle] = (clicsSociales[ev.detalle] || 0) + 1;
+      }
+    }
+    const tiempoPorPantallaLista = Object.entries(tiempoPorPantalla)
+      .map(([pantalla, v]) => ({
+        pantalla,
+        vistas: v.vistas,
+        duracionTotalMs: v.duracionTotalMs,
+        duracionPromedioMs: v.vistas ? Math.round(v.duracionTotalMs / v.vistas) : 0,
+      }))
+      .sort((a, b) => b.duracionTotalMs - a.duracionTotalMs);
 
     // Freaky (asistente IA): activación (quién canjeó/tiene acceso) y reportes
     // ("radiografía mensual") generados -- la señal más directa de que alguien
@@ -432,6 +493,16 @@ Deno.serve(async (req) => {
         avatar: contarValores("avatar_asesor"),
         idioma: contarValores("idioma_preferido"),
         tema: contarValores("tema_preferido"),
+        notifGastos: contarValores("notif_gastos_frecuencia"),
+        notifSaldos: contarValores("notif_saldos_frecuencia"),
+        notifReporteMes: contarBooleano("notif_reporte_mes"),
+        freakyVueloDesactivado: contarBooleano("freaky_vuelo_desactivado"),
+        diasAvisoTarjetaPromedio,
+        usuariosConDiasAvisoTarjeta: diasAvisoTarjeta.length,
+      },
+      usoPantallas: {
+        pantallas: tiempoPorPantallaLista,
+        clicsSociales,
       },
       adquisicion: {
         fuentes: contarValores("origen_registro"),
