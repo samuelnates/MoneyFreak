@@ -3045,6 +3045,21 @@ window.addEventListener('unhandledrejection', (ev) => {
 });
 </script>
 <script>
+// Fuente de adquisición -- se captura una sola vez, al cargar la página
+// (antes de cualquier navegación interna), para saber de dónde vino cada
+// cuenta nueva (TikTok, Instagram, directo...). Prioriza ?utm_source=... si
+// existe (para enlaces armados a propósito), si no usa el referrer. La app
+// nativa no trae ninguno de los dos, así que ahí siempre sale null -- normal,
+// nadie llega a la app instalada "desde" un link.
+const ORIGEN_REGISTRO = (function(){
+  try{
+    const utm = new URLSearchParams(location.search).get('utm_source');
+    if(utm) return utm.slice(0, 60).toLowerCase();
+    if(!document.referrer) return 'directo';
+    return new URL(document.referrer).hostname.replace(/^www\./, '').slice(0, 60);
+  }catch(e){ return null; }
+})();
+
 let sb = null;
 let cuentaActual = null;
 let bienActual = null;
@@ -5889,7 +5904,11 @@ async function terminosYaAceptados(){
 }
 function marcarTerminosAceptados(){
   terminosAceptadosCache = true;
-  sb.from('perfil_financiero').upsert({ terminos_aceptados_en: new Date().toISOString() }, { onConflict: 'user_id' })
+  const payload = { terminos_aceptados_en: new Date().toISOString() };
+  // Solo se guarda la primera vez que se aceptan términos (nueva cuenta) --
+  // por eso este es el punto donde también queda registrado de dónde vino.
+  if(ORIGEN_REGISTRO) payload.origen_registro = ORIGEN_REGISTRO;
+  sb.from('perfil_financiero').upsert(payload, { onConflict: 'user_id' })
     .then(({ error }) => { if(error) console.warn('No se pudo guardar terminos_aceptados_en (¿ya corriste la migración?)', error); });
 }
 

@@ -145,6 +145,43 @@
     </div>
     <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo (todavía no hay analítica de sesiones, así que es la señal de uso real más directa que existe hoy).</div>
 
+    <div class="grid-kpis" style="margin-bottom:8px;">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Retención 7 días</div>
+        <div class="tarjeta-valor" id="kpi-retencion-7d">—</div>
+        <div class="tarjeta-sub" id="kpi-retencion-7d-sub"></div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Retención 30 días</div>
+        <div class="tarjeta-valor" id="kpi-retencion-30d">—</div>
+        <div class="tarjeta-sub" id="kpi-retencion-30d-sub"></div>
+      </div>
+    </div>
+    <div class="tarjeta-sub" style="margin:-4px 0 24px;">De los usuarios con antigüedad suficiente (registrados hace más de 7/30 días), qué % sigue activo. Distinto de "activos": ahí no importa cuándo se registraron, aquí sí.</div>
+
+    <div class="grid-kpis" style="margin-bottom:8px;">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Registrados → 1ª cuenta</div>
+        <div class="tarjeta-valor" id="kpi-embudo-cuenta">—</div>
+        <div class="tarjeta-sub" id="kpi-embudo-cuenta-sub"></div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">1ª cuenta → 1er gasto</div>
+        <div class="tarjeta-valor" id="kpi-embudo-gasto">—</div>
+        <div class="tarjeta-sub" id="kpi-embudo-gasto-sub"></div>
+      </div>
+    </div>
+    <div class="tarjeta-sub" style="margin:-4px 0 24px;">Embudo de activación: cuántos llegan a cada paso y cuánto tardan en promedio — mide fricción real del onboarding.</div>
+
+    <div class="caja" style="margin-bottom:32px;">
+      <div class="tarjeta-etiqueta">Riesgo de abandono</div>
+      <div class="tarjeta-sub" style="margin:4px 0 8px;">Se activaron (crearon una cuenta) pero no registran un gasto hace más de 10 días, o nunca. Lista para contactar directo.</div>
+      <table>
+        <thead><tr><th>Correo</th><th>Alta</th><th>Última actividad</th></tr></thead>
+        <tbody id="tabla-riesgo"></tbody>
+      </table>
+    </div>
+
     <h2>Salud</h2>
     <div class="grid-kpis" style="margin-bottom:8px;">
       <div class="tarjeta">
@@ -194,6 +231,12 @@
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Idioma y tema solo se guardan aquí desde que el usuario los cambia en Configuración (2026-08-27) — antes vivían solo en el teléfono de cada quien, así que usuarios que no volvieron a tocar esa pantalla van a salir sin dato aunque sí tengan una preferencia real puesta.</div>
 
+    <h2>De dónde vienen</h2>
+    <div class="caja">
+      <div id="lista-adquisicion" style="margin-top:10px;"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Se captura una sola vez, al registrarse (link con "?utm_source=..." o el sitio desde el que llegaron; "directo" = sin referrer, ej. escribió la URL directo). Cuentas creadas antes del 2026-08-27, o desde la app nativa, salen sin dato — todavía no se rastreaba, no es lo mismo que "directo".</div>
+
     <h2>Uso por sección</h2>
     <div class="caja">
       <table>
@@ -221,6 +264,25 @@
         <div class="tarjeta-etiqueta">Radiografías este mes</div>
         <div class="tarjeta-valor" id="kpi-freaky-reportes-mes">—</div>
       </div>
+    </div>
+
+    <div class="caja" style="margin-bottom:32px;">
+      <div class="tarjeta-etiqueta">Costo de OpenAI (radiografías)</div>
+      <div class="tarjeta-sub" style="margin:4px 0 12px;">Tokens reales consumidos. El precio por token cambia, así que no se inventa un costo aquí — pon el precio vigente (platform.openai.com/pricing) y se calcula solo. Se guarda en este navegador.</div>
+      <table>
+        <thead><tr><th></th><th>Entrada</th><th>Entrada (caché)</th><th>Salida</th></tr></thead>
+        <tbody>
+          <tr><td>Tokens (total)</td><td id="tok-input-total">—</td><td id="tok-cached-total">—</td><td id="tok-output-total">—</td></tr>
+          <tr><td>Tokens (este mes)</td><td id="tok-input-mes">—</td><td id="tok-cached-mes">—</td><td id="tok-output-mes">—</td></tr>
+          <tr>
+            <td>USD por 1M</td>
+            <td><input type="number" id="precio-input" step="0.01" min="0" placeholder="0.00" style="width:70px;padding:4px 6px;border-radius:6px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--mono);font-size:12px;"></td>
+            <td><input type="number" id="precio-cached" step="0.01" min="0" placeholder="0.00" style="width:70px;padding:4px 6px;border-radius:6px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--mono);font-size:12px;"></td>
+            <td><input type="number" id="precio-output" step="0.01" min="0" placeholder="0.00" style="width:70px;padding:4px 6px;border-radius:6px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--mono);font-size:12px;"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tarjeta-sub" style="margin-top:12px;">Estimado total: <strong id="costo-total">—</strong> · Este mes: <strong id="costo-mes">—</strong></div>
     </div>
 
     <h2>Usuarios</h2>
@@ -405,6 +467,54 @@ function toggleDetalleUsuario(fila){
   fila.after(tr);
 }
 
+let tokensCostoActual = null;
+
+function recalcularCostoIA(){
+  if(!tokensCostoActual) return;
+  const leerPrecio = (id) => {
+    const v = parseFloat(document.getElementById(id).value);
+    return Number.isFinite(v) ? v : 0;
+  };
+  const precioInput = leerPrecio('precio-input');
+  const precioCached = leerPrecio('precio-cached');
+  const precioOutput = leerPrecio('precio-output');
+  try{
+    localStorage.setItem('admin_precio_ia', JSON.stringify({ precioInput, precioCached, precioOutput }));
+  }catch(e){}
+  const calcular = (t) => (t.input / 1e6) * precioInput + (t.cachedInput / 1e6) * precioCached + (t.output / 1e6) * precioOutput;
+  document.getElementById('costo-total').textContent = formatoMonedaUsd(calcular(tokensCostoActual.total));
+  document.getElementById('costo-mes').textContent = formatoMonedaUsd(calcular(tokensCostoActual.mes));
+}
+
+function formatoMonedaUsd(n){
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
+}
+
+function pintarCostoIA(tokensTotal, tokensMes){
+  tokensCostoActual = { total: tokensTotal, mes: tokensMes };
+  document.getElementById('tok-input-total').textContent = formatoNumero(tokensTotal.input);
+  document.getElementById('tok-cached-total').textContent = formatoNumero(tokensTotal.cachedInput);
+  document.getElementById('tok-output-total').textContent = formatoNumero(tokensTotal.output);
+  document.getElementById('tok-input-mes').textContent = formatoNumero(tokensMes.input);
+  document.getElementById('tok-cached-mes').textContent = formatoNumero(tokensMes.cachedInput);
+  document.getElementById('tok-output-mes').textContent = formatoNumero(tokensMes.output);
+  recalcularCostoIA();
+}
+
+function inicializarCalculadoraCostoIA(){
+  try{
+    const guardado = JSON.parse(localStorage.getItem('admin_precio_ia') || 'null');
+    if(guardado){
+      document.getElementById('precio-input').value = guardado.precioInput || '';
+      document.getElementById('precio-cached').value = guardado.precioCached || '';
+      document.getElementById('precio-output').value = guardado.precioOutput || '';
+    }
+  }catch(e){}
+  ['precio-input', 'precio-cached', 'precio-output'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalcularCostoIA);
+  });
+}
+
 function inicializarInteraccionesUsuarios(){
   document.getElementById('input-buscar-usuario').addEventListener('input', pintarTablaUsuarios);
   document.querySelectorAll('.th-orden').forEach(th => {
@@ -477,6 +587,26 @@ async function cargarPanel(){
   document.getElementById('kpi-activos-7d').textContent = formatoNumero(datos.uso.activos7d);
   document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
 
+  document.getElementById('kpi-retencion-7d').textContent = datos.uso.retencionD7 === null ? '—' : `${Math.round(datos.uso.retencionD7 * 100)}%`;
+  document.getElementById('kpi-retencion-7d-sub').textContent = `De ${formatoNumero(datos.uso.elegiblesRetencionD7)} con más de 7 días registrados`;
+  document.getElementById('kpi-retencion-30d').textContent = datos.uso.retencionD30 === null ? '—' : `${Math.round(datos.uso.retencionD30 * 100)}%`;
+  document.getElementById('kpi-retencion-30d-sub').textContent = `De ${formatoNumero(datos.uso.elegiblesRetencionD30)} con más de 30 días registrados`;
+
+  const e = datos.embudoActivacion;
+  document.getElementById('kpi-embudo-cuenta').textContent = e.registrados ? `${Math.round((e.conCuenta / e.registrados) * 100)}%` : '—';
+  document.getElementById('kpi-embudo-cuenta-sub').textContent = `${formatoNumero(e.conCuenta)} de ${formatoNumero(e.registrados)}` + (e.diasPromedioRegistroACuenta === null ? '' : ` · ${e.diasPromedioRegistroACuenta.toFixed(1)} días en promedio`);
+  document.getElementById('kpi-embudo-gasto').textContent = e.conCuenta ? `${Math.round((e.conGasto / e.conCuenta) * 100)}%` : '—';
+  document.getElementById('kpi-embudo-gasto-sub').textContent = `${formatoNumero(e.conGasto)} de ${formatoNumero(e.conCuenta)}` + (e.diasPromedioCuentaAGasto === null ? '' : ` · ${e.diasPromedioCuentaAGasto.toFixed(1)} días en promedio`);
+
+  const tablaRiesgo = document.getElementById('tabla-riesgo');
+  if(!datos.riesgo.usuarios.length){
+    tablaRiesgo.innerHTML = '<tr><td colspan="3" class="tarjeta-sub">Nadie en riesgo ahorita.</td></tr>';
+  }else{
+    tablaRiesgo.innerHTML = datos.riesgo.usuarios.map(u =>
+      `<tr><td>${escapeHtmlAdmin(u.correo || '—')}</td><td>${formatoFechaHora(u.fechaAlta)}</td><td>${formatoFechaHora(u.ultimaActividad)}</td></tr>`
+    ).join('');
+  }
+
   document.getElementById('kpi-pendientes').textContent = datos.salud.solicitudesPendientes === null ? '—' : formatoNumero(datos.salud.solicitudesPendientes);
   document.getElementById('kpi-errores-24h').textContent = datos.salud.errores24h === null ? '—' : formatoNumero(datos.salud.errores24h);
   const tablaErrores = document.getElementById('tabla-errores');
@@ -495,6 +625,7 @@ async function cargarPanel(){
   pintarDistribucion('lista-avatar', datos.configuracion.avatar, ETIQUETAS_AVATAR);
   pintarDistribucion('lista-idioma', datos.configuracion.idioma, ETIQUETAS_IDIOMA);
   pintarDistribucion('lista-tema', datos.configuracion.tema, ETIQUETAS_TEMA);
+  pintarDistribucion('lista-adquisicion', datos.adquisicion.fuentes, {});
 
   const tablaSecciones = document.getElementById('tabla-secciones');
   tablaSecciones.innerHTML = Object.entries(datos.usoPorSeccion)
@@ -506,6 +637,7 @@ async function cargarPanel(){
   document.getElementById('kpi-freaky-usuarios-reporte').textContent = formatoNumero(datos.freaky.usuariosConReporte);
   document.getElementById('kpi-freaky-reportes').textContent = formatoNumero(datos.freaky.reportesGenerados);
   document.getElementById('kpi-freaky-reportes-mes').textContent = formatoNumero(datos.freaky.reportesEsteMes);
+  pintarCostoIA(datos.freaky.tokensTotal, datos.freaky.tokensMes);
 
   usuariosDetalleGlobal = datos.detalleUsuarios || [];
   pintarTablaUsuarios();
@@ -517,6 +649,7 @@ async function cargarPanel(){
   if(!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return;
   iniciarCliente();
   inicializarInteraccionesUsuarios();
+  inicializarCalculadoraCostoIA();
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     await cargarPanel();

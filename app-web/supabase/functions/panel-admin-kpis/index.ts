@@ -190,10 +190,10 @@ Deno.serve(async (req) => {
     // aunque sí tengan una preferencia real guardada en su teléfono).
     const { data: preferencias, error: errorPreferencias } = await admin
       .from("perfil_financiero")
-      .select("user_id, avatar_asesor, idioma_preferido, tema_preferido");
+      .select("user_id, avatar_asesor, idioma_preferido, tema_preferido, origen_registro");
     if (errorPreferencias) throw errorPreferencias;
 
-    const contarValores = (campo: "avatar_asesor" | "idioma_preferido" | "tema_preferido") => {
+    const contarValores = (campo: "avatar_asesor" | "idioma_preferido" | "tema_preferido" | "origen_registro") => {
       const conteo: Record<string, number> = {};
       for (const p of preferencias || []) {
         const valor = p[campo];
@@ -221,6 +221,11 @@ Deno.serve(async (req) => {
     // detalle por usuario (cuántas cuentas/gastos/etc. tiene cada quien), sin
     // repetir estas mismas consultas.
     const conteoPorTablaPorUsuario: Record<string, Record<string, number>> = {};
+    // Primera fecha por usuario en cada tabla -- para el embudo de
+    // activación (registro -> primera cuenta -> primer gasto).
+    const primeraFechaPorTablaPorUsuario: Record<string, Record<string, string>> = {};
+    // Última fecha de gasto por usuario -- para detectar riesgo de abandono.
+    const ultimaFechaGastoPorUsuario: Record<string, string> = {};
     // Uso reciente (proxy de actividad general, no solo de "gastos"):
     // usuarios distintos con al menos un gasto registrado en cada ventana.
     // No hay tabla de sesiones/analytics todavía, así que "registrar un
@@ -240,19 +245,79 @@ Deno.serve(async (req) => {
       const usuariosConDatos = new Set<string>();
       const usuariosActivos30d = new Set<string>();
       const conteoUsuario: Record<string, number> = {};
+      const primeraFechaUsuario: Record<string, string> = {};
       for (const f of filas || []) {
         usuariosConDatos.add(f.user_id);
         conteoUsuario[f.user_id] = (conteoUsuario[f.user_id] || 0) + 1;
+        if (f.created_at && (!primeraFechaUsuario[f.user_id] || f.created_at < primeraFechaUsuario[f.user_id])) {
+          primeraFechaUsuario[f.user_id] = f.created_at;
+        }
         if (f.created_at && f.created_at >= hace30d) usuariosActivos30d.add(f.user_id);
-        if (clave === "gastos" && f.created_at >= hace30d) {
-          activos30d.add(f.user_id);
-          if (f.created_at >= hace7d) activos7d.add(f.user_id);
-          if (f.created_at >= hace24h) activos24h.add(f.user_id);
+        if (clave === "gastos" && f.created_at) {
+          if (!ultimaFechaGastoPorUsuario[f.user_id] || f.created_at > ultimaFechaGastoPorUsuario[f.user_id]) {
+            ultimaFechaGastoPorUsuario[f.user_id] = f.created_at;
+          }
+          if (f.created_at >= hace30d) {
+            activos30d.add(f.user_id);
+            if (f.created_at >= hace7d) activos7d.add(f.user_id);
+            if (f.created_at >= hace24h) activos24h.add(f.user_id);
+          }
         }
       }
       usoPorSeccion[clave] = { usuariosConDatos: usuariosConDatos.size, activos30d: usuariosActivos30d.size };
       conteoPorTablaPorUsuario[clave] = conteoUsuario;
+      primeraFechaPorTablaPorUsuario[clave] = primeraFechaUsuario;
     }
+
+    // Retención: de los usuarios con antigüedad suficiente para que la
+    // ventana ya haya "corrido" (registrados hace más de 7/30 días), ¿qué
+    // % sigue activo? Es la señal real de si la gente se queda o prueba una
+    // vez y se va -- distinto de "activos" (que no distingue antigüedad).
+    const elegiblesD7 = usuarios.filter((u) => u.created_at <= hace7d);
+    const elegiblesD30 = usuarios.filter((u) => u.created_at <= hace30d);
+    const retencionD7 = elegiblesD7.length
+      ? elegiblesD7.filter((u) => activos7d.has(u.id)).length / elegiblesD7.length
+      : null;
+    const retencionD30 = elegiblesD30.length
+      ? elegiblesD30.filter((u) => activos30d.has(u.id)).length / elegiblesD30.length
+      : null;
+
+    // Riesgo de abandono: se activaron (llegaron a crear una cuenta) pero
+    // no registran un gasto hace más de 10 días, o nunca -- lista accionable
+    // para contactar directamente, no solo un número.
+    const hace10d = new Date(ahora - 10 * 24 * 60 * 60 * 1000).toISOString();
+    const usuariosRiesgo = usuarios
+      .filter((u) => usuariosConCuenta.has(u.id))
+      .filter((u) => {
+        const ultima = ultimaFechaGastoPorUsuario[u.id];
+        return !ultima || ultima < hace10d;
+      })
+      .map((u) => ({
+        correo: u.email ?? null,
+        fechaAlta: u.created_at,
+        ultimaActividad: ultimaFechaGastoPorUsuario[u.id] || null,
+      }))
+      .sort((a, b) => (a.ultimaActividad || "").localeCompare(b.ultimaActividad || ""));
+
+    // Embudo de activación: registro -> primera cuenta -> primer gasto, con
+    // cuánto tarda cada paso en promedio (mide fricción real del onboarding).
+    const diasEntre = (a: string, b: string) => (new Date(b).getTime() - new Date(a).getTime()) / (24 * 60 * 60 * 1000);
+    const promedio = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+    const tiemposRegistroACuenta: number[] = [];
+    const tiemposCuentaAGasto: number[] = [];
+    for (const u of usuarios) {
+      const fechaCuenta = primeraFechaPorTablaPorUsuario.cuentas?.[u.id];
+      const fechaGasto = primeraFechaPorTablaPorUsuario.gastos?.[u.id];
+      if (fechaCuenta) tiemposRegistroACuenta.push(diasEntre(u.created_at, fechaCuenta));
+      if (fechaCuenta && fechaGasto) tiemposCuentaAGasto.push(diasEntre(fechaCuenta, fechaGasto));
+    }
+    const embudoActivacion = {
+      registrados: totalUsuarios,
+      conCuenta: usuariosConCuenta.size,
+      conGasto: usoPorSeccion.gastos?.usuariosConDatos || 0,
+      diasPromedioRegistroACuenta: promedio(tiemposRegistroACuenta),
+      diasPromedioCuentaAGasto: promedio(tiemposCuentaAGasto),
+    };
 
     // Freaky (asistente IA): activación (quién canjeó/tiene acceso) y reportes
     // ("radiografía mensual") generados -- la señal más directa de que alguien
@@ -265,18 +330,36 @@ Deno.serve(async (req) => {
 
     const { data: reportes, error: errorReportes } = await admin
       .from("reportes_financieros")
-      .select("user_id, report_month, status, created_at");
+      .select("user_id, report_month, status, created_at, input_tokens, cached_input_tokens, output_tokens");
     if (errorReportes) console.error("panel-admin-kpis: error leyendo reportes_financieros:", errorReportes);
 
     const reportesCompletados = (reportes || []).filter((r) => r.status === "completed");
     const usuariosConReporte = new Set(reportesCompletados.map((r) => r.user_id));
     const mesActual = new Date().toISOString().slice(0, 7);
-    const reportesEsteMes = reportesCompletados.filter((r) => r.report_month === mesActual).length;
+    const reportesDelMes = reportesCompletados.filter((r) => r.report_month === mesActual);
+    const reportesEsteMes = reportesDelMes.length;
 
     const reportesPorUsuario: Record<string, number> = {};
     for (const r of reportesCompletados) {
       reportesPorUsuario[r.user_id] = (reportesPorUsuario[r.user_id] || 0) + 1;
     }
+
+    // Consumo de tokens de OpenAI -- se guarda en cada radiografía generada
+    // desde que existe la función (ver radiografia-mensual). No se convierte
+    // a dólares aquí a propósito: el precio por token cambia y no queremos
+    // que el panel muestre un costo inventado/desactualizado -- el panel
+    // deja capturar el precio vigente y calcula el estimado ahí mismo.
+    const sumarTokens = (lista: typeof reportesCompletados) =>
+      lista.reduce(
+        (acc, r) => ({
+          input: acc.input + (r.input_tokens || 0),
+          cachedInput: acc.cachedInput + (r.cached_input_tokens || 0),
+          output: acc.output + (r.output_tokens || 0),
+        }),
+        { input: 0, cachedInput: 0, output: 0 },
+      );
+    const tokensTotal = sumarTokens(reportesCompletados);
+    const tokensMes = sumarTokens(reportesDelMes);
 
     const preferenciasPorUsuario: Record<string, { avatar_asesor: string | null; idioma_preferido: string | null; tema_preferido: string | null }> = {};
     for (const p of preferencias || []) {
@@ -326,7 +409,15 @@ Deno.serve(async (req) => {
         activos24h: activos24h.size,
         activos7d: activos7d.size,
         activos30d: activos30d.size,
+        retencionD7,
+        retencionD30,
+        elegiblesRetencionD7: elegiblesD7.length,
+        elegiblesRetencionD30: elegiblesD30.length,
       },
+      riesgo: {
+        usuarios: usuariosRiesgo,
+      },
+      embudoActivacion,
       salud: {
         solicitudesPendientes: solicitudesPendientes ?? null,
         errores24h: errores24h ?? null,
@@ -342,12 +433,17 @@ Deno.serve(async (req) => {
         idioma: contarValores("idioma_preferido"),
         tema: contarValores("tema_preferido"),
       },
+      adquisicion: {
+        fuentes: contarValores("origen_registro"),
+      },
       usoPorSeccion,
       freaky: {
         usuariosConAccesoIA: usuariosConAccesoIASet.size,
         usuariosConReporte: usuariosConReporte.size,
         reportesGenerados: reportesCompletados.length,
         reportesEsteMes,
+        tokensTotal,
+        tokensMes,
       },
       detalleUsuarios,
     });
