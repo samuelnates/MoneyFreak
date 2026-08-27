@@ -332,10 +332,20 @@
     <div class="tarjeta-sub" style="margin:8px 0 24px;">La barra es "usuarios con datos" (alguna vez registraron algo ahí); el número chico entre paréntesis es cuántos de esos siguen activos ahí en los últimos 30 días.</div>
 
     <h2>Dónde pasan tiempo</h2>
+    <div class="caja" id="caja-insight-promocion" style="margin-bottom:16px;display:none;background:var(--acento);color:var(--acento-texto);">
+      <div class="tarjeta-etiqueta" style="color:var(--acento-texto);opacity:.75;">Insight para promoción</div>
+      <div id="texto-insight-promocion" style="font-size:14px;font-weight:600;margin-top:4px;"></div>
+    </div>
     <div class="caja">
       <div id="grafica-pantallas"></div>
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Registro propio (sin herramientas de terceros, sin grabar pantalla): cada vez que alguien cambia de pantalla dentro de la app se guarda cuánto duró la anterior. La barra es el tiempo total acumulado de todos los usuarios; el número chico es el promedio por visita.</div>
+
+    <h2>Nunca visitadas o casi nunca</h2>
+    <div class="caja">
+      <div id="lista-pantallas-sin-uso"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Candidatas a revisar: nadie las visita, o casi nadie. Puede ser que estén escondidas/difíciles de encontrar, que resuelvan algo que a nadie le importa, o que tengan un bug que las hace inútiles — no significa automáticamente "bórrala", pero sí "ve a ver por qué".</div>
 
     <h2>Clics en redes sociales</h2>
     <div class="caja" style="margin-bottom:32px;">
@@ -624,13 +634,30 @@ const ETIQUETAS_TEMA = { light: 'Claro', dark: 'Oscuro', auto: 'Automático' };
 const ETIQUETAS_SECCION = { cuentas: 'Cuentas', gastos: 'Gastos', ingresos: 'Ingresos', deudas: 'Deudas y tarjetas', bienes: 'Bienes', acciones: 'Acciones e inversiones' };
 const ETIQUETAS_NOTIF_GASTOS = { nunca: 'Nunca', dia: 'Cada día', semana: 'Cada semana' };
 const ETIQUETAS_NOTIF_SALDOS = { nunca: 'Nunca', semana: 'Cada semana', 'dos-semanas': 'Cada 2 semanas', mes: 'Cada mes' };
+// Las 51 pantallas reales de la app (ver .pantalla en index.html) --
+// completo a propósito: sin la lista completa no se puede saber cuáles
+// nunca se visitan, solo cuáles sí.
 const ETIQUETAS_PANTALLA = {
   'vista-inicio': 'Inicio', 'vista-cuentas': 'Cuentas y patrimonio', 'vista-agregar-gasto': 'Agregar gasto',
   'vista-agregar-ingreso': 'Agregar ingreso', 'vista-cuentas-deudas': 'Deudas', 'vista-cuentas-bienes': 'Bienes',
   'vista-cuentas-acciones': 'Acciones', 'vista-cuentas-transferencias': 'Transferencias', 'vista-salud': 'Salud financiera',
   'vista-simulador': 'Simulador de crédito', 'vista-config-general': 'Configuración general', 'vista-seguridad-privacidad': 'Seguridad y privacidad',
   'vista-reportes': 'Reportes', 'vista-ayuda-ia': 'Chat con Freaky', 'vista-login': 'Login',
+  'vista-agregar-accion': 'Agregar acción', 'vista-agregar-bien': 'Agregar bien', 'vista-agregar-cuenta': 'Agregar cuenta',
+  'vista-agregar-deuda': 'Agregar deuda', 'vista-agregar-transferencia': 'Agregar transferencia', 'vista-aviso-legal': 'Aviso legal',
+  'vista-balance': 'Balance / patrimonio', 'vista-balance-graficas': 'Gráficas y liquidez', 'vista-balance-pdf': 'Exportar PDF del balance',
+  'vista-crear-cuenta': 'Crear cuenta (registro)', 'vista-cuentas-ingresos': 'Ingresos', 'vista-cuentas-inversion': 'Cuentas de inversión',
+  'vista-editar-accion': 'Editar acción', 'vista-editar-bien': 'Editar bien', 'vista-editar-cuenta': 'Editar cuenta',
+  'vista-editar-deuda': 'Editar deuda', 'vista-editar-gasto': 'Editar gasto', 'vista-editar-ingreso': 'Editar ingreso',
+  'vista-editar-perfil': 'Editar umbrales de salud', 'vista-editar-transferencia': 'Editar transferencia', 'vista-elegir-asesor': 'Elegir avatar de Freaky',
+  'vista-flujo': 'Flujo de efectivo', 'vista-gastos': 'Gastos', 'vista-gastos-movimientos': 'Historial de gastos',
+  'vista-historial-accion': 'Historial de acción', 'vista-historial-bien': 'Historial de bien', 'vista-historial-cuenta': 'Historial de cuenta',
+  'vista-historial-deuda': 'Historial de deuda', 'vista-nueva-contrasena': 'Nueva contraseña', 'vista-olvide-contrasena': 'Olvidé mi contraseña',
+  'vista-onboarding-rapido': 'Onboarding rápido', 'vista-presupuesto': 'Presupuesto', 'vista-privacidad': 'Menú de privacidad',
+  'vista-radiografia-resultado': 'Resultado de radiografía', 'vista-salud-detalle': 'Detalle de salud financiera', 'vista-score': 'Score de constancia',
+  'vista-solicitudes-gasto': 'Solicitudes de gasto (Freaky)',
 };
+const TODAS_LAS_PANTALLAS = Object.keys(ETIQUETAS_PANTALLA);
 
 function formatoDuracion(ms){
   const totalSeg = Math.round(ms / 1000);
@@ -713,6 +740,50 @@ function pintarRetencionVisual(contenedorId, etiqueta, retenidos, elegibles){
       <span><span class="retencion-punto" style="background:var(--color-riesgo);opacity:.6;"></span>Ya no volvieron: ${formatoNumero(perdidos)}</span>
       <span>de ${formatoNumero(elegibles)} con antigüedad suficiente</span>
     </div>`;
+}
+
+// Pensado para promoción: la pantalla con más tiempo acumulado, en una
+// frase lista para usar. Se descartan login/inicio a propósito -- son
+// pantallas de paso, no una función que valga la pena presumir.
+function pintarInsightPromocion(pantallas){
+  const caja = document.getElementById('caja-insight-promocion');
+  const candidatas = pantallas.filter(p => p.pantalla !== 'vista-login' && p.pantalla !== 'vista-inicio' && p.vistas > 0);
+  if(!candidatas.length){
+    caja.style.display = 'none';
+    return;
+  }
+  const top = candidatas[0];
+  const etiqueta = ETIQUETAS_PANTALLA[top.pantalla] || top.pantalla;
+  document.getElementById('texto-insight-promocion').textContent =
+    `"${etiqueta}" es lo que más engancha: ${formatoDuracion(top.duracionTotalMs)} acumulados entre todos los usuarios, en ${formatoNumero(top.vistas)} visitas. Buen argumento para promocionar la app con eso.`;
+  caja.style.display = '';
+}
+
+// Candidatas a revisar/limpiar: pantallas que existen en la app pero nunca
+// (o casi nunca) se visitan. No es "bórrala" automático -- puede estar
+// escondida, tener un bug, o de verdad no importarle a nadie; hay que ir a
+// ver cada caso.
+function pintarPantallasSinUso(pantallas){
+  const cont = document.getElementById('lista-pantallas-sin-uso');
+  const conDatos = new Map(pantallas.map(p => [p.pantalla, p]));
+  const UMBRAL_POCAS_VISITAS = 2;
+  const sinVisitas = TODAS_LAS_PANTALLAS
+    .filter(id => !conDatos.has(id))
+    .sort((a, b) => (ETIQUETAS_PANTALLA[a] || a).localeCompare(ETIQUETAS_PANTALLA[b] || b));
+  const pocasVisitas = pantallas.filter(p => p.vistas > 0 && p.vistas <= UMBRAL_POCAS_VISITAS).sort((a, b) => a.vistas - b.vistas);
+
+  let html = '';
+  if(sinVisitas.length){
+    html += `<div class="tarjeta-etiqueta" style="margin-bottom:6px;">Cero visitas registradas (${sinVisitas.length} de ${TODAS_LAS_PANTALLAS.length})</div>`;
+    html += `<div style="font-size:13px;line-height:1.9;margin-bottom:16px;">${sinVisitas.map(id => escapeHtmlAdmin(ETIQUETAS_PANTALLA[id] || id)).join(' · ')}</div>`;
+  }
+  if(pocasVisitas.length){
+    html += `<div class="tarjeta-etiqueta" style="margin-bottom:6px;">Muy pocas visitas</div>`;
+    html += pocasVisitas.map(p =>
+      `<div class="categoria-fila-etiqueta"><span>${escapeHtmlAdmin(ETIQUETAS_PANTALLA[p.pantalla] || p.pantalla)}</span><span>${formatoNumero(p.vistas)} visita${p.vistas === 1 ? '' : 's'}</span></div>`
+    ).join('');
+  }
+  cont.innerHTML = html || '<div class="tarjeta-sub">Todas las pantallas tienen uso razonable.</div>';
 }
 
 function pintarGraficaPantallas(pantallas){
@@ -1156,6 +1227,8 @@ async function cargarPanel(){
 
   pintarGraficaSecciones(datos.usoPorSeccion);
   pintarGraficaPantallas(datos.usoPantallas.pantallas);
+  pintarInsightPromocion(datos.usoPantallas.pantallas);
+  pintarPantallasSinUso(datos.usoPantallas.pantallas);
   pintarClicsSociales(datos.usoPantallas.clicsSociales);
 
   document.getElementById('kpi-freaky-acceso').textContent = datos.freaky.usuariosConAccesoIA === null ? '—' : formatoNumero(datos.freaky.usuariosConAccesoIA);
