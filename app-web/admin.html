@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de administración — Money Freak</title>
+<link rel="icon" type="image/svg+xml" href="app-icon/icon-1024.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg:#000000;
+    --superficie:#0D0D0B;
+    --borde:#232019;
+    --texto:#EDEAE2;
+    --texto-tenue:#8D8676;
+    --acento:#8CA37A;
+    --alerta:#C4756B;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F7F5EF;
+      --superficie:#FFFFFF;
+      --borde:#E4E0D2;
+      --texto:#2A2718;
+      --texto-tenue:#6B6555;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
+    line-height:1.5;padding:24px 16px 60px;
+  }
+  .contenedor{max-width:880px;margin:0 auto;}
+  .marca{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
+  h1{font-size:22px;margin:0 0 24px;}
+  .logo-mark{width:26px;height:26px;margin-bottom:8px;color:var(--texto);}
+  .logo-mark svg{width:100%;height:100%;display:block;}
+
+  .caja-login{max-width:340px;margin:80px auto;text-align:center;}
+  .caja-login input{
+    width:100%;padding:12px 14px;margin-bottom:10px;border-radius:8px;border:1px solid var(--borde);
+    background:var(--superficie);color:var(--texto);font-family:var(--sans);font-size:14px;
+  }
+  .caja-login button{
+    width:100%;padding:12px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);
+    font-family:var(--sans);font-weight:600;font-size:14px;cursor:pointer;
+  }
+  .caja-login button:disabled{opacity:.5;cursor:default;}
+  .error-login{color:var(--alerta);font-size:12px;margin-top:10px;font-family:var(--mono);}
+
+  .grid-kpis{display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-bottom:24px;}
+  .tarjeta{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:16px 18px;}
+  .tarjeta-etiqueta{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:6px;}
+  .tarjeta-valor{font-family:var(--mono);font-size:26px;font-weight:600;}
+  .tarjeta-sub{font-size:11.5px;color:var(--texto-tenue);margin-top:4px;}
+
+  h2{font-size:14px;margin:32px 0 12px;font-family:var(--mono);letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;}
+  .caja{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:16px 18px;margin-bottom:8px;}
+
+  .grafica-barras{display:flex;align-items:flex-end;gap:3px;height:100px;margin-top:8px;}
+  .barra{flex:1;background:var(--acento);border-radius:2px 2px 0 0;min-height:2px;position:relative;}
+  .grafica-ejes{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--texto-tenue);margin-top:6px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--texto-tenue);padding:8px 6px;border-bottom:1px solid var(--borde);}
+  td{padding:8px 6px;border-bottom:1px solid var(--borde);}
+  tr:last-child td{border-bottom:none;}
+
+  .oculto{display:none;}
+  .cargando{text-align:center;padding:60px 20px;color:var(--texto-tenue);font-family:var(--mono);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="contenedor">
+
+  <div id="vista-login" class="caja-login">
+    <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
+    <div class="marca">MONEY FREAK · ADMIN</div>
+    <input type="email" id="input-correo" placeholder="Correo" autocomplete="username">
+    <input type="password" id="input-clave" placeholder="Contraseña" autocomplete="current-password">
+    <button id="btn-entrar" onclick="entrar()">Entrar</button>
+    <div class="error-login oculto" id="error-login"></div>
+  </div>
+
+  <div id="vista-cargando" class="cargando oculto">Cargando KPIs…</div>
+
+  <div id="vista-panel" class="oculto">
+    <div class="marca">MONEY FREAK</div>
+    <h1>Panel de administración</h1>
+
+    <h2>Crecimiento</h2>
+    <div class="grid-kpis">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Usuarios totales</div>
+        <div class="tarjeta-valor" id="kpi-total">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Nuevos hoy</div>
+        <div class="tarjeta-valor" id="kpi-hoy">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Nuevos 7 días</div>
+        <div class="tarjeta-valor" id="kpi-7d">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Nuevos 30 días</div>
+        <div class="tarjeta-valor" id="kpi-30d">—</div>
+      </div>
+    </div>
+
+    <div class="caja">
+      <div class="tarjeta-etiqueta">Registros por día (últimos 30 días)</div>
+      <div class="grafica-barras" id="grafica-registros"></div>
+      <div class="grafica-ejes"><span id="eje-inicio"></span><span id="eje-fin"></span></div>
+    </div>
+
+    <h2>Activación y uso</h2>
+    <div class="grid-kpis">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Tasa de activación</div>
+        <div class="tarjeta-valor" id="kpi-activacion">—</div>
+        <div class="tarjeta-sub" id="kpi-activacion-sub"></div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Activos hoy</div>
+        <div class="tarjeta-valor" id="kpi-activos-24h">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Activos 7 días</div>
+        <div class="tarjeta-valor" id="kpi-activos-7d">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Activos 30 días</div>
+        <div class="tarjeta-valor" id="kpi-activos-30d">—</div>
+      </div>
+    </div>
+    <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo (todavía no hay analítica de sesiones, así que es la señal de uso real más directa que existe hoy).</div>
+
+    <h2>Salud</h2>
+    <div class="grid-kpis" style="margin-bottom:32px;">
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Aprobaciones pendientes</div>
+        <div class="tarjeta-valor" id="kpi-pendientes">—</div>
+        <div class="tarjeta-sub">Fotos de tickets sin revisar (Freaky)</div>
+      </div>
+    </div>
+
+    <h2>Últimas altas</h2>
+    <div class="caja">
+      <table>
+        <thead><tr><th>Correo</th><th>Fecha</th></tr></thead>
+        <tbody id="tabla-registros"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+let sb = null;
+
+function iniciarCliente(){
+  sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+    auth: { flowType: 'pkce' },
+  });
+}
+
+function mostrar(id){
+  ['vista-login', 'vista-cargando', 'vista-panel'].forEach(v => {
+    document.getElementById(v).classList.toggle('oculto', v !== id);
+  });
+}
+
+async function entrar(){
+  const correo = document.getElementById('input-correo').value.trim();
+  const clave = document.getElementById('input-clave').value;
+  const btn = document.getElementById('btn-entrar');
+  const errorEl = document.getElementById('error-login');
+  errorEl.classList.add('oculto');
+  if(!correo || !clave) return;
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+  const { error } = await sb.auth.signInWithPassword({ email: correo, password: clave });
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+  if(error){
+    errorEl.textContent = 'Correo o contraseña incorrectos.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+  await cargarPanel();
+}
+
+function formatoNumero(n){
+  return new Intl.NumberFormat('es-MX').format(n);
+}
+
+function pintarGraficaRegistros(registrosPorDia){
+  const dias = [];
+  const hoy = new Date();
+  for(let i = 29; i >= 0; i--){
+    const d = new Date(hoy);
+    d.setDate(d.getDate() - i);
+    dias.push(d.toISOString().slice(0, 10));
+  }
+  const valores = dias.map(d => registrosPorDia[d] || 0);
+  const max = Math.max(1, ...valores);
+  const cont = document.getElementById('grafica-registros');
+  cont.innerHTML = valores.map(v => {
+    const alturaPct = Math.max(4, Math.round((v / max) * 100));
+    return `<div class="barra" style="height:${alturaPct}%" title="${v}"></div>`;
+  }).join('');
+  document.getElementById('eje-inicio').textContent = dias[0];
+  document.getElementById('eje-fin').textContent = dias[dias.length - 1];
+}
+
+async function cargarPanel(){
+  mostrar('vista-cargando');
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ mostrar('vista-login'); return; }
+
+  let resp;
+  try{
+    resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-kpis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    });
+  }catch(e){
+    document.getElementById('vista-cargando').textContent = 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.';
+    return;
+  }
+
+  if(resp.status === 403){
+    document.getElementById('vista-cargando').textContent = 'Esta cuenta no tiene acceso al panel de administración.';
+    return;
+  }
+  if(!resp.ok){
+    document.getElementById('vista-cargando').textContent = 'Ocurrió un error cargando los KPIs.';
+    return;
+  }
+
+  const datos = await resp.json();
+
+  document.getElementById('kpi-total').textContent = formatoNumero(datos.crecimiento.totalUsuarios);
+  document.getElementById('kpi-hoy').textContent = formatoNumero(datos.crecimiento.nuevosHoy);
+  document.getElementById('kpi-7d').textContent = formatoNumero(datos.crecimiento.nuevos7d);
+  document.getElementById('kpi-30d').textContent = formatoNumero(datos.crecimiento.nuevos30d);
+  pintarGraficaRegistros(datos.crecimiento.registrosPorDia);
+
+  const tasaPct = Math.round(datos.activacion.tasaActivacion * 100);
+  document.getElementById('kpi-activacion').textContent = `${tasaPct}%`;
+  document.getElementById('kpi-activacion-sub').textContent = `${formatoNumero(datos.activacion.usuariosConCuenta)} de ${formatoNumero(datos.activacion.totalUsuarios)} crearon una cuenta`;
+  document.getElementById('kpi-activos-24h').textContent = formatoNumero(datos.uso.activos24h);
+  document.getElementById('kpi-activos-7d').textContent = formatoNumero(datos.uso.activos7d);
+  document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
+
+  document.getElementById('kpi-pendientes').textContent = datos.salud.solicitudesPendientes === null ? '—' : formatoNumero(datos.salud.solicitudesPendientes);
+
+  const tbody = document.getElementById('tabla-registros');
+  tbody.innerHTML = datos.crecimiento.registrosRecientes.map(r => {
+    const fecha = new Date(r.fecha).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+    return `<tr><td>${r.correo || '—'}</td><td>${fecha}</td></tr>`;
+  }).join('');
+
+  mostrar('vista-panel');
+}
+
+(async function init(){
+  if(!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return;
+  iniciarCliente();
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    await cargarPanel();
+  }
+})();
+</script>
+</body>
+</html>
