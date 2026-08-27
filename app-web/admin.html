@@ -19,6 +19,7 @@
     --alerta:#C4756B;
     --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
     --sans:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    --pad-x:16px;
   }
   @media (prefers-color-scheme: light){
     :root{
@@ -32,7 +33,7 @@
   *{box-sizing:border-box;}
   body{
     margin:0;background:var(--bg);color:var(--texto);font-family:var(--sans);
-    line-height:1.5;padding:24px 16px 60px;
+    line-height:1.5;padding:24px var(--pad-x) 60px;
   }
   .contenedor{max-width:880px;margin:0 auto;}
   .marca{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
@@ -78,7 +79,13 @@
   .oculto{display:none;}
   .cargando{text-align:center;padding:60px 20px;color:var(--texto-tenue);font-family:var(--mono);font-size:13px;}
 
-  .tabs-admin{display:flex;gap:4px;overflow-x:auto;margin:16px 0 28px;padding-bottom:1px;border-bottom:1px solid var(--borde);-webkit-overflow-scrolling:touch;}
+  .tabs-admin{
+    display:flex;gap:4px;overflow-x:auto;margin:0 calc(-1 * var(--pad-x)) 28px;padding:10px var(--pad-x) 1px;
+    border-bottom:1px solid var(--borde);-webkit-overflow-scrolling:touch;
+    position:sticky;top:0;z-index:20;background:var(--bg);
+    scrollbar-width:none;
+  }
+  .tabs-admin::-webkit-scrollbar{display:none;}
   .tab-admin{
     flex:0 0 auto;padding:9px 14px;border:none;background:none;
     color:var(--texto-tenue);font-family:var(--mono);font-size:11px;letter-spacing:.03em;
@@ -87,6 +94,19 @@
   }
   .tab-admin:hover{color:var(--texto);}
   .tab-admin.activo{color:var(--texto);border-bottom-color:var(--acento);}
+
+  .tabla-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px;}
+  .tabla-scroll table{min-width:480px;}
+
+  @media (max-width: 560px){
+    :root{--pad-x:12px;}
+    h1{font-size:19px;margin-bottom:16px;}
+    .tab-admin{padding:11px 13px;font-size:10.5px;}
+    .grid-kpis{grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:8px;}
+    .tarjeta{padding:13px 14px;}
+    .tarjeta-valor{font-size:22px;}
+    .caja{padding:14px 14px;}
+  }
 
   .embudo-cont{display:flex;gap:18px;align-items:stretch;}
   .embudo-forma{width:110px;flex:0 0 110px;display:flex;flex-direction:column;}
@@ -259,10 +279,12 @@
     <div class="caja" style="margin-bottom:32px;">
       <div class="tarjeta-etiqueta">Riesgo de abandono</div>
       <div class="tarjeta-sub" style="margin:4px 0 8px;">Se activaron (crearon una cuenta) pero no registran un gasto hace más de 10 días, o nunca. Lista para contactar directo.</div>
+      <div class="tabla-scroll">
       <table>
         <thead><tr><th>Correo</th><th>Alta</th><th>Última actividad</th></tr></thead>
         <tbody id="tabla-riesgo"></tbody>
       </table>
+      </div>
     </div>
 
     </div>
@@ -387,6 +409,7 @@
       <button type="button" onclick="toggleDetalleCostoIA()" style="background:none;border:none;color:var(--texto-tenue);font-family:var(--mono);font-size:11px;text-decoration:underline;cursor:pointer;padding:4px 0;">Ver detalle de tokens y precios</button>
       <div id="detalle-costo-ia" class="oculto" style="margin-top:10px;">
         <div class="tarjeta-sub" style="margin-bottom:10px;">Tokens reales consumidos. El precio por token cambia, así que no se inventa un costo aquí — pon el precio vigente (platform.openai.com/pricing) y se calcula solo. Se guarda en este navegador.</div>
+        <div class="tabla-scroll">
         <table>
           <thead><tr><th></th><th>Entrada</th><th>Entrada (caché)</th><th>Salida</th></tr></thead>
           <tbody>
@@ -400,6 +423,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -411,6 +435,7 @@
       <input type="text" id="input-buscar-usuario" placeholder="Buscar por correo…" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--sans);font-size:13px;">
     </div>
     <div class="caja">
+      <div class="tabla-scroll">
       <table>
         <thead>
           <tr>
@@ -422,6 +447,7 @@
         </thead>
         <tbody id="tabla-usuarios"></tbody>
       </table>
+      </div>
     </div>
     <div class="tarjeta-sub" style="margin:8px 0 24px;">Clic en un usuario para ver su detalle (encabezados con clic para ordenar). El detalle nunca incluye montos ni datos financieros reales — solo conteos y preferencias.</div>
 
@@ -495,10 +521,12 @@
     </div>
 
     <div class="caja">
+      <div class="tabla-scroll">
       <table>
         <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Monto original</th><th>En pesos</th><th>Recurrente</th><th></th></tr></thead>
         <tbody id="tabla-negocio"></tbody>
       </table>
+      </div>
     </div>
     </div>
   </div>
