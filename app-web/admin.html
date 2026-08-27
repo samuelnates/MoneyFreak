@@ -112,6 +112,14 @@
   .campo-negocio-check label{margin:0;text-transform:none;font-family:var(--sans);font-size:12.5px;}
   .campo-negocio-check input{width:auto;}
   .btn-eliminar-fila{background:none;border:1px solid var(--borde-fuerte);color:var(--alerta);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--mono);}
+
+  .tabla-estado-resultados{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;}
+  .tabla-estado-resultados td{padding:7px 4px;border-bottom:1px solid var(--borde);}
+  .tabla-estado-resultados td:last-child{text-align:right;white-space:nowrap;}
+  .er-categoria td{padding-left:18px;color:var(--texto-tenue);font-size:12px;}
+  .er-subtotal td{font-weight:600;border-top:1px solid var(--borde-fuerte);}
+  .er-total td{font-weight:700;font-size:14.5px;border-top:2px solid var(--texto);border-bottom:none;padding-top:10px;}
+  .er-negativo{color:var(--color-riesgo);}
 </style>
 </head>
 <body>
@@ -364,8 +372,11 @@
 
     <div class="seccion-admin oculto" id="seccion-negocio">
     <h2>Negocio</h2>
-    <div class="tarjeta-sub" style="margin:0 0 12px;">Esto es aparte de los datos de los usuarios — es tu propia contabilidad de Money Freak como negocio (lo invertido, gastos operativos, ingresos).</div>
-    <div class="grid-kpis" style="margin-bottom:8px;" id="grid-resumen-negocio"></div>
+    <div class="tarjeta-sub" style="margin:0 0 12px;">Esto es aparte de los datos de los usuarios — es tu propia contabilidad de Money Freak como negocio (lo invertido, gastos operativos, ingresos). Todo consolidado en pesos, al tipo de cambio que de verdad pagaste en cada movimiento en dólares — no uno de mercado inventado en este momento.</div>
+    <div class="caja" style="margin-bottom:16px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Estado de resultados (MXN)</div>
+      <table class="tabla-estado-resultados" id="tabla-estado-resultados"></table>
+    </div>
 
     <div class="caja" style="margin-bottom:16px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Agregar movimiento</div>
@@ -408,10 +419,14 @@
         </div>
         <div class="campo-negocio">
           <label for="neg-moneda">Moneda</label>
-          <select id="neg-moneda">
+          <select id="neg-moneda" onchange="actualizarVisibilidadTipoCambio()">
             <option value="USD">USD</option>
             <option value="MXN">MXN</option>
           </select>
+        </div>
+        <div class="campo-negocio" id="campo-tipo-cambio">
+          <label for="neg-tipo-cambio">Tipo de cambio al que lo pagaste</label>
+          <input type="text" id="neg-tipo-cambio" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 18.50">
         </div>
         <div class="campo-negocio campo-negocio-check">
           <input type="checkbox" id="neg-recurrente">
@@ -424,7 +439,7 @@
 
     <div class="caja">
       <table>
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Monto</th><th>Recurrente</th><th></th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Monto original</th><th>En pesos</th><th>Recurrente</th><th></th></tr></thead>
         <tbody id="tabla-negocio"></tbody>
       </table>
     </div>
@@ -759,41 +774,39 @@ async function llamarNegocio(payload){
   return resp.json();
 }
 
-function pintarResumenNegocio(resumen){
-  const cont = document.getElementById('grid-resumen-negocio');
-  const monedas = Object.keys(resumen);
-  if(!monedas.length){
-    cont.innerHTML = '<div class="tarjeta"><div class="tarjeta-etiqueta">Sin movimientos todavía</div></div>';
-    return;
+function formatoMonedaMxn(n){
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(n);
+}
+
+// Estado de resultados clásico: ingresos arriba, gastos desglosados por
+// categoría abajo con su subtotal, utilidad operativa, inversión aparte
+// (no es gasto del día a día, es capital), y balance neto hasta el final.
+// Todo ya en pesos -- el peso-o-dólar se resolvió al capturar cada
+// movimiento, aquí ya no hay que pensar en monedas.
+function pintarEstadoResultados(er){
+  const tabla = document.getElementById('tabla-estado-resultados');
+  const fila = (etiqueta, valor, clase) => `<tr class="${clase || ''}"><td>${etiqueta}</td><td class="${valor < 0 ? 'er-negativo' : ''}">${formatoMonedaMxn(valor)}</td></tr>`;
+  const categorias = Object.entries(er.gastosPorCategoria).sort((a, b) => b[1] - a[1]);
+
+  let html = fila('Ingresos', er.ingresos);
+  html += '<tr><td colspan="2" style="padding-top:14px;color:var(--texto-tenue);font-size:11px;text-transform:uppercase;letter-spacing:.03em;">Gastos operativos</td></tr>';
+  if(!categorias.length){
+    html += '<tr class="er-categoria"><td>Sin gastos registrados</td><td>—</td></tr>';
+  }else{
+    categorias.forEach(([cat, monto]) => { html += fila(escapeHtmlAdmin(cat), -monto, 'er-categoria'); });
   }
-  cont.innerHTML = monedas.map(moneda => {
-    const r = resumen[moneda];
-    const balance = r.ingreso - r.gasto - r.inversion;
-    return `
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Ingresos (${moneda})</div>
-        <div class="tarjeta-valor">${formatoMonedaGenerica(r.ingreso, moneda)}</div>
-      </div>
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Gastos (${moneda})</div>
-        <div class="tarjeta-valor">${formatoMonedaGenerica(r.gasto, moneda)}</div>
-      </div>
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Inversión (${moneda})</div>
-        <div class="tarjeta-valor">${formatoMonedaGenerica(r.inversion, moneda)}</div>
-      </div>
-      <div class="tarjeta">
-        <div class="tarjeta-etiqueta">Balance (${moneda})</div>
-        <div class="tarjeta-valor">${formatoMonedaGenerica(balance, moneda)}</div>
-        <div class="tarjeta-sub">Ingresos − gastos − inversión</div>
-      </div>`;
-  }).join('');
+  html += fila('Total gastos operativos', -er.totalGastos, 'er-subtotal');
+  html += fila('Utilidad operativa', er.utilidadOperativa, 'er-subtotal');
+  html += fila('Inversión', -er.inversion);
+  html += fila('Balance neto', er.balanceNeto, 'er-total');
+
+  tabla.innerHTML = html;
 }
 
 function pintarTablaNegocio(movimientos){
   const tbody = document.getElementById('tabla-negocio');
   if(!movimientos.length){
-    tbody.innerHTML = '<tr><td colspan="7" class="tarjeta-sub">Sin movimientos todavía.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="tarjeta-sub">Sin movimientos todavía.</td></tr>';
     return;
   }
   tbody.innerHTML = movimientos.map(m => `
@@ -802,7 +815,8 @@ function pintarTablaNegocio(movimientos){
       <td>${ETIQUETAS_TIPO_NEGOCIO[m.tipo] || m.tipo}</td>
       <td>${escapeHtmlAdmin(m.categoria)}</td>
       <td>${escapeHtmlAdmin(m.concepto || '—')}</td>
-      <td>${formatoMonedaGenerica(m.monto, m.moneda)}</td>
+      <td>${formatoMonedaGenerica(m.monto, m.moneda)}${m.moneda === 'USD' ? ` <span class="tarjeta-sub">(TC ${m.tipo_cambio})</span>` : ''}</td>
+      <td>${formatoMonedaMxn(m.montoMxn)}</td>
       <td>${m.es_recurrente ? 'Sí' : 'No'}</td>
       <td><button class="btn-eliminar-fila" onclick="eliminarMovimientoNegocio('${m.id}')">Eliminar</button></td>
     </tr>
@@ -815,8 +829,13 @@ async function cargarNegocio(){
     console.warn('No se pudo cargar el registro de negocio:', datos.error);
     return;
   }
-  pintarResumenNegocio(datos.resumen || {});
+  pintarEstadoResultados(datos.estadoResultados || { ingresos: 0, gastosPorCategoria: {}, totalGastos: 0, utilidadOperativa: 0, inversion: 0, balanceNeto: 0 });
   pintarTablaNegocio(datos.movimientos || []);
+}
+
+function actualizarVisibilidadTipoCambio(){
+  const esUsd = document.getElementById('neg-moneda').value === 'USD';
+  document.getElementById('campo-tipo-cambio').style.display = esUsd ? '' : 'none';
 }
 
 async function agregarMovimientoNegocio(){
@@ -829,9 +848,15 @@ async function agregarMovimientoNegocio(){
   const monto = valorNumericoMonto(document.getElementById('neg-monto'));
   const moneda = document.getElementById('neg-moneda').value;
   const esRecurrente = document.getElementById('neg-recurrente').checked;
+  const tipoCambio = moneda === 'USD' ? valorNumericoMonto(document.getElementById('neg-tipo-cambio')) : null;
 
   if(!fecha || !categoria || !Number.isFinite(monto) || monto <= 0){
     errorEl.textContent = 'Falta la fecha, la categoría, o el monto no es válido.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+  if(moneda === 'USD' && (!Number.isFinite(tipoCambio) || tipoCambio <= 0)){
+    errorEl.textContent = 'Falta el tipo de cambio al que lo pagaste (para poder verlo en pesos).';
     errorEl.classList.remove('oculto');
     return;
   }
@@ -840,7 +865,7 @@ async function agregarMovimientoNegocio(){
   btn.disabled = true;
   const datos = await llamarNegocio({
     accion: 'crear',
-    movimiento: { fecha, tipo, categoria, concepto, monto, moneda, es_recurrente: esRecurrente },
+    movimiento: { fecha, tipo, categoria, concepto, monto, moneda, tipo_cambio: tipoCambio, es_recurrente: esRecurrente },
   });
   btn.disabled = false;
 
@@ -853,6 +878,7 @@ async function agregarMovimientoNegocio(){
   document.getElementById('neg-categoria').value = '';
   document.getElementById('neg-concepto').value = '';
   document.getElementById('neg-monto').value = '';
+  document.getElementById('neg-tipo-cambio').value = '';
   document.getElementById('neg-recurrente').checked = false;
   await cargarNegocio();
 }
@@ -1005,6 +1031,7 @@ async function cargarPanel(){
   inicializarInteraccionesUsuarios();
   inicializarCalculadoraCostoIA();
   document.getElementById('neg-fecha').value = new Date().toISOString().slice(0, 10);
+  actualizarVisibilidadTipoCambio();
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     await cargarPanel();
