@@ -1148,6 +1148,13 @@ function pintarGraficaRegistros(registrosPorDia){
   document.getElementById('eje-fin').textContent = dias[dias.length - 1];
 }
 
+async function pedirKpis(token){
+  return fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-kpis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  });
+}
+
 async function cargarPanel(){
   mostrar('vista-cargando');
   const { data: { session } } = await sb.auth.getSession();
@@ -1155,13 +1162,22 @@ async function cargarPanel(){
 
   let resp;
   try{
-    resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-kpis`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-    });
+    resp = await pedirKpis(session.access_token);
   }catch(e){
     document.getElementById('vista-cargando').textContent = 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.';
     return;
+  }
+
+  // Si la sesión ya expiró (token viejo, refresco automático que no alcanzó
+  // a correr), un solo reintento tras forzar el refresco resuelve la mayoría
+  // de los casos sin que el usuario tenga que volver a iniciar sesión.
+  if(resp.status === 401){
+    try{
+      const { data: refrescada } = await sb.auth.refreshSession();
+      if(refrescada?.session){
+        resp = await pedirKpis(refrescada.session.access_token);
+      }
+    }catch(e){}
   }
 
   if(resp.status === 403){
@@ -1169,7 +1185,16 @@ async function cargarPanel(){
     return;
   }
   if(!resp.ok){
-    document.getElementById('vista-cargando').textContent = 'Ocurrió un error cargando los KPIs.';
+    let detalle = '';
+    try{
+      const cuerpo = await resp.json();
+      detalle = cuerpo.detalle || cuerpo.error || '';
+    }catch(e){}
+    if(resp.status === 401){
+      document.getElementById('vista-cargando').textContent = 'Tu sesión expiró. Cierra sesión y vuelve a entrar.';
+    }else{
+      document.getElementById('vista-cargando').textContent = `Ocurrió un error cargando los KPIs (${resp.status}).${detalle ? ' ' + detalle : ''}`;
+    }
     return;
   }
 
