@@ -477,7 +477,7 @@
     </div>
 
     <div class="caja" style="margin-bottom:16px;">
-      <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Agregar movimiento</div>
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;" id="titulo-form-negocio">Agregar movimiento</div>
       <div class="form-negocio">
         <div class="campo-negocio">
           <label for="neg-fecha">Fecha</label>
@@ -532,6 +532,7 @@
         </div>
       </div>
       <button id="btn-agregar-movimiento" onclick="agregarMovimientoNegocio()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Agregar</button>
+      <button id="btn-cancelar-edicion-negocio" onclick="cancelarEdicionNegocio()" class="oculto" style="margin-top:12px;margin-left:8px;padding:10px 18px;border-radius:8px;border:1px solid var(--borde-fuerte);background:none;color:var(--texto);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>
       <div class="error-login oculto" id="error-negocio"></div>
     </div>
 
@@ -1086,6 +1087,8 @@ function pintarEstadoResultados(er){
   tabla.innerHTML = html;
 }
 
+let movimientosNegocioGlobal = [];
+
 function pintarTablaNegocio(movimientos){
   const tbody = document.getElementById('tabla-negocio');
   if(!movimientos.length){
@@ -1101,7 +1104,10 @@ function pintarTablaNegocio(movimientos){
       <td>${formatoMonedaGenerica(m.monto, m.moneda)}${m.moneda === 'USD' ? ` <span class="tarjeta-sub">(TC ${m.tipo_cambio})</span>` : ''}</td>
       <td>${formatoMonedaMxn(m.montoMxn)}</td>
       <td>${m.es_recurrente ? 'Sí' : 'No'}</td>
-      <td><button class="btn-eliminar-fila" onclick="eliminarMovimientoNegocio('${m.id}')">Eliminar</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn-eliminar-fila" style="color:var(--texto);margin-right:6px;" onclick="cargarFormularioParaEditar('${m.id}')">Editar</button>
+        <button class="btn-eliminar-fila" onclick="eliminarMovimientoNegocio('${m.id}')">Eliminar</button>
+      </td>
     </tr>
   `).join('');
 }
@@ -1113,12 +1119,61 @@ async function cargarNegocio(){
     return;
   }
   pintarEstadoResultados(datos.estadoResultados || { ingresos: 0, gastosPorCategoria: {}, totalGastos: 0, utilidadOperativa: 0, inversion: 0, balanceNeto: 0 });
-  pintarTablaNegocio(datos.movimientos || []);
+  movimientosNegocioGlobal = datos.movimientos || [];
+  pintarTablaNegocio(movimientosNegocioGlobal);
 }
 
 function actualizarVisibilidadTipoCambio(){
   const esUsd = document.getElementById('neg-moneda').value === 'USD';
   document.getElementById('campo-tipo-cambio').style.display = esUsd ? '' : 'none';
+}
+
+let movimientoEditandoId = null;
+
+function limpiarFormularioNegocio(){
+  document.getElementById('neg-categoria').value = '';
+  document.getElementById('neg-concepto').value = '';
+  document.getElementById('neg-monto').value = '';
+  document.getElementById('neg-tipo-cambio').value = '';
+  document.getElementById('neg-recurrente').checked = false;
+}
+
+// Reusa el mismo formulario de "Agregar movimiento" para editar: lo llena
+// con los datos del renglón elegido y cambia el botón a "Guardar cambios"
+// mientras dura la edición, en vez de tener un formulario aparte duplicado.
+function cargarFormularioParaEditar(id){
+  const m = movimientosNegocioGlobal.find(x => x.id === id);
+  if(!m) return;
+  movimientoEditandoId = id;
+
+  document.getElementById('neg-fecha').value = m.fecha;
+  document.getElementById('neg-tipo').value = m.tipo;
+  document.getElementById('neg-categoria').value = m.categoria;
+  document.getElementById('neg-concepto').value = m.concepto || '';
+  document.getElementById('neg-monto').value = formatearNumeroMonto(String(m.monto));
+  document.getElementById('neg-moneda').value = m.moneda;
+  document.getElementById('neg-tipo-cambio').value = m.tipo_cambio != null ? formatearNumeroMonto(String(m.tipo_cambio)) : '';
+  document.getElementById('neg-recurrente').checked = !!m.es_recurrente;
+  actualizarVisibilidadTipoCambio();
+
+  document.getElementById('btn-agregar-movimiento').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-edicion-negocio').classList.remove('oculto');
+  document.getElementById('titulo-form-negocio').textContent = 'Editar movimiento';
+  document.getElementById('error-negocio').classList.add('oculto');
+  document.getElementById('campo-tipo-cambio').closest('.caja').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicionNegocio(){
+  movimientoEditandoId = null;
+  limpiarFormularioNegocio();
+  document.getElementById('neg-fecha').value = '';
+  document.getElementById('neg-tipo').value = 'gasto';
+  document.getElementById('neg-moneda').value = 'USD';
+  actualizarVisibilidadTipoCambio();
+  document.getElementById('btn-agregar-movimiento').textContent = 'Agregar';
+  document.getElementById('btn-cancelar-edicion-negocio').classList.add('oculto');
+  document.getElementById('titulo-form-negocio').textContent = 'Agregar movimiento';
+  document.getElementById('error-negocio').classList.add('oculto');
 }
 
 async function agregarMovimientoNegocio(){
@@ -1144,10 +1199,12 @@ async function agregarMovimientoNegocio(){
     return;
   }
 
+  const editando = movimientoEditandoId;
   const btn = document.getElementById('btn-agregar-movimiento');
   btn.disabled = true;
   const datos = await llamarNegocio({
-    accion: 'crear',
+    accion: editando ? 'editar' : 'crear',
+    id: editando || undefined,
     movimiento: { fecha, tipo, categoria, concepto, monto, moneda, tipo_cambio: tipoCambio, es_recurrente: esRecurrente },
   });
   btn.disabled = false;
@@ -1158,17 +1215,15 @@ async function agregarMovimientoNegocio(){
     return;
   }
 
-  document.getElementById('neg-categoria').value = '';
-  document.getElementById('neg-concepto').value = '';
-  document.getElementById('neg-monto').value = '';
-  document.getElementById('neg-tipo-cambio').value = '';
-  document.getElementById('neg-recurrente').checked = false;
+  if(editando) cancelarEdicionNegocio();
+  else limpiarFormularioNegocio();
   await cargarNegocio();
 }
 
 async function eliminarMovimientoNegocio(id){
   const ok = confirm('¿Eliminar este movimiento?');
   if(!ok) return;
+  if(movimientoEditandoId === id) cancelarEdicionNegocio();
   await llamarNegocio({ accion: 'eliminar', id });
   await cargarNegocio();
 }

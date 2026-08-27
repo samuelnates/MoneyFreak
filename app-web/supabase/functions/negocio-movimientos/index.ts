@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (body.accion === "crear") {
+    if (body.accion === "crear" || body.accion === "editar") {
+      if (body.accion === "editar" && !body.id) return jsonResponse({ error: "id_requerido" }, 400);
+
       const m = body.movimiento || {};
       const tipo = String(m.tipo || "");
       const categoria = String(m.categoria || "").trim();
@@ -84,7 +86,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "tipo_cambio_requerido" }, 400);
       }
 
-      const { error } = await admin.from("negocio_movimientos").insert({
+      const fila = {
         fecha,
         tipo,
         categoria,
@@ -93,8 +95,15 @@ Deno.serve(async (req) => {
         moneda,
         tipo_cambio: moneda === "USD" ? tipoCambio : null,
         es_recurrente: !!m.es_recurrente,
-      });
-      if (error) throw error;
+      };
+
+      if (body.accion === "editar") {
+        const { error } = await admin.from("negocio_movimientos").update(fila).eq("id", body.id);
+        if (error) throw error;
+      } else {
+        const { error } = await admin.from("negocio_movimientos").insert(fila);
+        if (error) throw error;
+      }
       return jsonResponse({ ok: true });
     }
 
