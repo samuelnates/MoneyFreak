@@ -6468,7 +6468,10 @@ function mostrarPreguntaOnboarding(){
   document.getElementById('onb-chat-input-area').style.display = 'flex';
   mostrarRangosOnboarding();
   document.getElementById('onb-chat-nose').style.display = 'flex';
-  input.focus();
+  // Sin autofocus: la mayoría responde tocando un chip de rango, no
+  // escribiendo -- forzar el teclado en cada pregunta lo abre y cierra sin
+  // necesidad y estorba al elegir un chip. El teclado solo debe salir si el
+  // usuario de verdad toca el campo de texto para escribir su propia cifra.
 }
 
 function registrarRespuestaOnboarding(valor, textoBurbuja){
@@ -14470,8 +14473,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 49;
+const VERSION_APP_ACTUAL = 50;
 const CHANGELOG_APP = [
+  {
+    version: 50,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'El diagnóstico inicial con Freaky ya no abre el teclado en cada pregunta — solo aparece si tocas el campo para escribir tu propia cifra; elegir un chip de rango avanza directo.'
+    ],
+    cambios_en: [
+      'The initial diagnosis with Freaky no longer opens the keyboard on every question — it only appears if you tap the field to type your own figure; picking a range chip moves straight ahead.'
+    ]
+  },
   {
     version: 49,
     fecha: '2026-08-28',
