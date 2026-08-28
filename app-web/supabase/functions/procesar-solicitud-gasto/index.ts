@@ -13,7 +13,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import OpenAI from "npm:openai@4";
 import { zodTextFormat } from "npm:openai@4/helpers/zod";
 import { z } from "npm:zod@3";
-import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, type MedioPagoDisponible } from "../_shared/gastos.ts";
+import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, fechaValidaOAhora, hoyISO, type MedioPagoDisponible } from "../_shared/gastos.ts";
 
 const MODEL_TEXTO = "gpt-5.4-mini-2026-03-17";
 
@@ -36,18 +36,6 @@ const SolicitudGastoSchema = z.object({
   meses: z.number().int().nullable(),
   confianza: z.enum(["alta", "media", "baja"]),
 });
-
-const HOY = () => new Date().toISOString().slice(0, 10);
-
-// El modelo a veces devuelve algo que no es una fecha real de verdad (se vio
-// en producción: el string literal "/null" en vez de null cuando el ticket
-// no traía fecha visible) -- eso rompía el insert con un error críptico de
-// Postgres ("invalid input syntax for type date"). Nunca confiar en el
-// formato sin revisar, igual que ya se hace con categoría/medio de pago.
-function fechaValidaOAhora(valor: string | null): string {
-  if (valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !isNaN(new Date(valor).getTime())) return valor;
-  return HOY();
-}
 
 function construirPrompt(mediosPago: MedioPagoDisponible[]): string {
   const listaMediosPago = mediosPago.length
@@ -177,7 +165,7 @@ Deno.serve(async (req) => {
           {
             role: "user",
             content: [
-              { type: "input_text", text: `Fecha de hoy: ${HOY()}. Extrae el gasto de esta foto de ticket/recibo.` },
+              { type: "input_text", text: `Fecha de hoy: ${hoyISO()}. Extrae el gasto de esta foto de ticket/recibo.` },
               { type: "input_image", image_url: `data:${mime_type};base64,${datos_base64}`, detail: "low" },
             ],
           },

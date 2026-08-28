@@ -12,7 +12,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import OpenAI, { toFile } from "npm:openai@4";
 import { zodTextFormat } from "npm:openai@4/helpers/zod";
 import { z } from "npm:zod@3";
-import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, type MedioPagoDisponible } from "../_shared/gastos.ts";
+import { CATALOGO_GASTOS, CATEGORIAS_VALIDAS, EJEMPLOS_CATEGORIZACION, fechaValidaOAhora, type MedioPagoDisponible } from "../_shared/gastos.ts";
 
 const MODEL = "gpt-5.4-mini-2026-03-17";
 const MODEL_TRANSCRIPCION = "gpt-4o-mini-transcribe";
@@ -459,7 +459,11 @@ Deno.serve(async (req) => {
       const medioValidado = accion.medio_pago_sugerido && valoresValidosMedioPago.has(accion.medio_pago_sugerido)
         ? accion.medio_pago_sugerido
         : null;
-      accion = { ...accion, medio_pago_sugerido: medioValidado };
+      // El modelo no siempre respeta "YYYY-MM-DD o null" al pie de la letra (se
+      // vio en producción con procesar-solicitud-gasto: devolvió "/null" y
+      // "hoy" como texto literal) -- se normaliza aquí mismo, en el origen,
+      // para que el cliente nunca reciba algo que rompa un insert a `date`.
+      accion = { ...accion, medio_pago_sugerido: medioValidado, fecha_sugerida: fechaValidaOAhora(accion.fecha_sugerida) };
     }
 
     // Igual de estricto con el presupuesto: cada categoria/subcategoria tiene

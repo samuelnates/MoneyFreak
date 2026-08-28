@@ -39,3 +39,19 @@ export const EJEMPLOS_CATEGORIZACION = `Ejemplos de cómo clasificar (categoría
 - "colegiatura", "escuela" → Educación → Colegiaturas`;
 
 export type MedioPagoDisponible = { valor: string; etiqueta: string };
+
+// Compartido por cualquier función que reciba una "fecha sugerida" por un
+// modelo de IA y la vaya a usar en una columna `date` de Postgres. El modelo
+// no siempre respeta el formato pedido (se vio en producción: devolvió el
+// string literal "/null" en vez de null, y otra vez "hoy" en vez de una
+// fecha real) -- eso rompe el insert con un error críptico de Postgres
+// ("invalid input syntax for type date"). Nunca usar la fecha sugerida sin
+// pasar por aquí primero.
+export function hoyISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function fechaValidaOAhora(valor: string | null | undefined): string {
+  if (valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !isNaN(new Date(valor).getTime())) return valor;
+  return hoyISO();
+}

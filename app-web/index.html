@@ -9274,7 +9274,7 @@ function sincronizarChipsSubcategoriaCompleta(){
   document.querySelectorAll('#chips-subcategoria-completa .chip-categoria').forEach(el => el.classList.toggle('activo', el.dataset.sub === valorActual));
 }
 
-async function abrirAgregarGasto(){
+async function abrirAgregarGasto(sinFoco){
   solicitudPendienteActualId = null;
   poblarSelectCategorias(document.getElementById('select-categoria-gasto'));
   actualizarSubcategorias('');
@@ -9296,11 +9296,15 @@ async function abrirAgregarGasto(){
   selectPago.value = localStorage.getItem('ultimo_metodo_pago_gasto') || '';
   sincronizarChipsPago('select-pago-gasto', 'chips-pago-gasto');
   mostrar('vista-agregar-gasto');
-  document.getElementById('input-monto-gasto').focus();
+  // Sin foco al llegar desde una solicitud ya sugerida por Freaky (foto/voz) --
+  // ahí el usuario solo va a revisar y guardar, no a escribir desde cero; forzar
+  // el teclado encima del formulario ya lleno es el mismo problema que ya se
+  // corrigió en el onboarding (ver parte 66).
+  if(!sinFoco) document.getElementById('input-monto-gasto').focus();
 }
 
 async function abrirAgregarGastoDesdeSolicitud(solicitud){
-  await abrirAgregarGasto();
+  await abrirAgregarGasto(true);
   solicitudPendienteActualId = solicitud.id;
   if(solicitud.monto_sugerido != null) establecerValorMonto(document.getElementById('input-monto-gasto'), solicitud.monto_sugerido);
   if(solicitud.fecha_sugerida) document.getElementById('input-fecha-gasto').value = solicitud.fecha_sugerida;
@@ -14481,8 +14485,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 51;
+const VERSION_APP_ACTUAL = 52;
 const CHANGELOG_APP = [
+  {
+    version: 52,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Revisar un gasto que ya te sugirió Freaky (por foto o por chat) ya no abre el teclado de golpe -- solo si de verdad tocas un campo para editarlo.'
+    ],
+    cambios_en: [
+      'Reviewing an expense Freaky already suggested (by photo or chat) no longer pops the keyboard right away — only if you actually tap a field to edit it.'
+    ]
+  },
   {
     version: 51,
     fecha: '2026-08-28',
