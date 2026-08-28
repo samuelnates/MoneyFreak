@@ -18,6 +18,7 @@
 // borrar la cuenta de otra persona.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { TABLAS_A_BORRAR } from "../_shared/cuenta.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,27 +32,6 @@ function jsonResponse(body: unknown, status = 200) {
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
 }
-
-// Solo las tablas "padre" -- saldos, bienes_historico y deudas_historico se
-// borran solas por ON DELETE CASCADE cuando se borran cuentas/bienes/deudas
-// (confirmado en el esquema real). codigos_acceso_ia NO va aquí: es un
-// catálogo compartido entre todos los usuarios, no datos de esta cuenta.
-const TABLAS_A_BORRAR = [
-  "gastos",
-  "transferencias",
-  "presupuestos",
-  "ingresos",
-  "acciones",
-  "score_historico",
-  "patrimonio_historico",
-  "deudas",
-  "bienes",
-  "cuentas",
-  "accesos_ia_usuarios",
-  "reportes_financieros",
-  "solicitudes_gasto_pendientes",
-  "perfil_financiero",
-];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

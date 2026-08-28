@@ -1017,7 +1017,8 @@ function toggleDetalleUsuario(fila){
     ${campoDetalle('Tema', ETIQUETAS_TEMA[u.tema] || u.tema || '—')}
     ${campoDetalle('IA activada', u.accesoIA ? 'Sí' : 'No')}
     ${campoDetalle('Radiografías', formatoNumero(u.reportesGenerados))}
-  </div>`;
+  </div>
+  <button type="button" style="margin-top:4px;padding:6px 12px;border-radius:8px;border:1px solid #b3413a;background:none;color:#b3413a;font-family:var(--sans);font-size:12px;cursor:pointer;" onclick="event.stopPropagation();eliminarUsuarioAdmin('${u.id}')">Eliminar cuenta por completo</button>`;
   tr.appendChild(celda);
   fila.after(tr);
 }
@@ -1089,6 +1090,38 @@ async function llamarNegocio(payload){
     body: JSON.stringify(payload || {}),
   });
   return resp.json();
+}
+
+// Borra POR COMPLETO la cuenta de un usuario (datos + login) -- acción
+// irreversible, por eso pide escribir el correo EXACTO como confirmación en
+// vez de solo un "¿estás seguro?" (con la tabla llena de usuarios es fácil
+// dar clic en la fila equivocada). El candado real de quién puede llamar
+// esto vive en el servidor (admin-eliminar-usuario solo acepta CORREOS_ADMIN).
+async function eliminarUsuarioAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  const correo = u ? u.correo : null;
+  if(!correo){ alert('No se encontró el usuario.'); return; }
+  const escrito = prompt(`Esto borra TODO -- cuentas, gastos, historial, el login -- de ${correo}. No se puede deshacer.\n\nEscribe el correo exacto para confirmar:`);
+  if(escrito === null) return;
+  if(escrito.trim().toLowerCase() !== (correo || '').toLowerCase()){
+    alert('No coincidió el correo. No se borró nada.');
+    return;
+  }
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ alert('Sesión expirada, vuelve a entrar.'); return; }
+  const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/admin-eliminar-usuario`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify({ user_id: id }),
+  });
+  const datos = await resp.json().catch(() => ({}));
+  if(!resp.ok || !datos.ok){
+    alert(`No se pudo borrar: ${datos.error || resp.status}`);
+    return;
+  }
+  usuariosDetalleGlobal = usuariosDetalleGlobal.filter(u => u.id !== id);
+  pintarTablaUsuarios();
+  alert(`Cuenta de ${correo} eliminada.`);
 }
 
 function formatoMonedaMxn(n){
