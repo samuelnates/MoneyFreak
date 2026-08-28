@@ -11121,6 +11121,12 @@ async function procesarSolicitudGastoDesdeBlob(blob, tipo, mimeType){
     ]);
     const medios_pago_disponibles = opcionesPago.todas.map(o => ({ valor: o.valor || 'efectivo', etiqueta: o.etiqueta }));
     const resultado = await llamarConAccesoIA('procesar-solicitud-gasto', { tipo, datos_base64, mime_type: mimeType, medios_pago_disponibles });
+    // Ocultar el modal de "leyendo tu foto" en cuanto se tiene respuesta, ANTES
+    // de mostrar cualquier otro modal (error, aviso o el formulario) -- si no,
+    // se queda tapando al de abajo (el usuario ve el spinner encimado sobre el
+    // aviso y parece que se congeló, cuando en realidad el de abajo sí está
+    // esperando su toque en "Entendido").
+    ocultarProcesandoSolicitud();
     if(!resultado.ok || !resultado.data || !resultado.data.solicitud){
       const detalle = resultado.status
         ? `[debug] status ${resultado.status} — ${JSON.stringify(resultado.errBody || {})}`
@@ -11135,6 +11141,7 @@ async function procesarSolicitudGastoDesdeBlob(blob, tipo, mimeType){
     }
     await abrirAgregarGastoDesdeSolicitud(resultado.data.solicitud);
   }catch(e){
+    ocultarProcesandoSolicitud();
     console.error('Error procesando solicitud de gasto', e);
     await mostrarAlerta(t('gastos.solicitudes_error') + '\n\n[debug] excepción: ' + (e && e.message ? e.message : String(e)));
   }
@@ -14463,8 +14470,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 48;
+const VERSION_APP_ACTUAL = 49;
 const CHANGELOG_APP = [
+  {
+    version: 49,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Arreglado: a veces "Gasto por foto" se quedaba en "Leyendo tu foto..." sin avanzar — en realidad ya había terminado, solo que un aviso se quedaba tapado detrás del mensaje de carga.'
+    ],
+    cambios_en: [
+      'Fixed: "Expense by photo" sometimes appeared stuck on "Reading your photo..." — it had actually finished, a follow-up notice was just hidden behind the loading message.'
+    ]
+  },
   {
     version: 48,
     fecha: '2026-08-28',
