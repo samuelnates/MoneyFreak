@@ -347,6 +347,41 @@
   .panel-icono-svg{width:13px;height:13px;}
   .panel-tarjeta:hover .panel-icono{color:var(--texto);border-color:var(--texto-tenue);}
 
+  .referido-codigo-caja{
+    background:var(--superficie);border:1px solid var(--borde-fuerte);border-radius:10px;
+    padding:18px 16px;text-align:center;margin:16px 0;
+  }
+  .referido-codigo-etiqueta{font-family:var(--sans);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--texto-tenue);font-weight:600;margin-bottom:8px;}
+  .referido-codigo-valor{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:.08em;color:var(--texto);margin-bottom:14px;}
+  .referido-codigo-botones{display:flex;gap:8px;}
+  .referido-codigo-botones .btn-grande{margin-bottom:0;}
+
+  .referido-progreso-caja{margin-bottom:20px;}
+  .referido-progreso-texto{font-family:var(--sans);font-size:13px;color:var(--texto-tenue);margin-bottom:6px;}
+  .referido-progreso-barra-fondo{background:var(--borde);border-radius:5px;height:8px;overflow:hidden;}
+  .referido-progreso-barra{background:var(--acento);height:100%;border-radius:5px;transition:width 300ms ease;}
+
+  .premios-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;}
+  @media (max-width:480px){ .premios-grid{grid-template-columns:1fr;} }
+  .premio-tarjeta{
+    background:var(--superficie);border:1px solid var(--borde);border-radius:10px;
+    padding:14px 12px;text-align:center;position:relative;
+  }
+  .premio-tarjeta.desbloqueado{border-color:var(--acento);}
+  .premio-tarjeta-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid var(--borde-fuerte);}
+  .premio-tarjeta.bloqueado .premio-tarjeta-avatar{filter:grayscale(1);opacity:.4;}
+  .premio-tarjeta-nombre{font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--texto);margin-bottom:2px;}
+  .premio-tarjeta-requisito{font-family:var(--mono);font-size:11px;color:var(--texto-tenue-2);}
+  .premio-tarjeta.desbloqueado .premio-tarjeta-requisito{color:var(--acento);}
+
+  .amigo-tarjeta{
+    display:flex;align-items:center;gap:12px;background:var(--superficie);border:1px solid var(--borde);
+    border-radius:10px;padding:12px 14px;margin-bottom:8px;text-decoration:none;
+  }
+  .amigo-tarjeta-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--borde-fuerte);}
+  .amigo-tarjeta-nombre{font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--texto);}
+  .amigo-tarjeta-desc{font-family:var(--sans);font-size:12px;color:var(--texto-tenue);margin-top:2px;}
+
   .tabla-simple{width:100%;border-collapse:collapse;font-size:12.5px;}
   .tabla-simple th{font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--texto-tenue);text-align:left;padding:6px 8px;border-bottom:1px solid var(--borde-fuerte);}
   .tabla-simple td{font-family:var(--mono);padding:6px 8px;border-bottom:1px solid var(--borde);vertical-align:top;}
@@ -721,6 +756,8 @@
   }
   .asesor-tarjeta-habilidad b{color:var(--texto);font-weight:600;}
   .asesor-tarjeta button{width:100%;}
+  .asesor-tarjeta.bloqueada img{filter:grayscale(1);opacity:.35;}
+  .asesor-tarjeta-candado{font-family:var(--mono);font-size:11.5px;color:var(--texto-tenue-2);background:var(--bg);border:1px solid var(--borde);border-radius:10px;padding:8px 10px;width:100%;}
 
   .panel-freaky-card{
     border:1px solid var(--borde-fuerte);border-radius:10px;background:var(--superficie);
@@ -1469,6 +1506,10 @@
   </div>
 
   <div class="registro-paso" data-paso="6" style="display:none;">
+    <div class="campo">
+      <label for="input-codigo-referido-registro" data-i18n="registro.codigo_referido_label">¿Alguien te invitó? Código (opcional)</label>
+      <input type="text" id="input-codigo-referido-registro" placeholder="Ej. AB12CD" data-i18n-placeholder="registro.codigo_referido_placeholder" style="text-transform:uppercase;" maxlength="6">
+    </div>
     <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
     <div id="registro-error" class="aviso" style="display:none;"></div>
     <button class="btn-grande" onclick="crearCuenta()" data-i18n="registro.titulo">Crear cuenta</button>
@@ -2270,6 +2311,10 @@
   <div class="aviso" data-i18n="config.menu_seguridad_desc">Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.</div>
   <button class="btn-grande secundario" onclick="mostrar('vista-reportes')" data-i18n="config.menu_reportes_boton">Reportes</button>
   <div class="aviso" data-i18n="config.menu_reportes_desc">Radiografía financiera con IA, para analizar tus finanzas a fondo.</div>
+  <button class="btn-grande secundario" onclick="abrirReferidos()" data-i18n="config.menu_referidos_boton">Invita a un amigo</button>
+  <div class="aviso" data-i18n="config.menu_referidos_desc">Comparte tu código y desbloquea avatares exclusivos de Freaky — y sin anuncios, para siempre.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-amigos-app')" data-i18n="config.menu_amigos_boton">Amigos de Money Freak</button>
+  <div class="aviso" data-i18n="config.menu_amigos_desc">Creadores de contenido que colaboran con la app.</div>
 </div>
 
 <div id="vista-config-general" class="pantalla">
@@ -2370,6 +2415,40 @@
   <div class="aviso" data-i18n="config.radiografia_aviso">Descarga un archivo con tus datos calculados (patrimonio, liquidez, gastos, deudas, próximos pagos) más las instrucciones para que un asistente de IA (Claude, ChatGPT, Gemini) te dé un diagnóstico completo. Es gratis: tú lo pegas en tu propia cuenta.</div>
   <button class="btn-grande" id="btn-radiografia-ia" onclick="descargarRadiografiaManual()" data-i18n="config.radiografia_boton">Analizar mis finanzas con IA</button>
   <button class="btn-grande secundario" id="btn-radiografia-auto" onclick="generarRadiografiaAutomatica(false)" data-i18n="config.radiografia_boton_auto" style="margin-top:8px;">Generar automáticamente (beta interna)</button>
+</div>
+
+<div id="vista-referidos" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_referidos_boton">Invita a un amigo</h1>
+  </div>
+  <div class="aviso" data-i18n="referidos.explicacion">Cuando alguien se registra con tu código y de verdad empieza a usar la app (agrega su primera cuenta o gasto), cuenta como un referido activado. Entre más invites, más desbloqueas.</div>
+
+  <div class="referido-codigo-caja">
+    <div class="referido-codigo-etiqueta" data-i18n="referidos.tu_codigo">Tu código</div>
+    <div class="referido-codigo-valor" id="texto-mi-codigo-referido">—</div>
+    <div class="referido-codigo-botones">
+      <button type="button" class="btn-grande secundario" onclick="copiarCodigoReferido()" data-i18n="referidos.copiar">Copiar</button>
+      <button type="button" class="btn-grande" onclick="compartirCodigoReferido()" data-i18n="referidos.compartir">Compartir</button>
+    </div>
+  </div>
+
+  <div class="referido-progreso-caja">
+    <div class="referido-progreso-texto" id="texto-referidos-progreso">—</div>
+    <div class="referido-progreso-barra-fondo"><div class="referido-progreso-barra" id="barra-referidos-progreso" style="width:0%;"></div></div>
+  </div>
+
+  <h2 data-i18n="referidos.premios_h2">Recompensas</h2>
+  <div class="premios-grid" id="grid-premios-referidos"></div>
+</div>
+
+<div id="vista-amigos-app" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-privacidad')">‹</button>
+    <h1 data-i18n="config.menu_amigos_boton">Amigos de Money Freak</h1>
+  </div>
+  <div class="aviso" data-i18n="amigos.explicacion">Creadores de contenido de finanzas personales que colaboran con la app — gracias por correr la voz.</div>
+  <div id="lista-amigos-app"></div>
 </div>
 
 <div id="vista-ayuda-ia" class="pantalla pantalla-chat">
@@ -3274,6 +3353,7 @@ function mostrar(idVista){
     inicializarSeccionNotificaciones();
     cargarPreferenciaAvisoTarjeta();
   }
+  if(idVista === 'vista-amigos-app') pintarAmigosApp();
   document.body.classList.toggle('con-sesion', !VISTAS_SIN_SESION.includes(idVista));
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
     btn.classList.toggle('activo', btn.dataset.vista === idVista);
@@ -3563,6 +3643,8 @@ const TRADUCCIONES = {
     'registro.correo_label': 'Correo',
     'registro.password_label': 'Contraseña',
     'registro.password_placeholder': 'Mínimo 6 caracteres',
+    'registro.codigo_referido_label': '¿Alguien te invitó? Código (opcional)',
+    'registro.codigo_referido_placeholder': 'Ej. AB12CD',
     'registro.tema_label': 'Tema de la app',
     'tema.automatico': 'Automático',
     'tema.claro': 'Claro',
@@ -3950,6 +4032,28 @@ const TRADUCCIONES = {
     'config.menu_seguridad_desc': 'Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.',
     'config.menu_reportes_boton': 'Reportes',
     'config.menu_reportes_desc': 'Radiografía financiera con IA, para analizar tus finanzas a fondo.',
+    'config.menu_referidos_boton': 'Invita a un amigo',
+    'config.menu_referidos_desc': 'Comparte tu código y desbloquea avatares exclusivos de Freaky — y sin anuncios, para siempre.',
+    'config.menu_amigos_boton': 'Amigos de Money Freak',
+    'config.menu_amigos_desc': 'Creadores de contenido que colaboran con la app.',
+    'referidos.explicacion': 'Cuando alguien se registra con tu código y de verdad empieza a usar la app (agrega su primera cuenta o gasto), cuenta como un referido activado. Entre más invites, más desbloqueas.',
+    'referidos.tu_codigo': 'Tu código',
+    'referidos.copiar': 'Copiar',
+    'referidos.compartir': 'Compartir',
+    'referidos.premios_h2': 'Recompensas',
+    'referidos.error_cargar': 'No se pudo cargar. Intenta de nuevo.',
+    'referidos.progreso_faltan': '{0} referidos activados — te faltan {1} para el siguiente premio',
+    'referidos.progreso_completo': '¡Ya desbloqueaste todo! Gracias por correr la voz.',
+    'referidos.desbloqueado': 'Desbloqueado',
+    'referidos.requiere_n': 'Requiere {0} referido(s)',
+    'referidos.sin_anuncios_corto': 'sin anuncios',
+    'referidos.copiado': 'Código copiado.',
+    'referidos.texto_compartir': 'Estoy usando Money Freak para controlar mis finanzas — regístrate con mi código {0} y prueba la app.',
+    'referidos.premio_puerquito': 'Puerquito dorado',
+    'referidos.premio_luchador': 'Luchador',
+    'referidos.premio_catrina': 'Catrina',
+    'amigos.explicacion': 'Creadores de contenido de finanzas personales que colaboran con la app — gracias por correr la voz.',
+    'amigos.vacio': 'Todavía no hay colaboraciones que mostrar aquí.',
     'config.apariencia_h2': 'Apariencia',
     'config.apariencia_aviso': 'Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.',
     'config.proteccion_h2': 'Cómo protegemos tu información',
@@ -4013,6 +4117,15 @@ const TRADUCCIONES = {
     'asesor.avatar3.nombre': 'El Cómplice',
     'asesor.avatar3.desc': 'El que te anima cuando las cosas se ponen pesadas. Celebra contigo cada logro, por chico que sea.',
     'asesor.avatar3.habilidad': '<b>Habilidad especial:</b> hace que hablar de dinero se sienta menos pesado.',
+    'asesor.avatar4.nombre': 'Puerquito Dorado',
+    'asesor.avatar4.desc': 'Ganado a pulso invitando amigos — el que más presume el ahorro.',
+    'asesor.avatar4.habilidad': '<b>Habilidad especial:</b> celebra cada peso que guardas como si fuera un tesoro.',
+    'asesor.avatar5.nombre': 'El Luchador',
+    'asesor.avatar5.desc': 'Enmascarado, directo, nunca se rinde con tus metas de dinero.',
+    'asesor.avatar5.habilidad': '<b>Habilidad especial:</b> te reta a superar tu propio récord de ahorro.',
+    'asesor.avatar6.nombre': 'La Catrina',
+    'asesor.avatar6.desc': 'Elegante y sin miedo — te recuerda que el dinero se disfruta con cabeza.',
+    'asesor.avatar6.habilidad': '<b>Habilidad especial:</b> convierte cualquier gasto hormiga en una lección con estilo.',
     'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
     'freaky.dias_aviso_tarjeta_label': 'Avisarme de un pago de tarjeta con cuántos días de anticipación',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
@@ -4481,6 +4594,8 @@ const TRADUCCIONES = {
     'registro.correo_label': 'Email',
     'registro.password_label': 'Password',
     'registro.password_placeholder': 'At least 6 characters',
+    'registro.codigo_referido_label': 'Did someone invite you? Code (optional)',
+    'registro.codigo_referido_placeholder': 'e.g. AB12CD',
     'registro.tema_label': 'App theme',
     'tema.automatico': 'Automatic',
     'tema.claro': 'Light',
@@ -4868,6 +4983,28 @@ const TRADUCCIONES = {
     'config.menu_seguridad_desc': 'How we protect your information, Face ID/fingerprint, and full control over your data.',
     'config.menu_reportes_boton': 'Reports',
     'config.menu_reportes_desc': 'AI financial X-ray, for a deep analysis of your finances.',
+    'config.menu_referidos_boton': 'Invite a friend',
+    'config.menu_referidos_desc': 'Share your code and unlock exclusive Freaky avatars — and no ads, forever.',
+    'config.menu_amigos_boton': 'Friends of Money Freak',
+    'config.menu_amigos_desc': 'Content creators who partner with the app.',
+    'referidos.explicacion': "When someone signs up with your code and actually starts using the app (adds their first account or expense), it counts as an activated referral. The more you invite, the more you unlock.",
+    'referidos.tu_codigo': 'Your code',
+    'referidos.copiar': 'Copy',
+    'referidos.compartir': 'Share',
+    'referidos.premios_h2': 'Rewards',
+    'referidos.error_cargar': "Couldn't load this. Try again.",
+    'referidos.progreso_faltan': '{0} activated referrals — {1} more for the next reward',
+    'referidos.progreso_completo': "You've unlocked everything! Thanks for spreading the word.",
+    'referidos.desbloqueado': 'Unlocked',
+    'referidos.requiere_n': 'Requires {0} referral(s)',
+    'referidos.sin_anuncios_corto': 'no ads',
+    'referidos.copiado': 'Code copied.',
+    'referidos.texto_compartir': "I'm using Money Freak to manage my finances — sign up with my code {0} and give it a try.",
+    'referidos.premio_puerquito': 'Golden piggy',
+    'referidos.premio_luchador': 'Luchador',
+    'referidos.premio_catrina': 'Catrina',
+    'amigos.explicacion': 'Personal finance content creators who partner with the app — thanks for spreading the word.',
+    'amigos.vacio': "No partnerships to show here yet.",
     'config.apariencia_h2': 'Appearance',
     'config.apariencia_aviso': 'Automatic follows your phone or computer setting, just like other apps.',
     'config.proteccion_h2': 'How we protect your information',
@@ -4931,6 +5068,15 @@ const TRADUCCIONES = {
     'asesor.avatar3.nombre': 'The Sidekick',
     'asesor.avatar3.desc': 'The one who cheers you up when things get heavy. Celebrates every win with you, no matter how small.',
     'asesor.avatar3.habilidad': '<b>Special ability:</b> makes talking about money feel a lot less heavy.',
+    'asesor.avatar4.nombre': 'Golden Piggy',
+    'asesor.avatar4.desc': 'Earned by inviting friends — the one who brags about saving the most.',
+    'asesor.avatar4.habilidad': '<b>Special ability:</b> celebrates every peso you save like it were treasure.',
+    'asesor.avatar5.nombre': 'The Luchador',
+    'asesor.avatar5.desc': 'Masked, direct, never gives up on your money goals.',
+    'asesor.avatar5.habilidad': '<b>Special ability:</b> challenges you to beat your own savings record.',
+    'asesor.avatar6.nombre': 'La Catrina',
+    'asesor.avatar6.desc': 'Elegant and fearless — reminds you money is meant to be enjoyed wisely.',
+    'asesor.avatar6.habilidad': '<b>Special ability:</b> turns any impulse buy into a stylish lesson.',
     'config.cambiar_asesor_boton': "Change Freaky's look",
     'freaky.dias_aviso_tarjeta_label': 'Warn me about a card payment how many days in advance',
     'ayuda_ia.subtitulo': 'Your financial mentor',
@@ -6000,7 +6146,7 @@ async function terminosYaAceptados(){
     // sesión nunca vio ese momento.
     const { data: { user } } = await sb.auth.getUser();
     if(user?.app_metadata?.provider === 'email'){
-      marcarTerminosAceptados();
+      marcarTerminosAceptados(user);
       return true;
     }
     terminosAceptadosCache = false;
@@ -6010,7 +6156,112 @@ async function terminosYaAceptados(){
     return false;
   }
 }
-function marcarTerminosAceptados(){
+// Helper para la Edge Function `referidos` (invita a un amigo) -- mismo
+// patrón que las demás llamadas a funciones con sesión: token de la sesión
+// actual, sin reintentos especiales (si falla, simplemente no se canjeó/leyó
+// nada esta vez, no es un flujo crítico).
+async function llamarReferidos(payload){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return { error: 'sin_sesion' };
+  try{
+    const resp = await fetchConTimeout(`${window.SUPABASE_URL}/functions/v1/referidos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload || {}),
+    }, 15000);
+    return await resp.json();
+  }catch(e){
+    console.warn('No se pudo llamar a la función de referidos', e);
+    return { error: 'red' };
+  }
+}
+
+// Escalera de recompensas por referidos activados -- debe coincidir con
+// ESCALERA_PREMIOS en la Edge Function `referidos` (esta solo agrega lo
+// visual: nombre y carpeta de assets). El servidor es quien de verdad
+// decide qué está desbloqueado (datos.avataresDesbloqueados) -- esto es
+// nada más para dibujarlo.
+const PREMIOS_REFERIDOS = [
+  { avatar: 'avatar4', activados: 1, nombreKey: 'referidos.premio_puerquito' },
+  { avatar: 'avatar5', activados: 3, nombreKey: 'referidos.premio_luchador' },
+  { avatar: 'avatar6', activados: 5, nombreKey: 'referidos.premio_catrina', sinAnuncios: true },
+];
+
+let referidosCodigoActual = null;
+
+async function abrirReferidos(){
+  mostrar('vista-referidos');
+  document.getElementById('texto-mi-codigo-referido').textContent = '…';
+  document.getElementById('texto-referidos-progreso').textContent = t('comun.cargando');
+  document.getElementById('grid-premios-referidos').innerHTML = '';
+  const datos = await llamarReferidos({});
+  if(datos.error){
+    document.getElementById('texto-mi-codigo-referido').textContent = '—';
+    document.getElementById('texto-referidos-progreso').textContent = t('referidos.error_cargar');
+    return;
+  }
+  pintarReferidos(datos);
+}
+
+function pintarReferidos(datos){
+  referidosCodigoActual = datos.codigo;
+  document.getElementById('texto-mi-codigo-referido').textContent = datos.codigo || '—';
+
+  const siguiente = PREMIOS_REFERIDOS.find(p => datos.referidosActivados < p.activados);
+  document.getElementById('texto-referidos-progreso').textContent = siguiente
+    ? tf('referidos.progreso_faltan', datos.referidosActivados, siguiente.activados - datos.referidosActivados)
+    : t('referidos.progreso_completo');
+  const maxEscalera = PREMIOS_REFERIDOS[PREMIOS_REFERIDOS.length - 1].activados;
+  const pct = Math.min(100, Math.round((datos.referidosActivados / maxEscalera) * 100));
+  document.getElementById('barra-referidos-progreso').style.width = pct + '%';
+
+  document.getElementById('grid-premios-referidos').innerHTML = PREMIOS_REFERIDOS.map(p => {
+    const desbloqueado = (datos.avataresDesbloqueados || []).includes(p.avatar);
+    const requisito = desbloqueado ? t('referidos.desbloqueado') : tf('referidos.requiere_n', p.activados);
+    return `<div class="premio-tarjeta ${desbloqueado ? 'desbloqueado' : 'bloqueado'}">
+      <img class="premio-tarjeta-avatar" src="assets/asesores/${p.avatar}/avatar.png" alt="">
+      <div class="premio-tarjeta-nombre">${t(p.nombreKey)}</div>
+      <div class="premio-tarjeta-requisito">${requisito}${p.sinAnuncios ? ' · ' + t('referidos.sin_anuncios_corto') : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function copiarCodigoReferido(){
+  if(!referidosCodigoActual) return;
+  navigator.clipboard?.writeText(referidosCodigoActual).then(() => {
+    mostrarAlerta(t('referidos.copiado'));
+  }).catch(() => {});
+}
+
+async function compartirCodigoReferido(){
+  if(!referidosCodigoActual) return;
+  const texto = tf('referidos.texto_compartir', referidosCodigoActual);
+  if(navigator.share){
+    try{ await navigator.share({ text: texto }); return; }catch(e){ return; }
+  }
+  copiarCodigoReferido();
+}
+
+// Todavía no hay colaboraciones reales -- se deja el arreglo vacío a
+// propósito en vez de inventar nombres. Cuando haya una real, se agrega
+// aquí: { nombre, desc, avatarUrl, link }.
+const AMIGOS_APP = [];
+
+function pintarAmigosApp(){
+  const cont = document.getElementById('lista-amigos-app');
+  if(!AMIGOS_APP.length){
+    cont.innerHTML = `<div class="aviso">${t('amigos.vacio')}</div>`;
+    return;
+  }
+  cont.innerHTML = AMIGOS_APP.map(a => `
+    <a class="amigo-tarjeta" href="${a.link}" target="_blank" rel="noopener noreferrer">
+      <img class="amigo-tarjeta-avatar" src="${a.avatarUrl}" alt="">
+      <div><div class="amigo-tarjeta-nombre">${escapeHtml(a.nombre)}</div><div class="amigo-tarjeta-desc">${escapeHtml(a.desc)}</div></div>
+    </a>
+  `).join('');
+}
+
+function marcarTerminosAceptados(user){
   terminosAceptadosCache = true;
   const payload = { terminos_aceptados_en: new Date().toISOString() };
   // Solo se guarda la primera vez que se aceptan términos (nueva cuenta) --
@@ -6018,6 +6269,13 @@ function marcarTerminosAceptados(){
   if(ORIGEN_REGISTRO) payload.origen_registro = ORIGEN_REGISTRO;
   sb.from('perfil_financiero').upsert(payload, { onConflict: 'user_id' })
     .then(({ error }) => { if(error) console.warn('No se pudo guardar terminos_aceptados_en (¿ya corriste la migración?)', error); });
+
+  // Mismo punto (primera sesión real de una cuenta nueva por correo) para
+  // canjear el código de invitación que se guardó en el metadata al
+  // registrarse -- así funciona aunque el correo se confirme en otro
+  // dispositivo/navegador, igual que origen_registro arriba.
+  const codigoPendiente = user?.user_metadata?.codigo_referido_ingresado;
+  if(codigoPendiente) llamarReferidos({ accion: 'canjear', codigo: codigoPendiente });
 }
 
 // Bug real reportado por el usuario: probó el onboarding con una cuenta de
@@ -6476,9 +6734,15 @@ async function crearCuenta(){
     return;
   }
 
+  // El código de invitación se guarda en el metadata del usuario (no se
+  // canjea aquí) porque en este punto puede que todavía no haya sesión
+  // real (falta confirmar el correo) -- se canjea la primera vez que sí
+  // hay sesión, en marcarTerminosAceptados(), sin importar en qué
+  // dispositivo/navegador se confirme.
+  const codigoReferido = document.getElementById('input-codigo-referido-registro').value.trim().toUpperCase();
   const { data, error } = await sb.auth.signUp({
     email, password,
-    options: { data: { nombre }, emailRedirectTo: location.origin + location.pathname, captchaToken }
+    options: { data: { nombre, codigo_referido_ingresado: codigoReferido || undefined }, emailRedirectTo: location.origin + location.pathname, captchaToken }
   });
 
   if(turnstileWidgetIdRegistro !== null && typeof turnstile !== 'undefined') turnstile.reset(turnstileWidgetIdRegistro);
@@ -9475,6 +9739,9 @@ const ASESORES = [
   { id: 'avatar1', carpeta: 'assets/asesores/avatar1' },
   { id: 'avatar2', carpeta: 'assets/asesores/avatar2' },
   { id: 'avatar3', carpeta: 'assets/asesores/avatar3' },
+  { id: 'avatar4', carpeta: 'assets/asesores/avatar4', requiereReferidos: 1 },
+  { id: 'avatar5', carpeta: 'assets/asesores/avatar5', requiereReferidos: 3 },
+  { id: 'avatar6', carpeta: 'assets/asesores/avatar6', requiereReferidos: 5 },
 ];
 let asesorActual = null; // {id, carpeta} — null hasta que se aplica uno (elegido o cacheado)
 let asesorSelectorOrigen = 'login'; // 'login' = sigue el flujo normal de entrada; 'configuracion' = solo cambia y regresa
@@ -9572,8 +9839,16 @@ async function debeMostrarSelectorAsesor(){
   }
 }
 
-function abrirSelectorAsesor(origen){
+// Avatares desbloqueados por referidos -- se consulta una sola vez por
+// sesión (no cambia seguido) y se reusa; null = todavía no se sabe.
+let avataresDesbloqueadosPorReferidos = null;
+
+async function abrirSelectorAsesor(origen){
   asesorSelectorOrigen = origen || 'login';
+  if(!modoDemo && avataresDesbloqueadosPorReferidos === null){
+    const datos = await llamarReferidos({});
+    avataresDesbloqueadosPorReferidos = datos.avataresDesbloqueados || [];
+  }
   renderSelectorAsesor();
   mostrar('vista-elegir-asesor');
 }
@@ -9581,20 +9856,27 @@ function abrirSelectorAsesor(origen){
 function renderSelectorAsesor(){
   const cont = document.getElementById('asesor-grid');
   if(!cont) return;
-  cont.innerHTML = ASESORES.map(a => `
-    <div class="asesor-tarjeta">
+  const desbloqueados = avataresDesbloqueadosPorReferidos || [];
+  cont.innerHTML = ASESORES.map(a => {
+    const bloqueado = a.requiereReferidos && !desbloqueados.includes(a.id);
+    const accion = bloqueado
+      ? `<div class="asesor-tarjeta-candado">${tf('referidos.requiere_n', a.requiereReferidos)}</div>`
+      : `<button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>`;
+    return `
+    <div class="asesor-tarjeta ${bloqueado ? 'bloqueada' : ''}">
       <img src="${a.carpeta}/avatar.png" alt="">
       <div class="asesor-tarjeta-titulo">${t('asesor.' + a.id + '.nombre')}</div>
       <div class="asesor-tarjeta-desc">${t('asesor.' + a.id + '.desc')}</div>
       <div class="asesor-tarjeta-habilidad">${t('asesor.' + a.id + '.habilidad')}</div>
-      <button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>
-    </div>
-  `).join('');
+      ${accion}
+    </div>`;
+  }).join('');
 }
 
 async function elegirAsesor(id){
   const asesor = obtenerAsesorPorId(id);
   if(!asesor) return;
+  if(asesor.requiereReferidos && !(avataresDesbloqueadosPorReferidos || []).includes(id)) return;
   asesorActual = asesor;
   localStorage.setItem('asesor_actual_id', id);
   aplicarAsesorAlPersonaje();
@@ -14167,8 +14449,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 45;
+const VERSION_APP_ACTUAL = 46;
 const CHANGELOG_APP = [
+  {
+    version: 46,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Nuevo: "Invita a un amigo" en Configuración — comparte tu código y desbloquea avatares exclusivos de Freaky (y sin anuncios, para siempre) según cuántos amigos activen su cuenta.'
+    ],
+    cambios_en: [
+      'New: "Invite a friend" in Settings — share your code and unlock exclusive Freaky avatars (and no ads, forever) based on how many friends activate their account.'
+    ]
+  },
   {
     version: 45,
     fecha: '2026-08-27',
