@@ -1895,7 +1895,7 @@
   <button type="button" onclick="cerrarMenuAgregar(); mostrar('vista-agregar-deuda');" data-i18n="cuentas.menu_deuda">Deuda</button>
   <button type="button" onclick="cerrarMenuAgregar(); abrirAgregarTransferencia();" data-i18n="cuentas.menu_transferencia">Transferencia</button>
 </div>
-<input type="file" id="input-captura-foto-gasto" accept="image/*" capture="environment" style="display:none;" onchange="capturarFotoGasto(this)">
+<input type="file" id="input-captura-foto-gasto" accept="image/*" style="display:none;" onchange="capturarFotoGasto(this)">
 
 <div id="modal-procesando-solicitud" class="modal-overlay" style="display:none;">
   <div class="modal-caja">
@@ -14449,8 +14449,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 46;
+const VERSION_APP_ACTUAL = 47;
 const CHANGELOG_APP = [
+  {
+    version: 47,
+    fecha: '2026-08-28',
+    cambios_es: [
+      '"Gasto por foto" ya no solo toma la foto en el momento — también puedes elegir una que ya tengas guardada en tu galería.'
+    ],
+    cambios_en: [
+      '"Expense by photo" no longer only takes a photo on the spot — you can now also pick one already saved in your gallery.'
+    ]
+  },
   {
     version: 46,
     fecha: '2026-08-28',
