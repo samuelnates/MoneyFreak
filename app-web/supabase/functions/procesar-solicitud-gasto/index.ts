@@ -39,6 +39,16 @@ const SolicitudGastoSchema = z.object({
 
 const HOY = () => new Date().toISOString().slice(0, 10);
 
+// El modelo a veces devuelve algo que no es una fecha real de verdad (se vio
+// en producción: el string literal "/null" en vez de null cuando el ticket
+// no traía fecha visible) -- eso rompía el insert con un error críptico de
+// Postgres ("invalid input syntax for type date"). Nunca confiar en el
+// formato sin revisar, igual que ya se hace con categoría/medio de pago.
+function fechaValidaOAhora(valor: string | null): string {
+  if (valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !isNaN(new Date(valor).getTime())) return valor;
+  return HOY();
+}
+
 function construirPrompt(mediosPago: MedioPagoDisponible[]): string {
   const listaMediosPago = mediosPago.length
     ? mediosPago.map((m) => `- "${m.valor}" = ${m.etiqueta}`).join("\n")
@@ -197,7 +207,7 @@ Deno.serve(async (req) => {
         categoria_sugerida: parsed.categoria,
         subcategoria_sugerida: parsed.subcategoria,
         nota_sugerida: parsed.nota,
-        fecha_sugerida: parsed.fecha || HOY(),
+        fecha_sugerida: fechaValidaOAhora(parsed.fecha),
         medio_pago_sugerido: medioPagoValidado,
         es_compra_meses: parsed.es_compra_meses,
         es_recurrente: parsed.es_recurrente,
