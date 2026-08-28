@@ -10638,8 +10638,16 @@ async function confirmarGastoChat(idAccion){
     ? accion.subcategoria_sugerida
     : (accion.subcategoria_sugerida || null);
 
+  // Revalidación defensiva también de la fecha -- igual que categoría/subcategoría/medio
+  // de pago arriba. La IA a veces sugiere algo que no es "YYYY-MM-DD" (ej. "hoy"), y
+  // eso rompía silenciosamente sumarMesesFecha() más abajo (terminaba mandando
+  // "NaN-NaN-NaN" a la base, que Postgres rechaza con un error críptico).
+  const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(accion.fecha_sugerida || '') && !isNaN(new Date(accion.fecha_sugerida))
+    ? accion.fecha_sugerida
+    : new Date().toISOString().slice(0, 10);
+
   const resultado = await guardarGastoDesdeObjeto({
-    fecha: accion.fecha_sugerida || new Date().toISOString().slice(0, 10),
+    fecha: fechaValida,
     categoria: categoriaValida,
     subcategoria: subcategoriaValida,
     monto: Number(accion.monto_sugerido),
@@ -14473,8 +14481,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 50;
+const VERSION_APP_ACTUAL = 51;
 const CHANGELOG_APP = [
+  {
+    version: 51,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Arreglado: registrar un gasto contándoselo a Freaky por voz o texto a veces fallaba con un error de fecha inválida.'
+    ],
+    cambios_en: [
+      'Fixed: logging an expense by telling Freaky through voice or text sometimes failed with an invalid-date error.'
+    ]
+  },
   {
     version: 50,
     fecha: '2026-08-28',
