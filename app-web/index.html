@@ -978,6 +978,11 @@
   .total-caja .monto.estado-saludable{color:var(--color-saludable);}
   .total-caja .monto.estado-atencion{color:var(--color-atencion);font-weight:700;}
   .total-caja .monto.estado-riesgo{color:var(--color-riesgo);font-weight:700;}
+  .total-caja-clic{cursor:pointer;display:block;width:100%;appearance:none;-webkit-appearance:none;}
+  .total-caja-clic:hover, .total-caja-clic:focus-visible{border-color:var(--texto-tenue-2);}
+  .flecha-fila{opacity:.5;font-size:11px;margin-left:4px;}
+  .score-fila-clic{background:none;border:none;padding:0;margin:0 0 20px;width:100%;text-align:left;display:block;cursor:pointer;font:inherit;color:inherit;}
+  .score-fila-clic:hover .score-fila-titulo span:first-child, .score-fila-clic:focus-visible .score-fila-titulo span:first-child{text-decoration:underline;}
 
   /* Resumen consolidado de los hubs (Gastos, Salud, Flujo): compacto siempre, para que las tarjetas de acceso queden a la vista sin scroll */
   .totales-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;margin-bottom:14px;}
@@ -7950,26 +7955,32 @@ async function abrirScore(){
     </div>
 
     <h2>${t('score.desglose_titulo')}</h2>
-    <div class="score-fila">
-      <div class="score-fila-titulo"><span>${t('score.liquidez')}</span><span class="valor">${txtSub(score.liquidez)}</span></div>
+    <button type="button" class="score-fila score-fila-clic" onclick="abrirSaludDetalle()">
+      <div class="score-fila-titulo"><span>${t('score.liquidez')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.liquidez)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.liquidez)}" style="width:${score.liquidez !== null ? Math.min(score.liquidez, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.liquidez_explica')}</div>
-    </div>
-    <div class="score-fila">
-      <div class="score-fila-titulo"><span>${t('score.endeudamiento')}</span><span class="valor">${txtSub(score.endeudamiento)}</span></div>
+    </button>
+    <button type="button" class="score-fila score-fila-clic" onclick="abrirSaludDetalle()">
+      <div class="score-fila-titulo"><span>${t('score.endeudamiento')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.endeudamiento)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.endeudamiento)}" style="width:${score.endeudamiento !== null ? Math.min(score.endeudamiento, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.endeudamiento_explica')}</div>
-    </div>
+    </button>
+    ${modoDemo ? `
     <div class="score-fila">
       <div class="score-fila-titulo"><span>${t('score.presupuesto')}</span><span class="valor">${txtSub(score.presupuesto)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.presupuesto)}" style="width:${score.presupuesto !== null ? Math.min(score.presupuesto, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.presupuesto_explica')}</div>
-    </div>
-    <div class="score-fila">
-      <div class="score-fila-titulo"><span>${t('score.tendencia')}</span><span class="valor">${txtSub(score.tendencia)}</span></div>
+    </div>` : `
+    <button type="button" class="score-fila score-fila-clic" onclick="abrirPresupuesto()">
+      <div class="score-fila-titulo"><span>${t('score.presupuesto')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.presupuesto)}</span></div>
+      <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.presupuesto)}" style="width:${score.presupuesto !== null ? Math.min(score.presupuesto, 100) : 0}%"></div></div>
+      <div class="detalle-explica">${t('score.presupuesto_explica')}</div>
+    </button>`}
+    <button type="button" class="score-fila score-fila-clic" onclick="abrirBalanceGraficas('evolucion')">
+      <div class="score-fila-titulo"><span>${t('score.tendencia')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.tendencia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.tendencia)}" style="width:${score.tendencia !== null ? Math.min(score.tendencia, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.tendencia_explica')}</div>
-    </div>
+    </button>
     <div class="score-fila">
       <div class="score-fila-titulo"><span>${t('score.constancia')}</span><span class="valor">${txtSub(score.constancia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.constancia)}" style="width:${score.constancia !== null ? Math.min(score.constancia, 100) : 0}%"></div></div>
@@ -11916,11 +11927,11 @@ async function abrirGastos(){
   resumen.innerHTML = `
     ${presupuestoExcedeIngreso ? `<div class="aviso estado-riesgo">${tf('gastos.excede_ingreso', formatoMonto(r.totalPresupuestado, 'MXN'), formatoMonto(r.totalIngreso, 'MXN'))}</div>` : ''}
     <div class="totales-grid">
-      <div class="total-caja">
-        <div class="etiqueta">${t('gastos.gastado_mes')}</div>
+      <button type="button" class="total-caja total-caja-clic" onclick="abrirGastosMovimientos()">
+        <div class="etiqueta">${t('gastos.gastado_mes')}<span class="flecha-fila">›</span></div>
         <div class="monto">${formatoMonto(r.totalGastado, 'MXN')}</div>
         ${r.totalPresupuestado > 0 ? `<div class="detalle-explica">${tf('gastos.de_presupuestados', formatoMonto(r.totalPresupuestado, 'MXN'))}</div>` : ''}
-      </div>
+      </button>
       <div class="total-caja">
         <div class="etiqueta">${t('gastos.ingresos_vs_gastos')}</div>
         <div class="monto ${claseSaldo}">${formatoMonto(saldoMes, 'MXN')}</div>
@@ -13097,20 +13108,20 @@ async function abrirFlujoEfectivo(){
 
   if(f.items.length === 0){
     cont.innerHTML = `
-      <div class="total-caja">
-        <div class="etiqueta">${t('flujo.liquido_disponible')}</div>
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-inversion')">
+        <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
         <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
-      </div>
+      </button>
       <div class="mensaje">${t('flujo.sin_movimientos')}</div>
     `;
     return;
   }
 
   const ingresosHtml = f.totalIngresos > 0 ? `
-    <div class="total-caja">
-      <div class="etiqueta">${t('flujo.ingresos_esperados')}</div>
+    <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-ingresos')">
+      <div class="etiqueta">${t('flujo.ingresos_esperados')}<span class="flecha-fila">›</span></div>
       <div class="monto">+${formatoMonto(f.totalIngresos, 'MXN')}</div>
-    </div>
+    </button>
   ` : '';
 
   const filasHtml = f.items.map((it, i) => {
@@ -13131,15 +13142,15 @@ async function abrirFlujoEfectivo(){
 
   cont.innerHTML = `
     <div class="totales-grid">
-      <div class="total-caja">
-        <div class="etiqueta">${t('flujo.liquido_disponible')}</div>
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-inversion')">
+        <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
         <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
-      </div>
+      </button>
       ${ingresosHtml}
-      <div class="total-caja">
-        <div class="etiqueta">${t('flujo.total_pagar')}</div>
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-deudas')">
+        <div class="etiqueta">${t('flujo.total_pagar')}<span class="flecha-fila">›</span></div>
         <div class="monto">-${formatoMonto(f.total, 'MXN')}</div>
-      </div>
+      </button>
       <div class="total-caja">
         <div class="etiqueta">${t('flujo.saldo_proyectado')}</div>
         <div class="monto ${claseEstado(estadoProyectado)}">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
@@ -13251,16 +13262,16 @@ async function abrirSaludFinanciera(){
         <div class="etiqueta">${t('balance.estado_general')}</div>
         <div class="monto ${claseEstado(s.estadoGeneral)}">${etiquetas[s.estadoGeneral]}</div>
       </div>
-      <div class="total-caja">
-        <div class="etiqueta">${t('balance.cobertura_liquidez_30')}</div>
+      <button type="button" class="total-caja total-caja-clic" onclick="abrirSaludDetalle()">
+        <div class="etiqueta">${t('balance.cobertura_liquidez_30')}<span class="flecha-fila">›</span></div>
         <div class="monto">${coberturaTxt}</div>
         <div class="detalle-explica ${claseEstado(s.estadoLiquidez)}">${etiquetas[s.estadoLiquidez]}</div>
-      </div>
-      <div class="total-caja">
-        <div class="etiqueta">${t('balance.tasa_endeudamiento_mensual')}</div>
+      </button>
+      <button type="button" class="total-caja total-caja-clic" onclick="abrirSaludDetalle()">
+        <div class="etiqueta">${t('balance.tasa_endeudamiento_mensual')}<span class="flecha-fila">›</span></div>
         <div class="monto">${endeudamientoTxt}</div>
         ${s.estadoEndeudamiento ? `<div class="detalle-explica ${claseEstado(s.estadoEndeudamiento)}">${etiquetas[s.estadoEndeudamiento]}</div>` : ''}
-      </div>
+      </button>
     </div>
 
     <h2>${t('salud.recomendacion')}</h2>
@@ -13289,15 +13300,15 @@ async function abrirSaludDetalle(){
     <div class="grid-2col">
       <div>
         <h2>${t('salud.cobertura_liquidez')}</h2>
-        <div class="fila-balance"><span>${t('salud.activos_liquidos')}</span><span class="valor positivo">${formatoMonto(s.activosLiquidos, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-inversion')">${t('salud.activos_liquidos')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(s.activosLiquidos, 'MXN')}</span></div>
         <div class="fila-balance"><span>${t('salud.compromisos_mensuales')}</span><span class="valor negativo">${formatoMonto(s.compromisosMensuales, 'MXN')}</span></div>
         ${s.aportacionesRecurrentes > 0 ? `<div class="detalle-explica">${tf('salud.desglose_compromisos', formatoMonto(s.compromisosDeuda, 'MXN'), formatoMonto(s.aportacionesRecurrentes, 'MXN'))}</div>` : ''}
         <div class="aviso">${t('salud.aviso_cobertura')}</div>
       </div>
       <div>
         <h2>${t('salud.tasa_endeudamiento')}</h2>
-        <div class="fila-balance"><span>${t('salud.pagos_mensuales_deuda')}</span><span class="valor negativo">${formatoMonto(s.compromisosDeuda, 'MXN')}</span></div>
-        <div class="fila-balance"><span>${t('salud.ingreso_mensual')}</span><span class="valor positivo">${s.ingreso ? formatoMonto(s.ingreso, 'MXN') : t('comun.sin_definir')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-deudas')">${t('salud.pagos_mensuales_deuda')}<span class="flecha-fila">›</span></button><span class="valor negativo">${formatoMonto(s.compromisosDeuda, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-ingresos')">${t('salud.ingreso_mensual')}<span class="flecha-fila">›</span></button><span class="valor positivo">${s.ingreso ? formatoMonto(s.ingreso, 'MXN') : t('comun.sin_definir')}</span></div>
         <div class="aviso">${t('salud.aviso_endeudamiento')}</div>
       </div>
     </div>
@@ -13560,11 +13571,11 @@ async function abrirBalance(){
   }
 
   cont.innerHTML = `
-    <div class="total-caja">
-      <div class="etiqueta">${t('balance.patrimonio_neto')}</div>
+    <button type="button" class="total-caja total-caja-clic" onclick="abrirBalanceGraficas('evolucion')">
+      <div class="etiqueta">${t('balance.patrimonio_neto')}<span class="flecha-fila">›</span></div>
       <div class="monto" id="patrimonio-neto-monto">${formatoMonto(0, 'MXN')}</div>
       ${cambioHtml}
-    </div>
+    </button>
 
     <div class="grid-2col">
       <div>
@@ -13608,7 +13619,7 @@ async function abrirBalance(){
   animarNumero(document.getElementById('patrimonio-neto-monto'), b.patrimonioNeto, 'MXN', 1000);
 }
 
-async function abrirBalanceGraficas(){
+async function abrirBalanceGraficas(foco){
   mostrar('vista-balance-graficas');
   const cont = document.getElementById('balance-graficas-contenido');
   cont.innerHTML = skeletonCards(2);
@@ -13648,6 +13659,9 @@ async function abrirBalanceGraficas(){
   `;
 
   renderizarDetalleBalance();
+  if(foco === 'evolucion'){
+    document.getElementById('evolucion-patrimonio-caja')?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
+  }
 }
 
 function renderizarDetalleBalance(){
@@ -14449,8 +14463,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 47;
+const VERSION_APP_ACTUAL = 48;
 const CHANGELOG_APP = [
+  {
+    version: 48,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Ahora puedes tocar el patrimonio neto, la cobertura de liquidez, la tasa de endeudamiento y otros números clave para ir directo a su gráfica o sección relacionada, en vez de solo verlos.'
+    ],
+    cambios_en: [
+      'You can now tap net worth, liquidity coverage, debt ratio, and other key numbers to jump straight to their chart or related section, instead of just seeing them.'
+    ]
+  },
   {
     version: 47,
     fecha: '2026-08-28',
