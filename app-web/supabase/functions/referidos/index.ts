@@ -29,6 +29,13 @@ const ESCALERA_PREMIOS = [
   { activados: 5, avatar: "avatar6", sinAnuncios: true },
 ];
 
+// El dueño de la app se desbloquea todo a mano para poder ver/probar los
+// avatares y la experiencia sin anuncios -- no representa que haya invitado
+// a nadie de verdad, así que no se toca la tabla `referidos` (no se inventan
+// referidos falsos ni se le atribuyen a otros usuarios reales). Puramente un
+// override de la respuesta para este correo.
+const CORREOS_DESBLOQUEO_TOTAL = ["samuelnates@gmail.com"];
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -115,14 +122,17 @@ Deno.serve(async (req) => {
 
     const activados = (misReferidos || []).filter((r) => r.activado).length;
     const totales = (misReferidos || []).length;
-    const avataresDesbloqueados = ESCALERA_PREMIOS.filter((p) => activados >= p.activados).map((p) => p.avatar);
+    const desbloqueoTotal = CORREOS_DESBLOQUEO_TOTAL.includes((userData.user.email || "").toLowerCase());
+    const avataresDesbloqueados = desbloqueoTotal
+      ? ESCALERA_PREMIOS.map((p) => p.avatar)
+      : ESCALERA_PREMIOS.filter((p) => activados >= p.activados).map((p) => p.avatar);
 
     return jsonResponse({
       codigo: perfil?.codigo_referido || null,
       referidosActivados: activados,
       referidosTotales: totales,
       avataresDesbloqueados,
-      sinAnuncios: !!perfil?.sin_anuncios,
+      sinAnuncios: desbloqueoTotal || !!perfil?.sin_anuncios,
       escalera: ESCALERA_PREMIOS,
     });
   } catch (e) {
