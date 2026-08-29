@@ -197,6 +197,7 @@
       <button class="tab-admin" data-seccion="uso" onclick="mostrarSeccionAdmin('uso')">Uso y Freaky</button>
       <button class="tab-admin" data-seccion="usuarios" onclick="mostrarSeccionAdmin('usuarios')">Usuarios</button>
       <button class="tab-admin" data-seccion="negocio" onclick="mostrarSeccionAdmin('negocio')">Negocio</button>
+      <button class="tab-admin" data-seccion="logs" onclick="mostrarSeccionAdmin('logs')">Logs</button>
     </div>
 
     <div class="seccion-admin" id="seccion-crecimiento">
@@ -555,6 +556,38 @@
       </div>
     </div>
     </div>
+
+    <div class="seccion-admin oculto" id="seccion-logs">
+    <h2>Logs</h2>
+    <div class="tarjeta-sub" style="margin:0 0 12px;">Errores reales de las Edge Functions y de la base de datos, tal cual como se ven en Supabase -- sin tener que pedírselos a Claude cada vez.</div>
+    <div class="caja" style="margin-bottom:16px;">
+      <div class="form-negocio">
+        <div class="campo-negocio">
+          <label for="logs-ventana">Ventana de tiempo</label>
+          <select id="logs-ventana">
+            <option value="60">Última hora</option>
+            <option value="360">Últimas 6 horas</option>
+            <option value="1440" selected>Últimas 24 horas</option>
+            <option value="10080">Últimos 7 días</option>
+          </select>
+        </div>
+        <div class="campo-negocio">
+          <label for="logs-funcion">Filtrar por función (opcional)</label>
+          <input type="text" id="logs-funcion" placeholder="Ej. procesar-solicitud-gasto">
+        </div>
+      </div>
+      <button id="btn-cargar-logs" onclick="cargarLogsAdmin()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Buscar</button>
+      <span id="logs-estado" style="margin-left:10px;font-size:12px;color:var(--texto-tenue);"></span>
+    </div>
+    <div class="caja">
+      <div class="tabla-scroll">
+      <table>
+        <thead><tr><th style="width:160px;">Cuándo</th><th style="width:140px;">Fuente</th><th>Mensaje</th></tr></thead>
+        <tbody id="tabla-logs"><tr><td colspan="3" class="tarjeta-sub">Elige una ventana de tiempo y toca "Buscar".</td></tr></tbody>
+      </table>
+      </div>
+    </div>
+    </div>
   </div>
 
 </div>
@@ -580,7 +613,7 @@ function mostrar(id){
 // separan en pestañas. Los datos se cargan una sola vez para todas (ver
 // cargarPanel) así que cambiar de pestaña es instantáneo, sin volver a
 // pedir nada al servidor.
-const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'negocio'];
+const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'negocio', 'logs'];
 
 function mostrarSeccionAdmin(id){
   if(!SECCIONES_ADMIN.includes(id)) id = SECCIONES_ADMIN[0];
@@ -1193,6 +1226,64 @@ async function editarCorreoAdmin(id){
   if(!datos.ok){ alert(`No se pudo cambiar el correo: ${datos.error || 'error'}`); return; }
   refrescarFilaUsuario(id, { correo: datos.correoNuevo || limpio });
   alert('Correo actualizado.');
+}
+
+const ETIQUETAS_FUENTE_LOG = {
+  function_edge_logs: 'HTTP función',
+  function_logs: 'console.error función',
+  postgres_logs: 'Postgres',
+};
+
+async function cargarLogsAdmin(){
+  const boton = document.getElementById('btn-cargar-logs');
+  const estado = document.getElementById('logs-estado');
+  const tbody = document.getElementById('tabla-logs');
+  const minutos = Number(document.getElementById('logs-ventana').value);
+  const funcion = document.getElementById('logs-funcion').value.trim();
+
+  boton.disabled = true;
+  estado.textContent = 'Buscando…';
+  tbody.innerHTML = '<tr><td colspan="3" class="tarjeta-sub">Buscando…</td></tr>';
+
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ estado.textContent = 'Sesión expirada.'; boton.disabled = false; return; }
+
+  let resp, datos;
+  try{
+    resp = await fetch(`${window.SUPABASE_URL}/functions/v1/admin-logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ minutos, funcion: funcion || undefined }),
+    });
+    datos = await resp.json();
+  }catch(e){
+    estado.textContent = 'No se pudo conectar.';
+    tbody.innerHTML = '<tr><td colspan="3" class="tarjeta-sub">No se pudo conectar. Intenta de nuevo.</td></tr>';
+    boton.disabled = false;
+    return;
+  }
+  boton.disabled = false;
+
+  if(!resp.ok || !datos.ok){
+    estado.textContent = `Error: ${datos.error || resp.status}`;
+    tbody.innerHTML = `<tr><td colspan="3" class="tarjeta-sub">${escapeHtmlAdmin(datos.detalle || datos.error || 'Ocurrió un error.')}</td></tr>`;
+    return;
+  }
+
+  if(!datos.logs.length){
+    estado.textContent = `Sin errores en esta ventana.`;
+    tbody.innerHTML = '<tr><td colspan="3" class="tarjeta-sub">Nada que mostrar -- buena señal.</td></tr>';
+    return;
+  }
+
+  estado.textContent = `${datos.logs.length} resultado(s).`;
+  tbody.innerHTML = datos.logs.map(l => `
+    <tr>
+      <td style="white-space:nowrap;">${new Date(l.timestamp / 1000).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'medium' })}</td>
+      <td style="white-space:nowrap;">${ETIQUETAS_FUENTE_LOG[l.fuente] || l.fuente}</td>
+      <td style="font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-word;">${escapeHtmlAdmin(l.event_message)}</td>
+    </tr>
+  `).join('');
 }
 
 function formatoMonedaMxn(n){
