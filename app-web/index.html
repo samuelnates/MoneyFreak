@@ -1306,26 +1306,26 @@
 </nav>
 
 <nav class="nav-inferior-movil" id="nav-inferior-movil">
-  <button type="button" class="nav-inferior-boton" data-vista="vista-inicio" onclick="abrirPanel()">
+  <button type="button" class="nav-inferior-boton" data-vista="vista-inicio" onclick="manejarTapNavInferior('vista-inicio', abrirPanel)">
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span>
     <span data-i18n="navinf.inicio">Inicio</span>
   </button>
-  <button type="button" class="nav-inferior-boton" data-vista="vista-cuentas" onclick="mostrar('vista-cuentas')">
+  <button type="button" class="nav-inferior-boton" data-vista="vista-cuentas" onclick="manejarTapNavInferior('vista-cuentas', () => mostrar('vista-cuentas'))">
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/><path d="M3 9h18"/></svg></span>
     <span data-i18n="navinf.cuentas">Cuentas</span>
   </button>
   <button type="button" class="nav-inferior-fab" id="btn-nav-fab-gasto" onclick="toggleMenuAgregarCentral()" aria-label="Agregar" data-i18n-aria-label="cuentas.agregar_fab_aria">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
   </button>
-  <button type="button" class="nav-inferior-boton" data-vista="vista-gastos" onclick="abrirGastos()">
+  <button type="button" class="nav-inferior-boton" data-vista="vista-gastos" onclick="manejarTapNavInferior('vista-gastos', abrirGastos)">
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span>
     <span data-i18n="navinf.gastos">Gastos</span>
   </button>
-  <button type="button" class="nav-inferior-boton" data-vista="vista-flujo" onclick="abrirFlujoEfectivo()">
+  <button type="button" class="nav-inferior-boton" data-vista="vista-flujo" onclick="manejarTapNavInferior('vista-flujo', abrirFlujoEfectivo)">
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16l5-6 4 4 6-7"/><path d="M14 6h5v5"/></svg></span>
     <span data-i18n="navinf.flujo">Flujo</span>
   </button>
-  <button type="button" class="nav-inferior-boton" data-vista="vista-balance" onclick="abrirBalance()">
+  <button type="button" class="nav-inferior-boton" data-vista="vista-balance" onclick="manejarTapNavInferior('vista-balance', abrirBalance)">
     <span class="nav-inferior-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/></svg></span>
     <span data-i18n="navinf.balance">Balance</span>
   </button>
@@ -2172,7 +2172,7 @@
   </div>
 </div>
 
-<div id="vista-agregar-gasto" class="pantalla">
+<div id="vista-agregar-gasto" class="pantalla" oninput="programarGuardadoBorradorGasto()" onchange="programarGuardadoBorradorGasto()">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-gastos')">‹</button>
     <h1 data-i18n="gastos.registrar_titulo">Registrar gasto</h1>
@@ -2180,6 +2180,7 @@
   <div class="barra-guardar-superior">
     <button class="btn-grande" onclick="guardarGasto()" data-i18n="comun.guardar">Guardar</button>
   </div>
+  <div id="aviso-borrador-gasto"></div>
   <div class="campo requerido">
     <label for="input-monto-gasto" data-i18n="gastos.monto_label">Monto</label>
     <input type="text" id="input-monto-gasto" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00" autofocus>
@@ -3375,6 +3376,19 @@ function mostrar(idVista){
   actualizarVisibilidadBotonFab();
 }
 
+// Patrón de Instagram/Twitter: tocar el tab en el que ya estás te sube al
+// inicio de esa pantalla en vez de no hacer nada -- útil cuando bajaste
+// mucho en una lista larga (ej. movimientos de gastos) y quieres regresar
+// al resumen sin scrollear todo el camino de vuelta. Si el tab NO es el
+// activo, se comporta igual que siempre (navega a esa sección).
+function manejarTapNavInferior(vistaId, abrirFn){
+  if(document.getElementById(vistaId)?.classList.contains('activa')){
+    window.scrollTo({ top: 0, behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth' });
+  } else {
+    abrirFn();
+  }
+}
+
 function actualizarVisibilidadBotonTour(){
   const btn = document.getElementById('btn-tour');
   const btnConfig = document.getElementById('btn-config');
@@ -3637,6 +3651,8 @@ const TRADUCCIONES = {
     'gastos.recurrente_si': 'Sí, recuérdame',
     'gastos.recurrente_no': 'No, gracias',
     'gastos.recurrente_confirmado': 'Listo, te voy a recordar este pago cada mes.',
+    'gastos.borrador_recuperado': 'Recuperamos lo que tenías sin guardar.',
+    'gastos.borrador_descartar': 'Empezar de cero',
     'login.crear_cuenta': 'Crear cuenta',
     'login.ver_muestra': '¿Quieres ver un ejemplo primero?',
     'login.privacidad_link': 'Aviso de privacidad',
@@ -4588,6 +4604,8 @@ const TRADUCCIONES = {
     'gastos.recurrente_si': 'Yes, remind me',
     'gastos.recurrente_no': 'No thanks',
     'gastos.recurrente_confirmado': "Done, I'll remind you about this payment every month.",
+    'gastos.borrador_recuperado': 'We recovered what you had unsaved.',
+    'gastos.borrador_descartar': 'Start over',
     'login.crear_cuenta': 'Create account',
     'login.ver_muestra': 'Want to see an example first?',
     'login.privacidad_link': 'Privacy notice',
@@ -9276,6 +9294,7 @@ function sincronizarChipsSubcategoriaCompleta(){
 
 async function abrirAgregarGasto(sinFoco){
   solicitudPendienteActualId = null;
+  document.getElementById('aviso-borrador-gasto').innerHTML = '';
   poblarSelectCategorias(document.getElementById('select-categoria-gasto'));
   actualizarSubcategorias('');
   toggleConceptoPersonalizado('');
@@ -9300,39 +9319,119 @@ async function abrirAgregarGasto(sinFoco){
   // ahí el usuario solo va a revisar y guardar, no a escribir desde cero; forzar
   // el teclado encima del formulario ya lleno es el mismo problema que ya se
   // corrigió en el onboarding (ver parte 66).
-  if(!sinFoco) document.getElementById('input-monto-gasto').focus();
+  if(!sinFoco){
+    document.getElementById('input-monto-gasto').focus();
+    aplicarBorradorGastoSiExiste();
+  }
 }
 
-async function abrirAgregarGastoDesdeSolicitud(solicitud){
-  await abrirAgregarGasto(true);
-  solicitudPendienteActualId = solicitud.id;
-  if(solicitud.monto_sugerido != null) establecerValorMonto(document.getElementById('input-monto-gasto'), solicitud.monto_sugerido);
-  if(solicitud.fecha_sugerida) document.getElementById('input-fecha-gasto').value = solicitud.fecha_sugerida;
-  if(solicitud.nota_sugerida) document.getElementById('input-nota-gasto').value = solicitud.nota_sugerida;
-  if(solicitud.categoria_sugerida && CATALOGO_GASTOS[solicitud.categoria_sugerida]){
-    document.getElementById('select-categoria-gasto').value = solicitud.categoria_sugerida;
+// Compartido entre "llenar con lo que detectó Freaky" (abrirAgregarGastoDesdeSolicitud)
+// y "recuperar lo que tenías a medias" (aplicarBorradorGastoSiExiste) -- ambos
+// llenan el mismo formulario a partir de un objeto con la misma forma, así
+// que la lógica de "cuál campo tocar y cómo" solo vive en un lugar.
+function aplicarCamposGastoDesdeObjeto(datos){
+  if(datos.monto_sugerido != null) establecerValorMonto(document.getElementById('input-monto-gasto'), datos.monto_sugerido);
+  if(datos.fecha_sugerida) document.getElementById('input-fecha-gasto').value = datos.fecha_sugerida;
+  if(datos.nota_sugerida) document.getElementById('input-nota-gasto').value = datos.nota_sugerida;
+  if(datos.moneda) document.getElementById('select-moneda-gasto').value = datos.moneda;
+  if(datos.categoria_sugerida && CATALOGO_GASTOS[datos.categoria_sugerida]){
+    document.getElementById('select-categoria-gasto').value = datos.categoria_sugerida;
     actualizarSubcategorias('');
     const subSelect = document.getElementById('select-subcategoria-gasto');
-    const esCatalogo = CATALOGO_GASTOS[solicitud.categoria_sugerida].includes(solicitud.subcategoria_sugerida);
-    subSelect.value = esCatalogo ? solicitud.subcategoria_sugerida : '__otro__';
+    const esCatalogo = CATALOGO_GASTOS[datos.categoria_sugerida].includes(datos.subcategoria_sugerida);
+    subSelect.value = esCatalogo ? datos.subcategoria_sugerida : '__otro__';
     if(!esCatalogo){
-      document.getElementById('input-concepto-personalizado-gasto').value = solicitud.subcategoria_sugerida || '';
+      document.getElementById('input-concepto-personalizado-gasto').value = datos.subcategoria_sugerida || '';
       toggleConceptoPersonalizado('');
     }
   }
-  if(solicitud.medio_pago_sugerido){
-    const valorPago = solicitud.medio_pago_sugerido === 'efectivo' ? '' : solicitud.medio_pago_sugerido;
+  if(datos.medio_pago_sugerido){
+    const valorPago = datos.medio_pago_sugerido === 'efectivo' ? '' : datos.medio_pago_sugerido;
     const selectPago = document.getElementById('select-pago-gasto');
     if([...selectPago.options].some(o => o.value === valorPago)){
       selectPago.value = valorPago;
       sincronizarChipsPago('select-pago-gasto', 'chips-pago-gasto');
     }
   }
-  if(solicitud.es_compra_meses || solicitud.es_recurrente){
-    document.getElementById(solicitud.es_compra_meses ? 'check-gasto-compra-meses' : 'check-gasto-recurrente').checked = true;
-    if(solicitud.meses_sugeridos) document.getElementById('input-meses-recurrente').value = Math.min(12, Math.max(2, solicitud.meses_sugeridos));
-    toggleCamposRecurrente(solicitud.es_compra_meses ? 'compra_meses' : 'recurrente');
+  if(datos.es_compra_meses || datos.es_recurrente){
+    document.getElementById(datos.es_compra_meses ? 'check-gasto-compra-meses' : 'check-gasto-recurrente').checked = true;
+    if(datos.meses_sugeridos) document.getElementById('input-meses-recurrente').value = Math.min(12, Math.max(2, datos.meses_sugeridos));
+    toggleCamposRecurrente(datos.es_compra_meses ? 'compra_meses' : 'recurrente');
   }
+}
+
+async function abrirAgregarGastoDesdeSolicitud(solicitud){
+  await abrirAgregarGasto(true);
+  solicitudPendienteActualId = solicitud.id;
+  aplicarCamposGastoDesdeObjeto(solicitud);
+}
+
+// Pedido del usuario: si sales a medias de "Agregar gasto" (le diste atrás,
+// te llegó una llamada, la app se cerró sola en segundo plano), no debería
+// perderse lo que ya habías escrito. Se guarda en localStorage con debounce
+// mientras escribes (nunca se manda al servidor hasta que tocas Guardar de
+// verdad), y se recupera solo la próxima vez que abres el formulario desde
+// cero -- nunca al revisar algo que ya sugirió Freaky, eso ya viene lleno.
+const BORRADOR_GASTO_KEY = 'borrador_gasto';
+const BORRADOR_GASTO_VIGENCIA_MS = 24 * 60 * 60 * 1000;
+let temporizadorBorradorGasto = null;
+
+function programarGuardadoBorradorGasto(){
+  if(temporizadorBorradorGasto) clearTimeout(temporizadorBorradorGasto);
+  temporizadorBorradorGasto = setTimeout(guardarBorradorGasto, 600);
+}
+
+function guardarBorradorGasto(){
+  // Un formulario recién abierto y sin tocar no tiene nada que perder --
+  // no vale la pena persistirlo (y si ya había un borrador viejo de un
+  // gasto que sí se vació a mano, se descarta también).
+  const montoTexto = document.getElementById('input-monto-gasto').value.trim();
+  const notaTexto = document.getElementById('input-nota-gasto').value.trim();
+  if(!montoTexto && !notaTexto){
+    localStorage.removeItem(BORRADOR_GASTO_KEY);
+    return;
+  }
+  const subSelectValor = document.getElementById('select-subcategoria-gasto').value;
+  const montoNumerico = valorNumericoMonto(document.getElementById('input-monto-gasto'));
+  const datos = {
+    monto_sugerido: Number.isNaN(montoNumerico) ? null : montoNumerico,
+    fecha_sugerida: document.getElementById('input-fecha-gasto').value || null,
+    nota_sugerida: notaTexto || null,
+    moneda: document.getElementById('select-moneda-gasto').value || null,
+    categoria_sugerida: document.getElementById('select-categoria-gasto').value || null,
+    subcategoria_sugerida: subSelectValor === '__otro__'
+      ? (document.getElementById('input-concepto-personalizado-gasto').value.trim() || null)
+      : (subSelectValor || null),
+    medio_pago_sugerido: document.getElementById('select-pago-gasto').value || 'efectivo',
+    es_recurrente: document.getElementById('check-gasto-recurrente').checked,
+    es_compra_meses: document.getElementById('check-gasto-compra-meses').checked,
+    meses_sugeridos: Number(document.getElementById('input-meses-recurrente').value) || null,
+    guardadoEn: Date.now(),
+  };
+  localStorage.setItem(BORRADOR_GASTO_KEY, JSON.stringify(datos));
+}
+
+function aplicarBorradorGastoSiExiste(){
+  const crudo = localStorage.getItem(BORRADOR_GASTO_KEY);
+  if(!crudo) return;
+  let datos;
+  try{ datos = JSON.parse(crudo); }catch(e){ localStorage.removeItem(BORRADOR_GASTO_KEY); return; }
+  if(!datos.guardadoEn || Date.now() - datos.guardadoEn > BORRADOR_GASTO_VIGENCIA_MS){
+    localStorage.removeItem(BORRADOR_GASTO_KEY);
+    return;
+  }
+  aplicarCamposGastoDesdeObjeto(datos);
+  document.getElementById('aviso-borrador-gasto').innerHTML = `
+    <div class="aviso">
+      ${escapeHtml(t('gastos.borrador_recuperado'))}
+      <button type="button" class="btn-link-tenue" style="display:block;margin-top:6px;" onclick="descartarBorradorGasto()">${escapeHtml(t('gastos.borrador_descartar'))}</button>
+    </div>
+  `;
+}
+
+async function descartarBorradorGasto(){
+  localStorage.removeItem(BORRADOR_GASTO_KEY);
+  await abrirAgregarGasto();
 }
 
 function leerArchivoComoBase64(archivo){
@@ -11498,6 +11597,7 @@ async function guardarGasto(){
     sb.from('solicitudes_gasto_pendientes').update({ estado: 'aprobado' }).eq('id', solicitudPendienteActualId).then(() => {});
     solicitudPendienteActualId = null;
   }
+  localStorage.removeItem(BORRADOR_GASTO_KEY);
   abrirGastos();
 }
 
@@ -14485,8 +14585,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 52;
+const VERSION_APP_ACTUAL = 53;
 const CHANGELOG_APP = [
+  {
+    version: 53,
+    fecha: '2026-08-28',
+    cambios_es: [
+      'Si sales a medias de "Registrar gasto" (le diste atrás, la app se cerró sola), la próxima vez que lo abras recuperamos lo que ya habías escrito.',
+      'Tocar el ícono de la sección en la que ya estás (Inicio, Cuentas, Gastos, Flujo, Balance) te sube directo al inicio de esa pantalla.'
+    ],
+    cambios_en: [
+      'If you leave "Log expense" halfway through (tapped back, the app closed on its own), next time you open it we bring back what you had already typed.',
+      'Tapping the icon for the section you\'re already on (Home, Accounts, Expenses, Cash Flow, Balance) takes you straight to the top of that screen.'
+    ]
+  },
   {
     version: 52,
     fecha: '2026-08-28',
