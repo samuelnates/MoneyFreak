@@ -136,6 +136,9 @@
   .campo-negocio-check label{margin:0;text-transform:none;font-family:var(--sans);font-size:12.5px;}
   .campo-negocio-check input{width:auto;}
   .btn-eliminar-fila{background:none;border:1px solid var(--borde-fuerte);color:var(--alerta);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--mono);}
+  .btn-accion-fila{background:none;border:1px solid var(--borde-fuerte);color:var(--texto);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--mono);}
+  .fila-acciones-usuario{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .tag-suspendida{display:inline-block;padding:2px 8px;border-radius:20px;background:var(--alerta);color:#fff;font-size:10px;font-family:var(--mono);margin-left:8px;}
 
   .tabla-estado-resultados{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;}
   .tabla-estado-resultados td{padding:7px 4px;border-bottom:1px solid var(--borde);}
@@ -979,7 +982,7 @@ function pintarTablaUsuarios(){
   }
   tbody.innerHTML = filtrados.map(u => `
     <tr class="fila-usuario" data-id="${u.id}" style="cursor:pointer;">
-      <td>${escapeHtmlAdmin(u.correo || '—')}</td>
+      <td>${escapeHtmlAdmin(u.correo || '—')}${u.suspendida ? '<span class="tag-suspendida">Suspendida</span>' : ''}</td>
       <td>${formatoFechaHora(u.fechaAlta)}</td>
       <td>${formatoFechaHora(u.ultimoLogin)}</td>
       <td>${ETIQUETAS_PROVEEDOR[u.proveedor] || u.proveedor || '—'}</td>
@@ -1018,7 +1021,12 @@ function toggleDetalleUsuario(fila){
     ${campoDetalle('IA activada', u.accesoIA ? 'Sí' : 'No')}
     ${campoDetalle('Radiografías', formatoNumero(u.reportesGenerados))}
   </div>
-  <button type="button" style="margin-top:4px;padding:6px 12px;border-radius:8px;border:1px solid #b3413a;background:none;color:#b3413a;font-family:var(--sans);font-size:12px;cursor:pointer;" onclick="event.stopPropagation();eliminarUsuarioAdmin('${u.id}')">Eliminar cuenta por completo</button>`;
+  <div class="fila-acciones-usuario">
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();${u.suspendida ? 'reactivarUsuarioAdmin' : 'suspenderUsuarioAdmin'}('${u.id}')">${u.suspendida ? 'Reactivar cuenta' : 'Suspender (sin borrar)'}</button>
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();restablecerPasswordAdmin('${u.id}')">Restablecer contraseña</button>
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();editarCorreoAdmin('${u.id}')">Editar correo</button>
+    <button type="button" class="btn-eliminar-fila" onclick="event.stopPropagation();eliminarUsuarioAdmin('${u.id}')">Eliminar cuenta por completo</button>
+  </div>`;
   tr.appendChild(celda);
   fila.after(tr);
 }
@@ -1122,6 +1130,69 @@ async function eliminarUsuarioAdmin(id){
   usuariosDetalleGlobal = usuariosDetalleGlobal.filter(u => u.id !== id);
   pintarTablaUsuarios();
   alert(`Cuenta de ${correo} eliminada.`);
+}
+
+// Acciones de soporte reversibles (suspender/reactivar/editar correo) --
+// todas pasan por admin-usuarios, mismo candado de CORREOS_ADMIN del lado
+// del servidor que el resto de las funciones de admin.
+async function llamarUsuariosAdmin(payload){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return { error: 'sin_sesion' };
+  const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/admin-usuarios`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify(payload || {}),
+  });
+  return resp.json();
+}
+
+function refrescarFilaUsuario(id, cambios){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(u) Object.assign(u, cambios);
+  pintarTablaUsuarios();
+}
+
+async function suspenderUsuarioAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(!u) return;
+  const ok = confirm(`Suspender la cuenta de ${u.correo}: no va a poder entrar a la app hasta que la reactives. Sus datos NO se tocan.`);
+  if(!ok) return;
+  const datos = await llamarUsuariosAdmin({ accion: 'banear', user_id: id });
+  if(!datos.ok){ alert(`No se pudo suspender: ${datos.error || 'error'}`); return; }
+  refrescarFilaUsuario(id, { suspendida: true });
+}
+
+async function reactivarUsuarioAdmin(id){
+  const datos = await llamarUsuariosAdmin({ accion: 'desbanear', user_id: id });
+  if(!datos.ok){ alert(`No se pudo reactivar: ${datos.error || 'error'}`); return; }
+  refrescarFilaUsuario(id, { suspendida: false });
+}
+
+// Manda el mismo correo de "olvidé mi contraseña" que ya usa la app --
+// no hace falta una función nueva del lado del servidor para esto, el
+// cliente con la anon key ya puede pedirlo (Supabase nunca revela si el
+// correo existe o no en la respuesta, así que es seguro llamarlo siempre).
+async function restablecerPasswordAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(!u || !u.correo){ alert('No se encontró el usuario.'); return; }
+  const ok = confirm(`¿Mandar correo de restablecer contraseña a ${u.correo}?`);
+  if(!ok) return;
+  const { error } = await sb.auth.resetPasswordForEmail(u.correo);
+  if(error){ alert(`No se pudo mandar: ${error.message}`); return; }
+  alert(`Correo de restablecer contraseña enviado a ${u.correo}.`);
+}
+
+async function editarCorreoAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(!u) return;
+  const nuevo = prompt(`Corregir el correo de ${u.correo} (ej. un error de dedo al registrarse):`, u.correo || '');
+  if(nuevo === null) return;
+  const limpio = nuevo.trim().toLowerCase();
+  if(!limpio || limpio === (u.correo || '').toLowerCase()) return;
+  const datos = await llamarUsuariosAdmin({ accion: 'editar_correo', user_id: id, correo_nuevo: limpio });
+  if(!datos.ok){ alert(`No se pudo cambiar el correo: ${datos.error || 'error'}`); return; }
+  refrescarFilaUsuario(id, { correo: datos.correoNuevo || limpio });
+  alert('Correo actualizado.');
 }
 
 function formatoMonedaMxn(n){

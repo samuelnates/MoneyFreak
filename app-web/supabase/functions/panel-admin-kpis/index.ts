@@ -34,6 +34,7 @@ type UsuarioBasico = {
   created_at: string;
   last_sign_in_at: string | null;
   proveedor: string | null;
+  banned_until: string | null;
 };
 
 async function listarTodosLosUsuarios(admin: ReturnType<typeof createClient>): Promise<UsuarioBasico[]> {
@@ -50,6 +51,7 @@ async function listarTodosLosUsuarios(admin: ReturnType<typeof createClient>): P
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at ?? null,
         proveedor: (u.app_metadata as { provider?: string } | undefined)?.provider ?? null,
+        banned_until: (u as { banned_until?: string | null }).banned_until ?? null,
       });
     }
     if (data.users.length < perPage) break;
@@ -437,6 +439,9 @@ Deno.serve(async (req) => {
         fechaAlta: u.created_at,
         ultimoLogin: u.last_sign_in_at,
         proveedor: u.proveedor,
+        // banned_until en el futuro lejano (ver DURACION_BAN_PERMANENTE en
+        // admin-usuarios) = suspendida; null o una fecha ya pasada = activa.
+        suspendida: !!u.banned_until && new Date(u.banned_until).getTime() > Date.now(),
         cuentas: conteoPorTablaPorUsuario.cuentas?.[u.id] || 0,
         gastos: conteoPorTablaPorUsuario.gastos?.[u.id] || 0,
         ingresos: conteoPorTablaPorUsuario.ingresos?.[u.id] || 0,
