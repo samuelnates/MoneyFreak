@@ -822,12 +822,24 @@
     box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:6;transition:transform 200ms var(--ease-out);
   }
   .btn-fab-agregar.abierto{transform:rotate(45deg);}
-  .menu-agregar{
-    display:none;position:fixed;right:18px;bottom:80px;z-index:6;
-    background:var(--superficie);border:1px solid var(--borde-fuerte);border-radius:6px;
-    min-width:180px;box-shadow:0 12px 32px rgba(0,0,0,0.55);overflow:hidden;
+  /* Móvil: sheet real que sube desde abajo (antes era una tarjeta flotando
+     encima del contenido, sin overlay ni forma de cerrarla deslizando --
+     pedido explícito del usuario, "que se sienta como el resto de mis
+     apps"). Escritorio revierte a la tarjeta flotante de siempre más abajo. */
+  .sheet-backdrop{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:5;
+    opacity:0;transition:opacity 220ms var(--ease-out);
   }
-  .menu-agregar.menu-agregar-central{right:auto;left:50%;transform:translateX(-50%);}
+  .sheet-backdrop.visible{display:block;opacity:1;}
+  .menu-agregar{
+    display:none;position:fixed;left:0;right:0;bottom:0;z-index:6;
+    background:var(--superficie);border:1px solid var(--borde-fuerte);border-bottom:none;
+    border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom, 0px);
+    box-shadow:0 -12px 32px rgba(0,0,0,0.45);overflow:hidden;
+    transform:translateY(100%);transition:transform 260ms var(--ease-out);
+  }
+  .menu-agregar.visible{display:block;transform:translateY(0);}
+  .menu-agregar-agarradera{width:36px;height:4px;border-radius:2px;background:var(--borde-fuerte);margin:10px auto 6px;}
   .menu-agregar button{
     display:block;width:100%;background:none;border:none;border-bottom:1px solid var(--borde);
     text-align:left;padding:14px 16px;font-family:var(--sans);font-size:13.5px;color:var(--texto);
@@ -837,6 +849,16 @@
   .menu-agregar button:hover{background:var(--bg);}
   .menu-agregar-item{display:flex;align-items:center;gap:10px;}
   .menu-agregar-icono{width:17px;height:17px;flex:none;color:var(--texto-tenue);}
+  @media (min-width:900px){
+    .sheet-backdrop{display:none !important;}
+    .menu-agregar-agarradera{display:none;}
+    .menu-agregar{
+      left:auto;right:18px;bottom:80px;border:1px solid var(--borde-fuerte);border-radius:6px;
+      min-width:180px;box-shadow:0 12px 32px rgba(0,0,0,0.55);transform:none;transition:none;
+    }
+    .menu-agregar.menu-agregar-central{right:auto;left:50%;transform:translateX(-50%) !important;}
+    .menu-agregar.visible{display:block;}
+  }
   .menu-agregar-icono svg{width:100%;height:100%;}
 
   .grabadora-audio-icono{
@@ -1353,7 +1375,9 @@
   </button>
 </nav>
 
-<div class="menu-agregar menu-agregar-central" id="menu-agregar-gasto-central" style="display:none;">
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="cerrarTodosLosMenusAgregar()"></div>
+<div class="menu-agregar menu-agregar-central" id="menu-agregar-gasto-central">
+  <div class="menu-agregar-agarradera"></div>
   <button type="button" onclick="cerrarMenuAgregarGastoCentral(); abrirAgregarGasto();"><span class="menu-agregar-item"><span class="menu-agregar-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span><span data-i18n="cuentas.menu_gasto_escribir">Escribir</span></span></button>
   <button type="button" onclick="cerrarMenuAgregarGastoCentral(); document.getElementById('input-captura-foto-gasto').click();"><span class="menu-agregar-item"><span class="menu-agregar-icono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="4"/></svg></span><span data-i18n="cuentas.menu_gasto_foto">Gasto por foto</span></span></button>
   <button type="button" onclick="cerrarMenuAgregarGastoCentral(); abrirFreaky();"><span class="menu-agregar-item"><span class="menu-agregar-icono"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="3.3" rx="5.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5,13 A7,7 0 1 0 19,13 A7,7 0 1 0 5,13 Z M8.3,12.5 A1,1 0 1 0 10.3,12.5 A1,1 0 1 0 8.3,12.5 Z M13.7,12.5 A1,1 0 1 0 15.7,12.5 A1,1 0 1 0 13.7,12.5 Z"/><path d="M14,18.3 Q18.5,17 20,21.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="18.5,20.5 21.8,19.3 20.5,23.8" fill="currentColor"/></svg></span><span data-i18n="cuentas.menu_gasto_freaky">Contarle a Freaky</span></span></button>
@@ -1915,6 +1939,7 @@
 
 <button type="button" class="btn-fab-agregar" id="btn-fab-cuentas" onclick="toggleMenuAgregar()" aria-label="Agregar" data-i18n-aria-label="cuentas.agregar_fab_aria">+</button>
 <div class="menu-agregar" id="menu-agregar">
+  <div class="menu-agregar-agarradera"></div>
   <button type="button" onclick="cerrarMenuAgregar(); mostrar('vista-agregar-ingreso');" data-i18n="cuentas.menu_ingreso">Ingreso</button>
   <button type="button" onclick="cerrarMenuAgregar(); mostrar('vista-agregar-cuenta');" data-i18n="cuentas.menu_cuenta">Cuenta de inversión</button>
   <button type="button" onclick="cerrarMenuAgregar(); mostrar('vista-agregar-bien');" data-i18n="cuentas.menu_bien">Bien</button>
@@ -3319,7 +3344,17 @@ let perfilFinanciero = { umbral_amarillo: UMBRAL_AMARILLO_RECOMENDADO, umbral_ro
 
 const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta', 'vista-aviso-legal', 'vista-olvide-contrasena', 'vista-nueva-contrasena', 'vista-onboarding-rapido', 'vista-elegir-asesor'];
 
-let scrollGuardadoCuentas = null;
+// Pantallas con listas largas donde perder el scroll al entrar/salir es
+// molesto de verdad (ej. bajaste hasta el gasto #40 en Movimientos, tocaste
+// uno para editarlo, "atrás" te regresaba hasta arriba) -- antes solo
+// "Mis cuentas" tenía esto, generalizado a un mapa por vista en vez de una
+// sola variable.
+const VISTAS_CON_SCROLL_GUARDADO = [
+  'vista-cuentas', 'vista-gastos-movimientos', 'vista-cuentas-deudas',
+  'vista-cuentas-inversion', 'vista-cuentas-bienes', 'vista-cuentas-acciones',
+  'vista-cuentas-ingresos', 'vista-solicitudes-gasto'
+];
+let scrollGuardadoPorVista = {};
 
 // Registro propio de uso (reemplaza cualquier "pixel"/session-replay de
 // terceros -- ver decisión en CONTEXTO_PROYECTO.md parte 49): al cambiar de
@@ -3350,8 +3385,8 @@ function sincronizarPreferenciaPerfil(campo, valor){
 function mostrar(idVista){
   const vistaAnteriorEl = document.querySelector('.pantalla.activa');
   const vistaAnterior = vistaAnteriorEl ? vistaAnteriorEl.id : null;
-  if(vistaAnterior === 'vista-cuentas' && idVista !== 'vista-cuentas'){
-    scrollGuardadoCuentas = window.scrollY;
+  if(VISTAS_CON_SCROLL_GUARDADO.includes(vistaAnterior) && vistaAnterior !== idVista){
+    scrollGuardadoPorVista[vistaAnterior] = window.scrollY;
   }
   if(vistaAnterior && vistaAnterior !== idVista){
     const duracion = Date.now() - ultimaPantallaTimestamp;
@@ -3362,9 +3397,9 @@ function mostrar(idVista){
   document.querySelectorAll('.pantalla').forEach(el => el.classList.remove('activa'));
   document.getElementById(idVista).classList.add('activa');
 
-  if(idVista === 'vista-cuentas' && scrollGuardadoCuentas != null){
-    window.scrollTo(0, scrollGuardadoCuentas);
-    scrollGuardadoCuentas = null;
+  if(VISTAS_CON_SCROLL_GUARDADO.includes(idVista) && scrollGuardadoPorVista[idVista] != null){
+    window.scrollTo(0, scrollGuardadoPorVista[idVista]);
+    delete scrollGuardadoPorVista[idVista];
   } else {
     window.scrollTo(0, 0);
   }
@@ -7452,15 +7487,73 @@ function toggleAcordeon(id){
   flecha.classList.toggle('abierta', !abierto);
 }
 
+// Sheet real (sube desde abajo con overlay, se cierra deslizando el
+// "agarradera" hacia abajo) en móvil; tarjeta flotante de siempre en
+// escritorio (ver el media query en la CSS de .menu-agregar) -- mismas
+// funciones para ambos casos, la diferencia es puro CSS.
+function mostrarBackdropSheet(){
+  document.getElementById('sheet-backdrop').classList.add('visible');
+}
+function ocultarBackdropSheet(){
+  document.getElementById('sheet-backdrop').classList.remove('visible');
+}
+function abrirMenuAgregarSheet(idMenu){
+  document.getElementById(idMenu).classList.add('visible');
+  mostrarBackdropSheet();
+}
+function cerrarMenuAgregarSheet(idMenu){
+  document.getElementById(idMenu).classList.remove('visible');
+  ocultarBackdropSheet();
+}
+
+function cerrarTodosLosMenusAgregar(){
+  cerrarMenuAgregarSheet('menu-agregar');
+  cerrarMenuAgregarSheet('menu-agregar-gasto-central');
+  document.getElementById('btn-fab-cuentas')?.classList.remove('abierto');
+}
+
+// Arrastrar el "agarradera" (la barrita del sheet) hacia abajo lo cierra --
+// acotado a esa barrita, no a todo el sheet, para no confundirse con tocar
+// uno de los botones de la lista.
+function inicializarSwipeSheet(idMenu, alCerrar){
+  const menu = document.getElementById(idMenu);
+  const agarradera = menu?.querySelector('.menu-agregar-agarradera');
+  if(!agarradera || menu.dataset.swipeListo) return;
+  menu.dataset.swipeListo = '1';
+  let inicioY = null;
+
+  agarradera.addEventListener('touchstart', (e) => {
+    if(REDUCIR_MOVIMIENTO) return;
+    inicioY = e.touches[0].clientY;
+    menu.style.transition = 'none';
+  }, { passive: true });
+
+  agarradera.addEventListener('touchmove', (e) => {
+    if(inicioY === null) return;
+    const dy = e.touches[0].clientY - inicioY;
+    if(dy > 0) menu.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+
+  agarradera.addEventListener('touchend', (e) => {
+    if(inicioY === null) return;
+    const dy = e.changedTouches[0].clientY - inicioY;
+    menu.style.transition = '';
+    menu.style.transform = '';
+    inicioY = null;
+    if(dy > 80) alCerrar();
+  });
+}
+
 function toggleMenuAgregar(){
   const menu = document.getElementById('menu-agregar');
-  const abierto = menu.style.display === 'block';
-  menu.style.display = abierto ? 'none' : 'block';
+  const abierto = menu.classList.contains('visible');
+  if(abierto) cerrarMenuAgregar();
+  else abrirMenuAgregarSheet('menu-agregar');
   document.getElementById('btn-fab-cuentas').classList.toggle('abierto', !abierto);
 }
 
 function cerrarMenuAgregar(){
-  document.getElementById('menu-agregar').style.display = 'none';
+  cerrarMenuAgregarSheet('menu-agregar');
   document.getElementById('btn-fab-cuentas').classList.remove('abierto');
 }
 
@@ -7477,14 +7570,15 @@ function toggleMenuAgregarCentral(){
   const enCuentas = estaEnAreaDeCuentas() && !modoDemo;
   const idMenu = enCuentas ? 'menu-agregar' : 'menu-agregar-gasto-central';
   const idOtro = enCuentas ? 'menu-agregar-gasto-central' : 'menu-agregar';
-  document.getElementById(idOtro).style.display = 'none';
+  document.getElementById(idOtro).classList.remove('visible');
   const menu = document.getElementById(idMenu);
-  const abierto = menu.style.display === 'block';
-  menu.style.display = abierto ? 'none' : 'block';
+  const abierto = menu.classList.contains('visible');
+  if(abierto) cerrarMenuAgregarSheet(idMenu);
+  else abrirMenuAgregarSheet(idMenu);
 }
 
 function cerrarMenuAgregarGastoCentral(){
-  document.getElementById('menu-agregar-gasto-central').style.display = 'none';
+  cerrarMenuAgregarSheet('menu-agregar-gasto-central');
 }
 
 function estaEnAreaDeCuentas(){
@@ -14811,8 +14905,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 57;
+const VERSION_APP_ACTUAL = 58;
 const CHANGELOG_APP = [
+  {
+    version: 58,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'El menú de "+" (agregar gasto, cuenta, deuda...) ahora sube desde abajo como el resto de tus apps -- se puede cerrar deslizando hacia abajo o tocando fuera.',
+      'Más pantallas con listas largas (Movimientos, Deudas, Cuentas de inversión, Bienes, Acciones, Ingresos, Aprobaciones) ahora recuerdan dónde te quedaste al volver, no solo "Mis cuentas".'
+    ],
+    cambios_en: [
+      'The "+" menu (add expense, account, debt...) now slides up from the bottom like the rest of your apps -- swipe it down or tap outside to close it.',
+      'More screens with long lists (Movements, Debts, Investment accounts, Assets, Stocks, Income, Approvals) now remember where you left off, not just "My accounts".'
+    ]
+  },
   {
     version: 57,
     fecha: '2026-08-30',
@@ -15574,6 +15680,8 @@ inicializarGestosSwipe();
 inicializarChequeoVersion();
 inicializarAvisoConexion();
 registrarServiceWorker();
+inicializarSwipeSheet('menu-agregar', cerrarMenuAgregar);
+inicializarSwipeSheet('menu-agregar-gasto-central', cerrarMenuAgregarGastoCentral);
 
 // Bug real reportado por el usuario ("loop en el onboarding... cuando le
 // das volver te regresa al formulario de crear cuenta"): el navegador
