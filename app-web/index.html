@@ -341,6 +341,7 @@
   .panel-tarjeta-dato.estado-atencion{color:var(--color-atencion);font-weight:700;}
   .panel-tarjeta-dato.estado-riesgo{color:var(--color-riesgo);font-weight:700;}
   .panel-tarjeta-sub{font-family:var(--sans);font-size:12px;color:var(--texto-tenue-2);line-height:1.3;}
+  .panel-tarjeta-dato.negativo{color:var(--neg);}
   .panel-icono{
     width:24px;height:24px;border-radius:6px;border:1px solid var(--borde-fuerte);
     display:flex;align-items:center;justify-content:center;color:var(--texto-tenue);
@@ -1729,27 +1730,27 @@
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-ingresos')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-ingresos"></span></div>
+      <div class="panel-tarjeta-dato"><span id="acordeon-total-ingresos"></span></div>
     </button>
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-inversion')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/><path d="M3 9h18"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.cuentas_inversion">Cuentas de inversión</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-cuentas"></span></div>
+      <div class="panel-tarjeta-dato"><span id="acordeon-total-cuentas"></span></div>
     </button>
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-bienes')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.bienes">Bienes</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-bienes"></span></div>
+      <div class="panel-tarjeta-dato"><span id="acordeon-total-bienes"></span></div>
     </button>
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-acciones')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.acciones">Acciones</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-acciones"></span></div>
+      <div class="panel-tarjeta-dato"><span id="acordeon-total-acciones"></span></div>
     </button>
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-deudas')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="cuentas.deudas_titulo">Deudas</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-deudas"></span></div>
+      <div class="panel-tarjeta-dato negativo"><span id="acordeon-total-deudas"></span></div>
     </button>
     <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-transferencias')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13l-3.5-3.5"/><path d="M20 7l-3.5 3.5"/><path d="M17 17H4l3.5-3.5"/><path d="M4 17l3.5 3.5"/></svg></div>
@@ -14907,8 +14908,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 61;
+const VERSION_APP_ACTUAL = 62;
 const CHANGELOG_APP = [
+  {
+    version: 62,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Rediseñada la pantalla de "Mis cuentas": los montos de cada sección ahora se ven grandes y claros (como en Inicio), y Deudas se distingue del resto con el signo "−".'
+    ],
+    cambios_en: [
+      'Redesigned the "My accounts" screen: each section\'s amount is now big and clear (like on Home), and Debts stands out from the rest with a "−" sign.'
+    ]
+  },
   {
     version: 61,
     fecha: '2026-08-30',
