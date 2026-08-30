@@ -279,9 +279,15 @@
     body.con-sesion .chat-input-fija{left:220px;}
   }
 
+  /* margin-bottom recortado de 30px a 16px (feedback: "perdemos casi un
+     tercio de pantalla arriba, optimízalo") -- el espacio de arriba del
+     todo (antes del encabezado) es el que necesita el botón flotante de
+     Inicio/Freaky para no taparse y no se tocó a propósito; este margen de
+     abajo del encabezado sí era pura holgura visual, sin ninguna función
+     que dependiera de él. */
   .encabezado{
     display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
-    margin-bottom:30px;flex-wrap:wrap;
+    margin-bottom:16px;flex-wrap:wrap;
   }
   .btn-volver{
     background:none;border:1px solid var(--borde-fuerte);border-radius:3px;
@@ -15000,8 +15006,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 67;
+const VERSION_APP_ACTUAL = 68;
 const CHANGELOG_APP = [
+  {
+    version: 68,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Reducido el espacio vacío arriba del encabezado en todas las pantallas -- el contenido empieza más arriba.'
+    ],
+    cambios_en: [
+      'Reduced the empty space above the header on every screen -- content now starts higher up.'
+    ]
+  },
   {
     version: 67,
     fecha: '2026-08-30',
