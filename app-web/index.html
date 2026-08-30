@@ -2523,7 +2523,7 @@
   <div id="radiografia-resultado-contenido"></div>
 </div>
 
-<div id="vista-agregar-cuenta" class="pantalla">
+<div id="vista-agregar-cuenta" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-cuenta')" onchange="programarGuardadoBorradorGenerico('vista-agregar-cuenta')">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-cuentas-inversion')">‹</button>
     <h1 data-i18n="cuenta.nueva_titulo">Nueva cuenta</h1>
@@ -2531,6 +2531,7 @@
   <div class="barra-guardar-superior">
     <button class="btn-grande" onclick="guardarCuenta()" data-i18n="comun.guardar">Guardar</button>
   </div>
+  <div id="aviso-borrador-cuenta"></div>
   <div class="campo requerido">
     <label for="input-nombre-cuenta" data-i18n="cuenta.nombre_label">Nombre de la cuenta</label>
     <input type="text" id="input-nombre-cuenta" placeholder="Ej. GBM, Actinver..." data-i18n-placeholder="cuenta.nombre_placeholder">
@@ -2652,7 +2653,7 @@
   <button class="btn-grande peligro btn-escritura" onclick="eliminarCuentaActual()" data-i18n="cuenta.eliminar">Eliminar cuenta</button>
 </div>
 
-<div id="vista-agregar-accion" class="pantalla">
+<div id="vista-agregar-accion" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-accion')" onchange="programarGuardadoBorradorGenerico('vista-agregar-accion')">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-cuentas-acciones')">‹</button>
     <h1 data-i18n="accion.nueva_titulo">Nueva acción</h1>
@@ -2660,6 +2661,7 @@
   <div class="barra-guardar-superior">
     <button class="btn-grande" onclick="guardarAccion()" data-i18n="comun.guardar">Guardar</button>
   </div>
+  <div id="aviso-borrador-accion"></div>
   <div class="campo">
     <label for="input-buscar-accion" data-i18n="accion.buscar_label">Buscar por nombre o símbolo</label>
     <input type="text" id="input-buscar-accion" placeholder="Ej. Apple, AAPL, Femsa..." data-i18n-placeholder="accion.buscar_placeholder" autocomplete="off" oninput="buscarAccionesDebounced()" onkeydown="manejarTecladoBuscadorAccion(event)" onblur="setTimeout(ocultarResultadosBusquedaAccion, 150)">
@@ -2771,7 +2773,7 @@
   <div id="lista-historial-accion" class="lista"></div>
 </div>
 
-<div id="vista-agregar-bien" class="pantalla">
+<div id="vista-agregar-bien" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-bien')" onchange="programarGuardadoBorradorGenerico('vista-agregar-bien')">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-cuentas-bienes')">‹</button>
     <h1 data-i18n="bien.nuevo_titulo">Nuevo bien</h1>
@@ -2779,6 +2781,7 @@
   <div class="barra-guardar-superior">
     <button class="btn-grande" onclick="guardarBien()" data-i18n="comun.guardar">Guardar</button>
   </div>
+  <div id="aviso-borrador-bien"></div>
   <div class="campo">
     <label for="input-nombre-bien" data-i18n="campo.nombre">Nombre</label>
     <input type="text" id="input-nombre-bien" placeholder="Ej. Casa, Camioneta..." data-i18n-placeholder="bien.nombre_placeholder">
@@ -2947,7 +2950,7 @@
   <button class="btn-grande peligro btn-escritura" onclick="eliminarIngreso()" data-i18n="ingreso.eliminar">Eliminar ingreso</button>
 </div>
 
-<div id="vista-agregar-deuda" class="pantalla">
+<div id="vista-agregar-deuda" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-deuda')" onchange="programarGuardadoBorradorGenerico('vista-agregar-deuda')">
   <div class="encabezado">
     <button class="btn-volver" onclick="mostrar('vista-cuentas-deudas')">‹</button>
     <h1 data-i18n="deuda.nueva_titulo">Nueva deuda</h1>
@@ -2955,6 +2958,7 @@
   <div class="barra-guardar-superior">
     <button class="btn-grande" onclick="guardarDeuda()" data-i18n="comun.guardar">Guardar</button>
   </div>
+  <div id="aviso-borrador-deuda"></div>
   <div class="campo">
     <label for="input-nombre-deuda" data-i18n="campo.nombre">Nombre</label>
     <input type="text" id="input-nombre-deuda" placeholder="Ej. Tarjeta BBVA, Hipoteca..." data-i18n-placeholder="deuda.nombre_placeholder">
@@ -3382,6 +3386,7 @@ function mostrar(idVista){
     cargarPreferenciaAvisoTarjeta();
   }
   if(idVista === 'vista-amigos-app') pintarAmigosApp();
+  if(VISTAS_CON_BORRADOR[idVista]) aplicarBorradorGenericoSiExiste(idVista);
   document.body.classList.toggle('con-sesion', !VISTAS_SIN_SESION.includes(idVista));
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
     btn.classList.toggle('activo', btn.dataset.vista === idVista);
@@ -3683,6 +3688,8 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': 'Listo, te voy a recordar este pago cada mes.',
     'gastos.borrador_recuperado': 'Recuperamos lo que tenías sin guardar.',
     'gastos.borrador_descartar': 'Empezar de cero',
+    'comun.borrador_recuperado': 'Recuperamos lo que tenías sin guardar.',
+    'comun.borrador_descartar': 'Empezar de cero',
     'login.crear_cuenta': 'Crear cuenta',
     'login.ver_muestra': '¿Quieres ver un ejemplo primero?',
     'login.privacidad_link': 'Aviso de privacidad',
@@ -4641,6 +4648,8 @@ const TRADUCCIONES = {
     'gastos.recurrente_confirmado': "Done, I'll remind you about this payment every month.",
     'gastos.borrador_recuperado': 'We recovered what you had unsaved.',
     'gastos.borrador_descartar': 'Start over',
+    'comun.borrador_recuperado': 'We recovered what you had unsaved.',
+    'comun.borrador_descartar': 'Start over',
     'login.crear_cuenta': 'Create account',
     'login.ver_muestra': 'Want to see an example first?',
     'login.privacidad_link': 'Privacy notice',
@@ -5790,6 +5799,15 @@ async function init(){
         if(session) abrirAgregarGasto();
       }
     });
+
+    // Antes, tocar cualquier notificación local (recordatorio de gastos,
+    // de saldos, de reporte mensual, de un gasto recurrente) solo abría la
+    // app en Inicio -- el usuario tenía que buscar a mano la pantalla que
+    // el aviso mencionaba. Cada notificación ahora lleva un `extra.destino`
+    // (agregado en reprogramarNotificaciones) y aquí se navega directo.
+    window.Capacitor.Plugins.LocalNotifications.addListener('localNotificationActionPerformed', (accion) => {
+      manejarNotificacionTocada(accion?.notification?.extra || {});
+    });
   }
 
   // Bug real reportado por el usuario ("loop en el onboarding, primera
@@ -6153,22 +6171,22 @@ async function reprogramarNotificaciones(){
   const insightFresco = insightFecha && (Date.now() - new Date(insightFecha).getTime()) < 7 * 24 * 60 * 60 * 1000;
   const bodyGastos = (insightCache && insightFresco) ? insightCache : t('notif.recordatorio_gastos_texto');
   if(freqGastos === 'dia'){
-    notifications.push({ id: NOTIF_ID_GASTOS, title: t('notif.recordatorio_gastos_titulo'), body: bodyGastos, schedule: { on: { hour: 20, minute: 0 }, every: 'day' } });
+    notifications.push({ id: NOTIF_ID_GASTOS, title: t('notif.recordatorio_gastos_titulo'), body: bodyGastos, schedule: { on: { hour: 20, minute: 0 }, every: 'day' }, extra: { destino: 'gastos' } });
   } else if(freqGastos === 'semana'){
-    notifications.push({ id: NOTIF_ID_GASTOS, title: t('notif.recordatorio_gastos_titulo'), body: bodyGastos, schedule: { on: { weekday: 2, hour: 20, minute: 0 }, every: 'week' } });
+    notifications.push({ id: NOTIF_ID_GASTOS, title: t('notif.recordatorio_gastos_titulo'), body: bodyGastos, schedule: { on: { weekday: 2, hour: 20, minute: 0 }, every: 'week' }, extra: { destino: 'gastos' } });
   }
 
   const freqSaldos = localStorage.getItem('notif_saldos_frecuencia') || 'nunca';
   if(freqSaldos === 'semana'){
-    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { weekday: 2, hour: 9, minute: 0 }, every: 'week' } });
+    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { weekday: 2, hour: 9, minute: 0 }, every: 'week' }, extra: { destino: 'saldos' } });
   } else if(freqSaldos === 'dos-semanas'){
-    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { weekday: 2, hour: 9, minute: 0 }, every: 'two-weeks' } });
+    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { weekday: 2, hour: 9, minute: 0 }, every: 'two-weeks' }, extra: { destino: 'saldos' } });
   } else if(freqSaldos === 'mes'){
-    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { day: 1, hour: 9, minute: 0 }, every: 'month' } });
+    notifications.push({ id: NOTIF_ID_SALDOS, title: t('notif.recordatorio_saldos_titulo'), body: t('notif.recordatorio_saldos_texto'), schedule: { on: { day: 1, hour: 9, minute: 0 }, every: 'month' }, extra: { destino: 'saldos' } });
   }
 
   if(localStorage.getItem('notif_reporte_mes') === '1'){
-    notifications.push({ id: NOTIF_ID_REPORTE, title: t('notif.recordatorio_reporte_titulo'), body: t('notif.recordatorio_reporte_texto'), schedule: { on: { day: 1, hour: 9, minute: 30 }, every: 'month' } });
+    notifications.push({ id: NOTIF_ID_REPORTE, title: t('notif.recordatorio_reporte_titulo'), body: t('notif.recordatorio_reporte_texto'), schedule: { on: { day: 1, hour: 9, minute: 30 }, every: 'month' }, extra: { destino: 'reporte' } });
   }
 
   recordatoriosRecurrentes.forEach(r => {
@@ -6176,11 +6194,40 @@ async function reprogramarNotificaciones(){
       id: r.id,
       title: t('notif.recordatorio_recurrente_titulo'),
       body: tf('notif.recordatorio_recurrente_texto', nombreGasto(r.subcategoria || r.categoria), formatoMonto(r.monto, 'MXN')),
-      schedule: { on: { day: r.dia, hour: 9, minute: 0 }, every: 'month' }
+      schedule: { on: { day: r.dia, hour: 9, minute: 0 }, every: 'month' },
+      extra: { destino: 'gasto_recurrente', categoria: r.categoria, subcategoria: r.subcategoria || '', monto: r.monto }
     });
   });
 
   if(notifications.length > 0) await LN.schedule({ notifications });
+}
+
+// Antes, tocar cualquier notificación local (recordatorio de gastos, de
+// saldos, de reporte mensual, de un gasto recurrente) solo abría la app en
+// Inicio -- había que buscar a mano la pantalla que el aviso mencionaba.
+// Separada de la registración del listener (arriba, junto a appUrlOpen)
+// para poder probarla sin depender del plugin nativo real.
+async function manejarNotificacionTocada(extra){
+  const destino = extra?.destino;
+  if(!destino) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return; // sin sesión se queda en el login normal, sin forzar navegación
+  await entrarAlPanelConOnboarding();
+  if(destino === 'gastos'){
+    abrirAgregarGasto();
+  } else if(destino === 'saldos'){
+    mostrar('vista-cuentas-inversion');
+  } else if(destino === 'reporte'){
+    mostrar('vista-reportes');
+  } else if(destino === 'gasto_recurrente'){
+    await abrirAgregarGasto(true);
+    aplicarCamposGastoDesdeObjeto({
+      categoria_sugerida: extra.categoria,
+      subcategoria_sugerida: extra.subcategoria || null,
+      monto_sugerido: extra.monto,
+      fecha_sugerida: new Date().toISOString().slice(0, 10),
+    });
+  }
 }
 
 // Bug real reportado por el usuario ("loop en el onboarding... garantizamos
@@ -8282,6 +8329,7 @@ async function guardarCuenta(){
   document.getElementById('select-tipo-cuenta').value = 'Inversión';
   document.getElementById('check-liquida-cuenta').checked = true;
   document.getElementById('check-incluir-cuenta').checked = true;
+  localStorage.removeItem(VISTAS_CON_BORRADOR['vista-agregar-cuenta']);
   volverACuentas('cuentas');
 }
 
@@ -8797,6 +8845,7 @@ async function guardarAccion(){
   document.getElementById('check-precio-manual').checked = false;
   document.getElementById('input-precio-manual').value = '';
   document.getElementById('campos-precio-manual').style.display = 'none';
+  localStorage.removeItem(VISTAS_CON_BORRADOR['vista-agregar-accion']);
   volverACuentas('acciones');
 }
 
@@ -8981,6 +9030,7 @@ async function guardarBien(){
   await sb.from('bienes_historico').insert({ bien_id: data.id, fecha: new Date().toISOString().slice(0,10), valor: Number(valor) });
   document.getElementById('input-nombre-bien').value = '';
   document.getElementById('input-valor-bien').value = '';
+  localStorage.removeItem(VISTAS_CON_BORRADOR['vista-agregar-bien']);
   volverACuentas('bienes');
 }
 
@@ -9470,6 +9520,82 @@ function aplicarBorradorGastoSiExiste(){
 async function descartarBorradorGasto(){
   localStorage.removeItem(BORRADOR_GASTO_KEY);
   await abrirAgregarGasto();
+}
+
+// Mismo patrón de "borrador automático" que ya existe para Registrar gasto
+// (ver arriba), pero genérico -- para formularios simples de un solo nivel
+// (inputs/selects/checkboxes por id, sin chips ni sub-selección) no hace
+// falta reescribir la lógica de leer/aplicar campos cada vez. Usado por
+// Cuenta, Deuda, Bien y Acción (ver VISTAS_CON_BORRADOR).
+const VISTAS_CON_BORRADOR = {
+  'vista-agregar-cuenta': 'borrador_cuenta',
+  'vista-agregar-deuda': 'borrador_deuda',
+  'vista-agregar-bien': 'borrador_bien',
+  'vista-agregar-accion': 'borrador_accion',
+};
+const temporizadoresBorradorGenerico = {};
+
+function leerCamposFormularioGenerico(idVista){
+  const datos = {};
+  document.getElementById(idVista).querySelectorAll('input[id], select[id], textarea[id]').forEach(el => {
+    datos[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  return datos;
+}
+
+function hayContenidoRealEnBorrador(datos){
+  return Object.values(datos).some(v => typeof v === 'string' && v.trim() !== '');
+}
+
+function programarGuardadoBorradorGenerico(idVista){
+  clearTimeout(temporizadoresBorradorGenerico[idVista]);
+  temporizadoresBorradorGenerico[idVista] = setTimeout(() => guardarBorradorGenerico(idVista), 600);
+}
+
+function guardarBorradorGenerico(idVista){
+  const clave = VISTAS_CON_BORRADOR[idVista];
+  if(!clave) return;
+  const datos = leerCamposFormularioGenerico(idVista);
+  if(!hayContenidoRealEnBorrador(datos)){ localStorage.removeItem(clave); return; }
+  localStorage.setItem(clave, JSON.stringify({ datos, guardadoEn: Date.now() }));
+}
+
+function aplicarBorradorGenericoSiExiste(idVista){
+  const clave = VISTAS_CON_BORRADOR[idVista];
+  if(!clave) return;
+  const aviso = document.getElementById('aviso-' + clave.replace('borrador_', 'borrador-'));
+  if(aviso) aviso.innerHTML = '';
+  const crudo = localStorage.getItem(clave);
+  if(!crudo) return;
+  let parsed;
+  try { parsed = JSON.parse(crudo); } catch { localStorage.removeItem(clave); return; }
+  if(!parsed?.datos || !parsed?.guardadoEn || Date.now() - parsed.guardadoEn > BORRADOR_GASTO_VIGENCIA_MS){
+    localStorage.removeItem(clave);
+    return;
+  }
+  Object.entries(parsed.datos).forEach(([id, valor]) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(el.type === 'checkbox') el.checked = valor;
+    else el.value = valor;
+    el.dispatchEvent(new Event('change', { bubbles: true })); // dispara los onchange existentes (ej. mostrar/ocultar campos de tarjeta) sin duplicar esa lógica aquí
+  });
+  if(aviso){
+    aviso.innerHTML = `
+      <div class="aviso">
+        ${escapeHtml(t('comun.borrador_recuperado'))}
+        <button type="button" class="btn-link-tenue" style="display:block;margin-top:6px;" onclick="descartarBorradorGenerico('${idVista}')">${escapeHtml(t('comun.borrador_descartar'))}</button>
+      </div>
+    `;
+  }
+}
+
+function descartarBorradorGenerico(idVista){
+  const clave = VISTAS_CON_BORRADOR[idVista];
+  if(clave) localStorage.removeItem(clave);
+  document.getElementById(idVista).querySelectorAll('input[type="text"][id], input[type="number"][id], textarea[id]').forEach(el => el.value = '');
+  const aviso = document.getElementById('aviso-' + clave.replace('borrador_', 'borrador-'));
+  if(aviso) aviso.innerHTML = '';
 }
 
 function leerArchivoComoBase64(archivo){
@@ -12677,6 +12803,7 @@ async function guardarDeuda(){
   }
   await sb.from('deudas_historico').insert({ deuda_id: data.id, fecha: new Date().toISOString().slice(0,10), saldo: Number(saldo) });
   ['input-nombre-deuda','input-saldo-deuda','input-tasa-deuda','input-pago-mensual-deuda','input-limite-deuda','input-anualidad-deuda','input-cashback-deuda','input-gasto-deuda','input-diacorte-deuda','input-diapago-deuda','input-proximopago-deuda'].forEach(id => document.getElementById(id).value = '');
+  localStorage.removeItem(VISTAS_CON_BORRADOR['vista-agregar-deuda']);
   volverACuentas('deudas');
 }
 
@@ -14684,8 +14811,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 56;
+const VERSION_APP_ACTUAL = 57;
 const CHANGELOG_APP = [
+  {
+    version: 57,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Si sales a medias de "Nueva cuenta", "Nueva deuda", "Nuevo bien" o "Nueva acción", ahora también recuperamos lo que tenías sin guardar (igual que ya pasaba en Registrar gasto).',
+      'En la app nativa: tocar una notificación (recordatorio de gastos, de saldos, de tu reporte mensual, o de un gasto recurrente) ahora abre directo la pantalla que menciona, en vez de dejarte en Inicio.'
+    ],
+    cambios_en: [
+      'If you leave "New account", "New debt", "New asset", or "New stock" halfway through, we now recover what you had unsaved too (same as "Log expense" already did).',
+      'In the native app: tapping a notification (expense reminder, balance reminder, your monthly report, or a recurring expense) now opens the exact screen it mentions, instead of leaving you on Home.'
+    ]
+  },
   {
     version: 56,
     fecha: '2026-08-30',
