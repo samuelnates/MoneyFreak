@@ -406,7 +406,11 @@
     font-weight:600;color:var(--texto-tenue);white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;min-width:0;
   }
-  .tab-cuentas-dato{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--texto);overflow-wrap:break-word;}
+  /* white-space:nowrap a propósito -- el tamaño se ajusta con JS
+     (ajustarTamanoMontosCuentas) para que el monto quepa siempre en una
+     sola línea (título + monto = 2 renglones por tarjeta, pedido explícito
+     del usuario) en vez de envolverse a 2-3 líneas como antes. */
+  .tab-cuentas-dato{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;}
   .tab-cuentas-dato.negativo{color:var(--neg);}
   .tab-cuentas.activo{background:var(--acento);border-color:var(--acento);}
   .tab-cuentas.activo .tab-cuentas-titulo,
@@ -3427,7 +3431,7 @@ function mostrar(idVista){
   // Transferencias) viven todas juntas dentro de esta misma vista ahora --
   // cargarTodo() ya trae y pinta las 6 en paralelo, no hace falta un hook
   // por sección.
-  if(idVista === 'vista-cuentas'){ cargarTodo(); requestAnimationFrame(actualizarScrollspyCuentas); }
+  if(idVista === 'vista-cuentas'){ cargarTodo().then(ajustarTamanoMontosCuentas); requestAnimationFrame(actualizarScrollspyCuentas); }
   if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
   if(idVista === 'vista-seguridad-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
@@ -7489,6 +7493,47 @@ async function cargarTodo(){
 // un clic o scrollear, sin ir y venir). Las pestañas fijas de arriba saltan
 // directo a la sección; al bajar con el dedo, la pestaña de la sección
 // visible se marca sola (ver actualizarScrollspyCuentas).
+// Pedido explícito del usuario: las tarjetas de "Mis cuentas" llegaron a
+// ocupar 4 renglones (el monto se envolvía a 2-3 líneas en cifras largas
+// como "-$2,006,278.04" al pasar a 3 columnas) -- deben quedar en 2 siempre
+// (título + monto). En vez de truncar el monto con "…" (perdería dígitos
+// reales, ya se decidió que no en la parte 87), se reduce su tamaño de
+// letra hasta que quepa en una sola línea -- distinto por tarjeta, porque
+// cada monto tiene un largo distinto.
+function ajustarTamanoMontosCuentas(){
+  const TAMANO_BASE = 15, TAMANO_MINIMO = 9;
+  document.querySelectorAll('#tabs-cuentas .tab-cuentas-dato').forEach(el => {
+    let tam = TAMANO_BASE;
+    el.style.fontSize = tam + 'px';
+    el.style.whiteSpace = '';
+    el.style.overflowWrap = '';
+    while(el.scrollWidth > el.clientWidth && tam > TAMANO_MINIMO){
+      tam -= 0.5;
+      el.style.fontSize = tam + 'px';
+    }
+    // Pantallas muy angostas (ej. iPhone SE, 320px) con el monto más largo
+    // pueden no caber en una línea ni en el tamaño mínimo -- ahí se deja
+    // envolver a una 2a línea (3 renglones en total en ese caso puntual) en
+    // vez de recortarlo en silencio con overflow:hidden, que perdería
+    // dígitos reales sin ningún aviso. overflow-wrap:break-word es necesario
+    // además de white-space:normal -- un monto es un solo token sin
+    // espacios ("$4,720,000.00"), así que sin esto no habría ningún punto
+    // donde el texto pudiera cortar de todos modos.
+    if(el.scrollWidth > el.clientWidth){
+      el.style.whiteSpace = 'normal';
+      el.style.overflowWrap = 'break-word';
+    }
+  });
+}
+
+let reajusteMontosCuentasPendiente = false;
+window.addEventListener('resize', () => {
+  if(reajusteMontosCuentasPendiente) return;
+  if(!document.getElementById('vista-cuentas')?.classList.contains('activa')) return;
+  reajusteMontosCuentasPendiente = true;
+  requestAnimationFrame(() => { reajusteMontosCuentasPendiente = false; ajustarTamanoMontosCuentas(); });
+}, { passive: true });
+
 function mostrarSeccionCuentas(idSeccion){
   if(!document.getElementById('vista-cuentas').classList.contains('activa')) mostrar('vista-cuentas');
   document.querySelectorAll('#tabs-cuentas .tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === idSeccion));
@@ -14993,8 +15038,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 69;
+const VERSION_APP_ACTUAL = 70;
 const CHANGELOG_APP = [
+  {
+    version: 70,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Las tarjetas de "Mis cuentas" ya no crecen a 3-4 renglones con montos largos -- la letra del monto se ajusta sola para que quepa siempre en 2 renglones (título + monto).'
+    ],
+    cambios_en: [
+      'The "My accounts" cards no longer grow to 3-4 lines with long amounts -- the amount\'s text size adjusts itself so each card always fits in 2 lines (title + amount).'
+    ]
+  },
   {
     version: 69,
     fecha: '2026-08-30',
