@@ -350,7 +350,12 @@
   }
   .panel-tarjeta:hover{border-color:var(--borde-fuerte);}
   .panel-tarjeta-titulo{font-family:var(--sans);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--texto-tenue);font-weight:600;}
-  .panel-tarjeta-dato{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--texto);}
+  /* white-space:nowrap a propósito -- el tamaño se ajusta con JS
+     (ajustarTamanoDatosTarjetas) para que el dato quepa siempre en una
+     línea, la misma técnica que ya se usó en las tarjetas de "Mis cuentas"
+     (pedido explícito del usuario: "me encantó, aplícalo para toda la
+     app"), en vez de dejarlo envolver a 2-3 líneas con cifras largas. */
+  .panel-tarjeta-dato{font-family:var(--mono);font-size:19px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;}
   .panel-tarjeta-dato.estado-saludable{color:var(--color-saludable);}
   .panel-tarjeta-dato.estado-atencion{color:var(--color-atencion);font-weight:700;}
   .panel-tarjeta-dato.estado-riesgo{color:var(--color-riesgo);font-weight:700;}
@@ -407,7 +412,7 @@
     text-overflow:ellipsis;min-width:0;
   }
   /* white-space:nowrap a propósito -- el tamaño se ajusta con JS
-     (ajustarTamanoMontosCuentas) para que el monto quepa siempre en una
+     (ajustarTamanoDatosTarjetas) para que el monto quepa siempre en una
      sola línea (título + monto = 2 renglones por tarjeta, pedido explícito
      del usuario) en vez de envolverse a 2-3 líneas como antes. */
   .tab-cuentas-dato{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;}
@@ -1082,9 +1087,21 @@
   .totales-grid .total-caja{
     background:var(--superficie);border:1px solid var(--borde);border-top:2px solid var(--acento);
     border-radius:8px;padding:12px 10px;text-align:left;margin-bottom:0;
+    /* min-width:0 es necesario -- sin él, un item de grid con un
+       descendiente white-space:nowrap (.monto) se niega a encogerse por
+       debajo del ancho de ese texto y empuja toda la columna (y la
+       página) a desbordar, en vez de que sea .monto el que se recorte y
+       ajustarTamanoDatosTarjetas lo detecte. Misma causa que ya se
+       encontró y arregló para las tarjetas de "Mis cuentas". */
+    min-width:0;
   }
   .totales-grid .total-caja .etiqueta{font-size:10.5px;margin-bottom:4px;letter-spacing:.06em;}
-  .totales-grid .total-caja .monto{font-size:18px;}
+  /* nowrap a propósito, igual que .panel-tarjeta-dato -- el tamaño se
+     ajusta con JS (ajustarTamanoDatosTarjetas) para que quepa en una línea
+     en vez de envolverse con cifras largas. Solo dentro de .totales-grid
+     (2 columnas, angosto) -- el .monto grande y centrado fuera de un grid
+     (34px, ancho completo) no tiene ese riesgo y se deja igual. */
+  .totales-grid .total-caja .monto{font-size:18px;white-space:nowrap;overflow:hidden;}
   .totales-grid .total-caja .detalle-explica{font-size:11.5px;text-align:left;margin-top:3px;}
 
   /* Sin huecos: si el grid de 2 columnas termina con un número impar de tarjetas, la última ocupa el ancho completo en vez de dejar espacio en blanco */
@@ -3431,7 +3448,7 @@ function mostrar(idVista){
   // Transferencias) viven todas juntas dentro de esta misma vista ahora --
   // cargarTodo() ya trae y pinta las 6 en paralelo, no hace falta un hook
   // por sección.
-  if(idVista === 'vista-cuentas'){ cargarTodo().then(ajustarTamanoMontosCuentas); requestAnimationFrame(actualizarScrollspyCuentas); }
+  if(idVista === 'vista-cuentas'){ cargarTodo().then(ajustarTamanoDatosTarjetas); requestAnimationFrame(actualizarScrollspyCuentas); }
   if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
   if(idVista === 'vista-seguridad-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
@@ -7320,6 +7337,7 @@ function renderizarRadiografiaAutomatica(report, cached){
     <button class="btn-grande secundario" id="btn-radiografia-regenerar" onclick="generarRadiografiaAutomatica(true)" style="margin-top:12px;">${escapeHtml(t('radiografia.regenerar_boton'))}</button>
   `;
   mostrar('vista-radiografia-resultado');
+  ajustarTamanoDatosTarjetas();
 }
 
 function descargarCorreccionesCsv(){
@@ -7499,39 +7517,44 @@ async function cargarTodo(){
 // (título + monto). En vez de truncar el monto con "…" (perdería dígitos
 // reales, ya se decidió que no en la parte 87), se reduce su tamaño de
 // letra hasta que quepa en una sola línea -- distinto por tarjeta, porque
-// cada monto tiene un largo distinto.
-function ajustarTamanoMontosCuentas(){
-  const TAMANO_BASE = 15, TAMANO_MINIMO = 9;
-  document.querySelectorAll('#tabs-cuentas .tab-cuentas-dato').forEach(el => {
-    let tam = TAMANO_BASE;
+// cada monto tiene un largo distinto. Al usuario le gustó tanto que pidió
+// aplicarlo "para toda la app" -- por eso es genérica (no exclusiva de
+// Cuentas) y se llama también desde Inicio, Balance general, Gastos, Flujo
+// de efectivo y Salud financiera, dondequiera que haya un monto dentro de
+// una tarjeta angosta (.panel-tarjeta-dato o .totales-grid .monto).
+function ajustarTextoUnaLinea(el, tamanoMinimo = 9){
+  let tam = parseFloat(getComputedStyle(el).fontSize);
+  el.style.whiteSpace = '';
+  el.style.overflowWrap = '';
+  el.style.fontSize = '';
+  while(el.scrollWidth > el.clientWidth && tam > tamanoMinimo){
+    tam -= 0.5;
     el.style.fontSize = tam + 'px';
-    el.style.whiteSpace = '';
-    el.style.overflowWrap = '';
-    while(el.scrollWidth > el.clientWidth && tam > TAMANO_MINIMO){
-      tam -= 0.5;
-      el.style.fontSize = tam + 'px';
-    }
-    // Pantallas muy angostas (ej. iPhone SE, 320px) con el monto más largo
-    // pueden no caber en una línea ni en el tamaño mínimo -- ahí se deja
-    // envolver a una 2a línea (3 renglones en total en ese caso puntual) en
-    // vez de recortarlo en silencio con overflow:hidden, que perdería
-    // dígitos reales sin ningún aviso. overflow-wrap:break-word es necesario
-    // además de white-space:normal -- un monto es un solo token sin
-    // espacios ("$4,720,000.00"), así que sin esto no habría ningún punto
-    // donde el texto pudiera cortar de todos modos.
-    if(el.scrollWidth > el.clientWidth){
-      el.style.whiteSpace = 'normal';
-      el.style.overflowWrap = 'break-word';
-    }
-  });
+  }
+  // Pantallas muy angostas (ej. iPhone SE, 320px) con el monto más largo
+  // pueden no caber en una línea ni en el tamaño mínimo -- ahí se deja
+  // envolver a una 2a línea en vez de recortarlo en silencio con
+  // overflow:hidden, que perdería dígitos reales sin ningún aviso.
+  // overflow-wrap:break-word es necesario además de white-space:normal --
+  // un monto es un solo token sin espacios ("$4,720,000.00"), así que sin
+  // esto no habría ningún punto donde el texto pudiera cortar de todos modos.
+  if(el.scrollWidth > el.clientWidth){
+    el.style.whiteSpace = 'normal';
+    el.style.overflowWrap = 'break-word';
+  }
 }
 
-let reajusteMontosCuentasPendiente = false;
+function ajustarTamanoDatosTarjetas(){
+  document.querySelectorAll(
+    '#tabs-cuentas .tab-cuentas-dato, .panel-grid .panel-tarjeta-dato, .totales-grid .total-caja .monto'
+  ).forEach(el => ajustarTextoUnaLinea(el));
+}
+
+let reajusteDatosTarjetasPendiente = false;
 window.addEventListener('resize', () => {
-  if(reajusteMontosCuentasPendiente) return;
-  if(!document.getElementById('vista-cuentas')?.classList.contains('activa')) return;
-  reajusteMontosCuentasPendiente = true;
-  requestAnimationFrame(() => { reajusteMontosCuentasPendiente = false; ajustarTamanoMontosCuentas(); });
+  if(reajusteDatosTarjetasPendiente) return;
+  reajusteDatosTarjetasPendiente = true;
+  requestAnimationFrame(() => { reajusteDatosTarjetasPendiente = false; ajustarTamanoDatosTarjetas(); });
 }, { passive: true });
 
 function mostrarSeccionCuentas(idSeccion){
@@ -8245,6 +8268,7 @@ async function abrirPanel(){
     ` : ''}
   `;
   animarNumero(document.getElementById('panel-patrimonio-monto'), b.patrimonioNeto, 'MXN', 900);
+  ajustarTamanoDatosTarjetas();
   actualizarUIDemo();
   inicializarRotacionInsights(insights);
 }
@@ -12523,6 +12547,7 @@ async function abrirGastos(){
     </button>` : ''}
   `;
   actualizarUIDemo();
+  ajustarTamanoDatosTarjetas();
 
   renderGastosGraficasInline(r);
   renderGastosCategoriasInline(r);
@@ -13742,6 +13767,7 @@ async function abrirFlujoEfectivo(){
     ${filasHtml}
   `;
   renderProyeccionLiquidez(f.items, f.activosLiquidos);
+  ajustarTamanoDatosTarjetas();
 
   cont.querySelectorAll('[data-movimiento-idx]').forEach(btn => {
     const it = f.items[Number(btn.dataset.movimientoIdx)];
@@ -13861,6 +13887,7 @@ async function abrirSaludFinanciera(){
     </button>
   `;
   actualizarUIDemo();
+  ajustarTamanoDatosTarjetas();
 }
 
 async function abrirSaludDetalle(){
@@ -14192,6 +14219,7 @@ async function abrirBalance(){
   `;
 
   animarNumero(document.getElementById('patrimonio-neto-monto'), b.patrimonioNeto, 'MXN', 1000);
+  ajustarTamanoDatosTarjetas();
 }
 
 async function abrirBalanceGraficas(foco){
@@ -15038,8 +15066,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 70;
+const VERSION_APP_ACTUAL = 71;
 const CHANGELOG_APP = [
+  {
+    version: 71,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'La letra que se ajusta sola para no desbordar (antes solo en "Mis cuentas") ahora aplica en toda la app: Inicio, Balance general, Gastos, Flujo de efectivo y Salud financiera.'
+    ],
+    cambios_en: [
+      'The self-adjusting text that keeps numbers from overflowing (previously only in "My accounts") now applies app-wide: Home, Balance sheet, Expenses, Cash flow, and Financial health.'
+    ]
+  },
   {
     version: 70,
     fecha: '2026-08-30',
