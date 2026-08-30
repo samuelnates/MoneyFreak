@@ -1020,6 +1020,17 @@
      usuaria que no distinguía si el envío había funcionado). */
   .aviso.exito{border-left-color:var(--color-saludable);color:var(--color-saludable);font-weight:600;}
   .aviso.error{border-left-color:var(--neg);color:var(--neg);font-weight:600;}
+  .mensaje-vacio-accion{display:block;margin:10px auto 0;}
+  .toast-deshacer{
+    position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 84px);transform:translate(-50%, 12px);
+    display:flex;align-items:center;gap:14px;background:var(--texto);color:var(--fondo);
+    border-radius:10px;padding:12px 16px;font-family:var(--sans);font-size:13.5px;
+    box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:9000;opacity:0;pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;max-width:calc(100% - 32px);
+  }
+  .toast-deshacer.visible{opacity:1;transform:translate(-50%, 0);pointer-events:auto;}
+  .toast-deshacer button{background:none;border:none;color:inherit;font-weight:700;font-family:inherit;font-size:inherit;cursor:pointer;flex:none;text-decoration:underline;padding:0;}
+  @media (min-width:900px){ .toast-deshacer{ bottom:24px; } }
   .chart-caja{background:none;border-radius:0;padding:0 0 22px;border:none;border-bottom:1px solid var(--borde);margin-bottom:24px;}
   .composicion-canvas-wrap{max-width:170px;aspect-ratio:1;margin:0 auto;}
   .leyenda{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
@@ -3546,6 +3557,14 @@ function revelarAlEntrarEnVista(contenedor, selector){
 
 const REDUCIR_MOVIMIENTO = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Feedback táctil corto para las acciones clave (guardar, borrar, error).
+// navigator.vibrate no existe en iOS Safari/PWA -- se degrada en silencio.
+function haptic(tipo){
+  if(!navigator.vibrate) return;
+  const patrones = { exito: 15, error: [20, 40, 20], toque: 8 };
+  try { navigator.vibrate(patrones[tipo] ?? 10); } catch {}
+}
+
 function animarNumero(elemento, valorFinal, moneda, duracionMs){
   if(!elemento) return;
   if(REDUCIR_MOVIMIENTO || valorFinal === 0){
@@ -3851,6 +3870,7 @@ const TRADUCCIONES = {
     'score.tendencia_explica': 'Si tu patrimonio neto lleva varios meses subiendo o bajando seguido.',
     'score.constancia': 'Constancia',
     'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
+    'score.ver_salud_completa': 'Ver salud financiera completa y editar umbrales ›',
     'flujo.liquido_disponible': 'Líquido disponible ahora',
     'flujo.sin_movimientos': 'Aún no tienes pagos ni aportaciones con fecha registrada. Agrega el día límite de pago en tus deudas, o el día de aportación en tus cuentas, para ver aquí tu flujo de efectivo del mes.',
     'flujo.sin_fecha': 'Sin fecha registrada',
@@ -3890,6 +3910,7 @@ const TRADUCCIONES = {
     'gastos.movimientos_sub': '{0} este mes',
     'gastos.editar_presupuesto_sub': 'Por categoría y subcategoría',
     'gastos.sin_gastos_mes': 'Sin gastos registrados este mes.',
+    'gastos.eliminado_aviso': 'Gasto eliminado',
     'gastos.ver_restantes': 'Ver los {0} restantes',
     'gastos.filtro_todas_categorias': 'Todas las categorías',
     'gastos.filtro_todos_medios_pago': 'Todos los medios de pago',
@@ -4288,6 +4309,7 @@ const TRADUCCIONES = {
     'comun.guardar': 'Guardar',
     'comun.cancelar': 'Cancelar',
     'comun.eliminar': 'Eliminar',
+    'comun.deshacer': 'Deshacer',
     'comun.continuar': 'Continuar',
     'comun.guardar_cambios': 'Guardar cambios',
     'comun.cargando': 'Cargando...',
@@ -4804,6 +4826,7 @@ const TRADUCCIONES = {
     'score.tendencia_explica': 'Whether your net worth has been rising or falling for several months in a row.',
     'score.constancia': 'Consistency',
     'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
+    'score.ver_salud_completa': 'See full financial health and edit thresholds ›',
     'flujo.liquido_disponible': 'Liquid available now',
     'flujo.sin_movimientos': "You don't have any payments or contributions with a date yet. Add the due date on your debts, or the contribution day on your accounts, to see your cash flow here.",
     'flujo.sin_fecha': 'No date recorded',
@@ -4843,6 +4866,7 @@ const TRADUCCIONES = {
     'gastos.movimientos_sub': '{0} this month',
     'gastos.editar_presupuesto_sub': 'By category and subcategory',
     'gastos.sin_gastos_mes': 'No expenses logged this month.',
+    'gastos.eliminado_aviso': 'Expense deleted',
     'gastos.ver_restantes': 'See the other {0}',
     'gastos.filtro_todas_categorias': 'All categories',
     'gastos.filtro_todos_medios_pago': 'All payment methods',
@@ -5241,6 +5265,7 @@ const TRADUCCIONES = {
     'comun.guardar': 'Save',
     'comun.cancelar': 'Cancel',
     'comun.eliminar': 'Delete',
+    'comun.deshacer': 'Undo',
     'comun.continuar': 'Continue',
     'comun.guardar_cambios': 'Save changes',
     'comun.cargando': 'Loading...',
@@ -7892,25 +7917,19 @@ async function abrirPanel(){
         <div class="panel-tarjeta-dato">${formatoMonto(b.totalCuentas, 'MXN')}</div>
         <div class="panel-tarjeta-sub">${t('panel.cuentas.sub')}</div>
       </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:80ms" onclick="abrirSaludFinanciera()">
-        <div class="panel-icono">${iconoPanel('salud')}</div>
-        <div class="panel-tarjeta-titulo">${t('panel.salud.titulo')}</div>
-        <div class="panel-tarjeta-dato ${claseEstado(s.estadoGeneral)}">${etiquetasSalud[s.estadoGeneral]}</div>
-        <div class="panel-tarjeta-sub">${t('balance.estado_general').toLowerCase()}</div>
-      </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:120ms" onclick="abrirFlujoEfectivo()">
+      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:80ms" onclick="abrirFlujoEfectivo()">
         <div class="panel-icono">${iconoPanel('flujo')}</div>
         <div class="panel-tarjeta-titulo">${t('panel.flujo.titulo')}</div>
         <div class="panel-tarjeta-dato">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
         <div class="panel-tarjeta-sub">${flujoSubTxt}</div>
       </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:160ms" onclick="abrirGastos()">
+      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:120ms" onclick="abrirGastos()">
         <div class="panel-icono">${iconoPanel('gastos')}</div>
         <div class="panel-tarjeta-titulo">${t('panel.gastos.titulo')}</div>
         <div class="panel-tarjeta-dato ${claseGastos}">${formatoMonto(g.totalGastado, 'MXN')}</div>
         <div class="panel-tarjeta-sub">${gastosSubTxt}</div>
       </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:200ms" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');">
+      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:160ms" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');">
         <div class="panel-icono">${iconoPanel('simulador')}</div>
         <div class="panel-tarjeta-titulo">${t('panel.simulador.titulo')}</div>
         <div class="panel-tarjeta-sub">${t('panel.simulador.sub')}</div>
@@ -8007,6 +8026,10 @@ async function abrirScore(){
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.constancia)}" style="width:${score.constancia !== null ? Math.min(score.constancia, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.constancia_explica')}</div>
     </div>
+
+    <h2>${t('salud.recomendacion')}</h2>
+    <div class="aviso">${s.recomendacion}</div>
+    <button type="button" class="btn-link-tenue" onclick="abrirSaludFinanciera()">${t('score.ver_salud_completa')}</button>
   `;
 
   renderGraficaScore(historico || []);
@@ -8073,7 +8096,7 @@ async function cargarCuentasInversion(){
   }
   if(!cuentas || cuentas.length === 0){
     cuentasInversionData = [];
-    cont.innerHTML = `<div class="mensaje">${t('cuentas.sin_cuentas_mensaje')}</div>`;
+    cont.innerHTML = `<div class="mensaje">${t('cuentas.sin_cuentas_mensaje')}<button type="button" class="btn-link-tenue mensaje-vacio-accion" onclick="mostrar('vista-agregar-cuenta')">${t('cuentas.agregar_cuenta')}</button></div>`;
     return;
   }
 
@@ -8104,7 +8127,7 @@ async function cargarCuentasInversion(){
 function renderListaCuentas(animar){
   const cont = document.getElementById('lista-cuentas-inversion');
   if(!cuentasInversionData.length){
-    cont.innerHTML = `<div class="mensaje">${t('cuentas.sin_cuentas_mensaje')}</div>`;
+    cont.innerHTML = `<div class="mensaje">${t('cuentas.sin_cuentas_mensaje')}<button type="button" class="btn-link-tenue mensaje-vacio-accion" onclick="mostrar('vista-agregar-cuenta')">${t('cuentas.agregar_cuenta')}</button></div>`;
     document.getElementById('acordeon-total-cuentas').textContent = t('cuentas.sin_cuentas');
     return;
   }
@@ -8901,7 +8924,7 @@ async function cargarDeudas(){
     return;
   }
   if(!data || data.length === 0){
-    cont.innerHTML = `<div class="mensaje">${t('deudas.sin_deudas_mensaje')}</div>`;
+    cont.innerHTML = `<div class="mensaje">${t('deudas.sin_deudas_mensaje')}<button type="button" class="btn-link-tenue mensaje-vacio-accion" onclick="mostrar('vista-agregar-deuda')">${t('cuentas.agregar_deuda')}</button></div>`;
     document.getElementById('acordeon-total-deudas').textContent = t('deudas.sin_deudas');
     return;
   }
@@ -11586,10 +11609,12 @@ async function guardarGasto(){
     esRecurrente, esCompraMeses, mesesSolicitados
   });
   if(!resultado.ok){
+    haptic('error');
     const detalle = resultado.detalle ? `\n\n[debug] ${resultado.detalle}` : '';
     await mostrarAlerta(t(`alert.${resultado.error}`) + detalle);
     return;
   }
+  haptic('exito');
   if(subSelectValor !== '__otro__') registrarUsoCategoriaGasto(categoria, subSelectValor);
   localStorage.setItem('ultima_moneda_gasto', moneda);
   localStorage.setItem('ultimo_metodo_pago_gasto', document.getElementById('select-pago-gasto').value);
@@ -11698,6 +11723,7 @@ async function actualizarGasto(){
 async function eliminarGastoPorId(g){
   const { error } = await sb.from('gastos').delete().eq('id', g.id);
   if(error){
+    haptic('error');
     await mostrarAlerta(t('alert.error_eliminar'));
     return false;
   }
@@ -11710,13 +11736,60 @@ async function eliminarGastoPorId(g){
   return true;
 }
 
+// Toast flotante de "Deshacer" (patrón Gmail/Mail): al tocar "Eliminar" el
+// gasto desaparece de inmediato, pero el DELETE real en la base se difiere
+// BORRADO_GASTO_ESPERA_MS -- si el usuario toca "Deshacer" antes de que pase
+// ese tiempo, nunca se llega a tocar la base. Reemplaza el modal de
+// confirmación bloqueante (pedido del usuario: menos fricción, más
+// seguridad real vía "deshacer" en vez de un diálogo que hay que leer).
+const BORRADO_GASTO_ESPERA_MS = 5000;
+const gastosPendientesDeBorrado = {}; // id -> { timeoutId }
+
+function mostrarAvisoDeshacer(mensaje, alDeshacer){
+  let toast = document.getElementById('toast-deshacer');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'toast-deshacer';
+    toast.className = 'toast-deshacer';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span>${escapeHtml(mensaje)}</span><button type="button">${t('comun.deshacer')}</button>`;
+  toast.querySelector('button').onclick = () => {
+    toast.classList.remove('visible');
+    alDeshacer();
+  };
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  clearTimeout(toast._temporizadorOcultar);
+  toast._temporizadorOcultar = setTimeout(() => toast.classList.remove('visible'), BORRADO_GASTO_ESPERA_MS);
+}
+
+// ocultarFn: quita el gasto de la UI ya (optimista). restaurarFn: lo regresa
+// si se deshace. Ninguna de las dos toca la base -- eso solo pasa si pasan
+// los BORRADO_GASTO_ESPERA_MS sin deshacer.
+function borrarGastoConDeshacer(g, ocultarFn, restaurarFn){
+  if(gastosPendientesDeBorrado[g.id]) return; // ya está pendiente, evita doble disparo
+  ocultarFn();
+  haptic('toque');
+  const timeoutId = setTimeout(async () => {
+    delete gastosPendientesDeBorrado[g.id];
+    const ok = await eliminarGastoPorId(g);
+    if(ok) haptic('exito');
+  }, BORRADO_GASTO_ESPERA_MS);
+  gastosPendientesDeBorrado[g.id] = { timeoutId };
+  mostrarAvisoDeshacer(t('gastos.eliminado_aviso'), () => {
+    const pendiente = gastosPendientesDeBorrado[g.id];
+    if(!pendiente) return; // el timeout ya corrió (no debería pasar dentro de la ventana, pero por si acaso)
+    clearTimeout(pendiente.timeoutId);
+    delete gastosPendientesDeBorrado[g.id];
+    restaurarFn();
+  });
+}
+
 async function eliminarGasto(){
   if(!gastoActual) return;
-  const ok = await mostrarConfirmacion(t('alert.confirm_eliminar_gasto'), { destructivo: true, textoConfirmar: t('comun.eliminar') });
-  if(!ok) return;
-  const eliminado = await eliminarGastoPorId(gastoActual);
-  if(!eliminado) return;
+  const g = gastoActual;
   abrirGastos();
+  borrarGastoConDeshacer(g, () => {}, () => abrirGastos());
 }
 
 let transferenciasData = [];
@@ -12232,7 +12305,7 @@ function renderizarMovimientosGastos(){
        <div id="movimientos-gastos-resto" style="display:none;">${restoGastosHtml}</div>`
     : '';
 
-  cont.innerHTML = (listaGastosHtml || `<div class="mensaje">${t('gastos.sin_gastos_mes')}</div>`) + verMasMovimientosHtml;
+  cont.innerHTML = (listaGastosHtml || `<div class="mensaje">${t('gastos.sin_gastos_mes')}<button type="button" class="btn-link-tenue mensaje-vacio-accion" onclick="abrirAgregarGasto()">${t('panel.accion_gasto')}</button></div>`) + verMasMovimientosHtml;
   revelarAlEntrarEnVista(cont);
   activarSwipeEliminarGasto(cont);
 
@@ -12324,33 +12397,44 @@ function activarSwipeEliminarGasto(contenedor){
   }, true);
 }
 
-// Sin modal de confirmación aquí a propósito (pedido del usuario, "triple
-// confirmación ya es demasiado"): deslizar + tocar "Eliminar" ya son 2 pasos
-// deliberados, igual que el swipe-delete nativo de Mail/Gmail. El botón
-// "Eliminar gasto" de la pantalla de edición sí conserva su confirmación —
-// ahí se puede llegar solo por estar viendo el gasto, sin intención de borrar.
+// Sin modal de confirmación bloqueante aquí a propósito (pedido del usuario,
+// "triple confirmación ya es demasiado"): deslizar + tocar "Eliminar" ya son
+// 2 pasos deliberados, igual que el swipe-delete nativo de Mail/Gmail. La
+// red de seguridad ahora es el toast "Deshacer" (ver borrarGastoConDeshacer)
+// en vez de un diálogo que hay que leer y confirmar antes de poder borrar.
 async function eliminarGastoDesdeMovimiento(id){
   const g = gastosMovimientosActuales.find(x => x.id === id);
   if(!g) return;
-  const eliminado = await eliminarGastoPorId(g);
-  if(!eliminado) return;
 
-  gastosMovimientosActuales = gastosMovimientosActuales.filter(x => x.id !== id);
+  const indiceOriginal = gastosMovimientosActuales.indexOf(g);
   const fila = document.querySelector(`#gastos-movimientos-contenido .swipe-fila[data-gasto-id="${id}"]`);
-  if(!fila) return;
-  if(gastosMovimientosActuales.length === 0 || !document.querySelector('#gastos-movimientos-contenido [data-gasto-id]:not([data-gasto-id="' + id + '"])')){
-    renderizarMovimientosGastos(); // se quedaría vacía -- re-renderiza para mostrar el mensaje "sin gastos"
-    return;
-  }
-  if(REDUCIR_MOVIMIENTO){ fila.remove(); return; }
-  fila.style.overflow = 'hidden';
-  fila.style.maxHeight = fila.offsetHeight + 'px';
-  fila.style.transition = 'max-height .25s ease, opacity .25s ease';
-  requestAnimationFrame(() => {
-    fila.style.maxHeight = '0px';
-    fila.style.opacity = '0';
-  });
-  fila.addEventListener('transitionend', () => fila.remove(), { once: true });
+
+  const ocultar = () => {
+    gastosMovimientosActuales = gastosMovimientosActuales.filter(x => x.id !== id);
+    if(!fila) return;
+    if(!document.querySelector('#gastos-movimientos-contenido [data-gasto-id]:not([data-gasto-id="' + id + '"])')){
+      renderizarMovimientosGastos(); // se quedaría vacía -- re-renderiza para mostrar el mensaje "sin gastos"
+      return;
+    }
+    if(REDUCIR_MOVIMIENTO){ fila.remove(); return; }
+    fila.style.overflow = 'hidden';
+    fila.style.maxHeight = fila.offsetHeight + 'px';
+    fila.style.transition = 'max-height .25s ease, opacity .25s ease';
+    requestAnimationFrame(() => {
+      fila.style.maxHeight = '0px';
+      fila.style.opacity = '0';
+    });
+    fila.addEventListener('transitionend', () => fila.remove(), { once: true });
+  };
+
+  const restaurar = () => {
+    if(!gastosMovimientosActuales.includes(g)){
+      gastosMovimientosActuales.splice(Math.min(indiceOriginal, gastosMovimientosActuales.length), 0, g);
+    }
+    renderizarMovimientosGastos();
+  };
+
+  borrarGastoConDeshacer(g, ocultar, restaurar);
 }
 
 let graficaHistoricoGastos = null;
@@ -14585,8 +14669,24 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 53;
+const VERSION_APP_ACTUAL = 54;
 const CHANGELOG_APP = [
+  {
+    version: 54,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Eliminar un gasto ya no te pide confirmar con un cuadro de diálogo -- se borra al toque y te dejamos "Deshacer" unos segundos por si fue sin querer.',
+      'Cuando "Cuentas", "Deudas" o "Gastos" están vacíos, ahora hay un botón directo para agregar el primero.',
+      'La pantalla de Inicio ya no repite la misma información en dos tarjetas ("Score" y "Salud financiera") -- ahora todo vive junto dentro de Score.',
+      'Vibración corta al guardar o eliminar un gasto (si tu teléfono lo soporta).'
+    ],
+    cambios_en: [
+      'Deleting an expense no longer asks you to confirm in a dialog box -- it deletes instantly and gives you a few seconds to "Undo" in case it was a mistake.',
+      'When "Accounts", "Debts", or "Expenses" are empty, there is now a direct button to add your first one.',
+      'The Home screen no longer repeats the same info in two cards ("Score" and "Financial health") -- it all lives together inside Score now.',
+      'Short vibration when saving or deleting an expense (if your phone supports it).'
+    ]
+  },
   {
     version: 53,
     fecha: '2026-08-28',
