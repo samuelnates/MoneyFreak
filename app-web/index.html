@@ -3452,11 +3452,16 @@ function manejarTapNavInferior(vistaId, abrirFn){
   }
 }
 
+// Antes también se escondían en la pantalla "Mis cuentas" -- inconsistente
+// con sus propias sub-pantallas (Deudas, Cuentas de inversión, etc.), que
+// SÍ mostraban ambos botones al mismo tiempo que el "+" de escritorio sin
+// problema (bottom:74px del engrane vs. bottom:18px+52px de alto del "+",
+// no se pisan). Reportado por el usuario ("la pestaña de cuentas no tiene
+// el engrane") -- se quita ese caso especial, se ve igual que el resto.
 function actualizarVisibilidadBotonTour(){
   const btn = document.getElementById('btn-tour');
   const btnConfig = document.getElementById('btn-config');
-  const enCuentas = document.getElementById('vista-cuentas').classList.contains('activa');
-  const oculto = (tourConfigActivo || enCuentas) ? 'none' : '';
+  const oculto = tourConfigActivo ? 'none' : '';
   if(btn) btn.style.display = oculto;
   if(btnConfig) btnConfig.style.display = oculto;
 }
@@ -14932,8 +14937,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 59;
+const VERSION_APP_ACTUAL = 60;
 const CHANGELOG_APP = [
+  {
+    version: 60,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Arreglado: el botón de configuración (engrane) no aparecía dentro de "Mis cuentas" -- ya se ve ahí igual que en el resto de la app.'
+    ],
+    cambios_en: [
+      'Fixed: the settings (gear) button was missing inside "My accounts" -- it now shows there just like everywhere else in the app.'
+    ]
+  },
   {
     version: 59,
     fecha: '2026-08-30',
