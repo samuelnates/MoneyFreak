@@ -358,41 +358,42 @@
   .panel-icono-svg{width:13px;height:13px;}
   .panel-tarjeta:hover .panel-icono{color:var(--texto);border-color:var(--texto-tenue);}
 
-  /* Barra de pestañas fija de "Mis cuentas" -- salta directo a la sección
-     al tocarla, y se marca sola conforme se baja con el dedo (scrollspy,
-     ver actualizarScrollspyCuentas). top:64px deja espacio de sobra para
-     los botones flotantes de inicio/Freaky (~60px) que si no, quedarían
-     tapando la barra al pegarse arriba del todo. */
+  /* Barra de "Mis cuentas" -- hace doble función a propósito: es el menú
+     fijo que salta directo a una sección al tocarla (se marca sola
+     conforme se baja con el dedo, scrollspy, ver actualizarScrollspyCuentas)
+     Y el resumen de montos por sección -- antes eran 2 elementos separados
+     (una fila de 6 tarjetas grandes arriba + esta barra debajo) repitiendo
+     los mismos 6 nombres uno tras otro; el usuario lo vio "redundante", así
+     que se fusionaron en uno solo. top:64px deja espacio de sobra para los
+     botones flotantes de inicio/Freaky (~60px) que si no, quedarían tapando
+     la barra al pegarse arriba del todo. */
   .tabs-cuentas{
-    display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
     position:sticky;top:calc(64px + env(safe-area-inset-top, 0px));z-index:4;
     background:var(--bg);padding:10px 0;margin:10px 0 4px;border-bottom:1px solid var(--borde);
     scrollbar-width:none;
   }
   .tabs-cuentas::-webkit-scrollbar{display:none;}
   .tab-cuentas{
-    flex:none;background:none;border:none;border-radius:20px;padding:7px 13px;
-    font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--texto-tenue);
-    white-space:nowrap;cursor:pointer;transition:background-color 150ms ease, color 150ms ease;
+    flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+    background:var(--superficie);border:1px solid var(--borde);
+    border-radius:9px;padding:6px 10px;cursor:pointer;text-align:left;
+    transition:background-color 150ms ease, border-color 150ms ease;
   }
-  .tab-cuentas:hover{color:var(--texto);}
-  .tab-cuentas.activo{background:var(--acento);color:var(--acento-texto);}
-
-  /* Tarjetas de acceso de "Mis cuentas" -- versión compacta a pedido del
-     usuario ("ocupan casi la mitad de la pantalla, redúcelo al máximo").
-     Se quita el ícono (aportaba poco a 13px y era la mitad de la altura de
-     cada tarjeta) y el título nunca hace salto de línea (con "…" si no
-     cabe), en vez de crecer a 2 líneas como antes. */
-  #cuentas-accesos{gap:6px;margin-bottom:14px;}
-  #cuentas-accesos .panel-tarjeta{padding:8px 10px;gap:1px;min-width:0;}
-  #cuentas-accesos .panel-icono{display:none;}
-  /* min-width:0 es necesario en el título: sin él, un item de flex/grid con
-     white-space:nowrap se niega a encogerse por debajo del ancho del texto
-     completo y desborda la tarjeta (overflow horizontal de toda la
-     página) en vez de recortarse con "…" como se espera. */
-  #cuentas-accesos .panel-tarjeta-titulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
-  #cuentas-accesos .panel-tarjeta-dato,
-  #cuentas-accesos .panel-tarjeta-sub{font-size:15px;min-width:0;overflow-wrap:break-word;}
+  .tab-cuentas:hover{border-color:var(--borde-fuerte);}
+  /* Ni el título ni el monto se recortan -- la barra ya es horizontal con
+     scroll propio, así que cada pestaña simplemente crece al ancho de su
+     contenido (una cifra grande hace una pestaña más ancha) en vez de
+     truncar texto o partir un número a la mitad en 2 líneas. */
+  .tab-cuentas-titulo{
+    font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+    font-weight:600;color:var(--texto-tenue);white-space:nowrap;
+  }
+  .tab-cuentas-dato{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--texto);white-space:nowrap;}
+  .tab-cuentas-dato.negativo{color:var(--neg);}
+  .tab-cuentas.activo{background:var(--acento);border-color:var(--acento);}
+  .tab-cuentas.activo .tab-cuentas-titulo,
+  .tab-cuentas.activo .tab-cuentas-dato{color:var(--acento-texto);}
 
   .seccion-cuentas{margin-top:28px;scroll-margin-top:8px;}
   .seccion-cuentas:first-of-type{margin-top:18px;}
@@ -1770,46 +1771,31 @@
   </div>
   <div id="aviso-demo" class="aviso" style="display:none;" data-i18n="cuentas.aviso_demo">Estás viendo una cuenta de muestra con datos ficticios (solo lectura).</div>
 
-  <div class="panel-grid" id="cuentas-accesos">
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('ingresos')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</div>
-      <div class="panel-tarjeta-dato"><span id="acordeon-total-ingresos"></span></div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('cuentas')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/><path d="M3 9h18"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="balance.cuentas_inversion">Cuentas de inversión</div>
-      <div class="panel-tarjeta-dato"><span id="acordeon-total-cuentas"></span></div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('bienes')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="balance.bienes">Bienes</div>
-      <div class="panel-tarjeta-dato"><span id="acordeon-total-bienes"></span></div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('acciones')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="balance.acciones">Acciones</div>
-      <div class="panel-tarjeta-dato"><span id="acordeon-total-acciones"></span></div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('deudas')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="cuentas.deudas_titulo">Deudas</div>
-      <div class="panel-tarjeta-dato negativo"><span id="acordeon-total-deudas"></span></div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('transferencias')">
-      <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13l-3.5-3.5"/><path d="M20 7l-3.5 3.5"/><path d="M17 17H4l3.5-3.5"/><path d="M4 17l3.5 3.5"/></svg></div>
-      <div class="panel-tarjeta-titulo" data-i18n="cuentas.transferencias_titulo">Transferencias</div>
-      <div class="panel-tarjeta-sub"><span id="acordeon-total-transferencias"></span></div>
-    </button>
-  </div>
-
   <div class="tabs-cuentas" id="tabs-cuentas">
-    <button type="button" class="tab-cuentas" data-seccion="ingresos" onclick="mostrarSeccionCuentas('ingresos')" data-i18n="sidebar.ingresos_titulo">Ingresos</button>
-    <button type="button" class="tab-cuentas" data-seccion="cuentas" onclick="mostrarSeccionCuentas('cuentas')" data-i18n="balance.cuentas_inversion">Cuentas de inversión</button>
-    <button type="button" class="tab-cuentas" data-seccion="bienes" onclick="mostrarSeccionCuentas('bienes')" data-i18n="balance.bienes">Bienes</button>
-    <button type="button" class="tab-cuentas" data-seccion="acciones" onclick="mostrarSeccionCuentas('acciones')" data-i18n="balance.acciones">Acciones</button>
-    <button type="button" class="tab-cuentas" data-seccion="deudas" onclick="mostrarSeccionCuentas('deudas')" data-i18n="cuentas.deudas_titulo">Deudas</button>
-    <button type="button" class="tab-cuentas" data-seccion="transferencias" onclick="mostrarSeccionCuentas('transferencias')" data-i18n="cuentas.transferencias_titulo">Transferencias</button>
+    <button type="button" class="tab-cuentas" data-seccion="ingresos" onclick="mostrarSeccionCuentas('ingresos')">
+      <span class="tab-cuentas-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-ingresos"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="cuentas" onclick="mostrarSeccionCuentas('cuentas')">
+      <span class="tab-cuentas-titulo" data-i18n="balance.cuentas_inversion">Cuentas de inversión</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-cuentas"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="bienes" onclick="mostrarSeccionCuentas('bienes')">
+      <span class="tab-cuentas-titulo" data-i18n="balance.bienes">Bienes</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-bienes"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="acciones" onclick="mostrarSeccionCuentas('acciones')">
+      <span class="tab-cuentas-titulo" data-i18n="balance.acciones">Acciones</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-acciones"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="deudas" onclick="mostrarSeccionCuentas('deudas')">
+      <span class="tab-cuentas-titulo" data-i18n="cuentas.deudas_titulo">Deudas</span>
+      <span class="tab-cuentas-dato negativo" id="acordeon-total-deudas"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="transferencias" onclick="mostrarSeccionCuentas('transferencias')">
+      <span class="tab-cuentas-titulo" data-i18n="cuentas.transferencias_titulo">Transferencias</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-transferencias"></span>
+    </button>
   </div>
 
   <section class="seccion-cuentas" id="seccion-cuentas-ingresos">
@@ -13352,7 +13338,7 @@ const TOUR_PASOS = [
   {
     titulo: 'tour.p2.titulo',
     texto: 'tour.p2.texto',
-    selector: '#cuentas-accesos',
+    selector: '#tabs-cuentas',
     fallback: '#vista-cuentas',
     accion: async () => { mostrar('vista-cuentas'); }
   },
@@ -15003,8 +14989,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 65;
+const VERSION_APP_ACTUAL = 66;
 const CHANGELOG_APP = [
+  {
+    version: 66,
+    fecha: '2026-08-30',
+    cambios_es: [
+      '"Mis cuentas" ya no repite los 6 nombres dos veces (tarjetas arriba + pestañas debajo) -- ahora es una sola barra que muestra el nombre y el monto de cada sección y también sirve para saltar entre ellas.'
+    ],
+    cambios_en: [
+      '"My accounts" no longer repeats the 6 section names twice (cards on top + tabs below) -- now it\'s one bar that shows each section\'s name and amount and also jumps between them.'
+    ]
+  },
   {
     version: 65,
     fecha: '2026-08-30',
