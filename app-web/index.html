@@ -367,29 +367,29 @@
   /* Cuadrícula de "Mis cuentas" -- hace doble función a propósito: es el
      menú fijo que salta directo a una sección al tocarla (se marca sola
      conforme se baja con el dedo, scrollspy, ver actualizarScrollspyCuentas)
-     Y el resumen de montos por sección. Pasó por 2 versiones antes de esta:
-     una fila de tarjetas grandes + una barra de pestañas aparte (el usuario
-     la vio "redundante", los mismos 6 nombres 2 veces), y luego una sola
-     barra de pestañas angostas con scroll horizontal (el usuario tampoco
-     la quiso: "no me gusta que se muevan, deben estar fijas... me gustaban
-     más las tarjetas"). Esta versión es esa combinación: tarjetas (sin
-     ícono, la versión compacta ya probada) en cuadrícula fija de 2 columnas
-     -- las 6 caben siempre sin necesitar deslizar hacia los lados -- y todo
-     el bloque es sticky, así que se queda visible mientras se baja por las
-     secciones. Los nombres de clase (tab-cuentas*) quedaron del diseño
-     anterior a propósito, para no tener que tocar también el JS que ya
-     funciona (mostrarSeccionCuentas, actualizarScrollspyCuentas) por un
-     cambio que es solo de layout/estilo. top:64px deja espacio de sobra
-     para los botones flotantes de inicio/Freaky (~60px) que si no,
-     quedarían tapando la cuadrícula al pegarse arriba del todo. */
+     Y el resumen de montos por sección. Pasó por varias versiones antes de
+     esta: una fila de tarjetas grandes + una barra de pestañas aparte (el
+     usuario la vio "redundante", los mismos 6 nombres 2 veces), luego una
+     sola barra de pestañas angostas con scroll horizontal (tampoco: "no me
+     gusta que se muevan... me gustaban más las tarjetas"), después una
+     cuadrícula fija de 2 columnas, y ahora 3 columnas (pedido explícito:
+     "pone 3 en cada renglón para que sea más corto") -- las 6 caben siempre
+     sin necesitar deslizar hacia los lados, y todo el bloque es sticky. Los
+     nombres de clase (tab-cuentas*) quedaron del diseño anterior a
+     propósito, para no tener que tocar también el JS que ya funciona
+     (mostrarSeccionCuentas, actualizarScrollspyCuentas) por un cambio que es
+     solo de layout/estilo. El top varía según haya o no algo flotando arriba
+     de la pantalla (ver la nota junto a body.con-sesion .pantalla sobre el
+     logo flotante que se quitó). */
   .tabs-cuentas{
-    display:grid;grid-template-columns:repeat(2, 1fr);gap:6px;
-    position:sticky;top:calc(64px + env(safe-area-inset-top, 0px));z-index:4;
+    display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;
+    position:sticky;top:calc(18px + env(safe-area-inset-top, 0px));z-index:4;
     background:var(--bg);padding:10px 0;margin:10px 0 4px;border-bottom:1px solid var(--borde);
   }
-  @media(min-width:900px){
-    .tabs-cuentas{grid-template-columns:repeat(3, 1fr);}
-  }
+  /* El chip fijo de Freaky (.btn-asistente-flotante) solo se muestra con
+     Freaky-vuelo desactivado -- para ese caso, la cuadrícula necesita
+     pegarse más abajo para no taparlo, igual que .pantalla arriba. */
+  body.con-sesion.freaky-vuelo-desactivado .tabs-cuentas{top:calc(64px + env(safe-area-inset-top, 0px));}
   .tab-cuentas{
     display:flex;flex-direction:column;gap:1px;min-width:0;
     background:var(--superficie);border:1px solid var(--borde);
@@ -708,18 +708,6 @@
   }
   .btn-config-flotante svg{width:20px;height:20px;}
   body.con-sesion .btn-config-flotante{display:flex;}
-
-  .marca-flotante{
-    display:none;align-items:center;justify-content:center;position:fixed;
-    top:calc(14px + env(safe-area-inset-top));left:14px;z-index:5;
-    width:44px;height:44px;border-radius:50%;
-    background:var(--texto);border:none;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.35);
-  }
-  body.con-sesion .marca-flotante{display:flex;}
-  .marca-flotante svg{width:24px;height:24px;color:var(--bg);}
-  @media (min-width: 900px){
-    body.con-sesion .marca-flotante{display:none;}
-  }
 
   .btn-asistente-flotante{
     display:none;align-items:center;justify-content:center;gap:8px;position:fixed;
@@ -1365,7 +1353,16 @@
 
   @media (max-width: 899px){
     input[type=text],input[type=number],input[type=email],input[type=password],select{font-size:16px;}
-    body.con-sesion .pantalla{padding-bottom:calc(150px + env(safe-area-inset-bottom));padding-top:calc(60px + env(safe-area-inset-top));}
+    /* padding-top pasó de un fijo 60px a 14px (feedback: "ya no quiero que
+       esté la bolita con el logo... perdemos demasiado espacio") -- esos
+       60px eran para no tapar el logo flotante de Inicio (marca-flotante,
+       ya quitado) y el chip fijo de Freaky (.btn-asistente-flotante), que
+       solo se muestra cuando el usuario desactivó el vuelo de Freaky -- para
+       ESE caso puntual se restaura el margen grande abajo, ya que ese chip
+       sigue existiendo. Para todos los demás (el caso normal, Freaky
+       volando) ya no hay nada flotando arriba y el espacio se recupera. */
+    body.con-sesion .pantalla{padding-bottom:calc(150px + env(safe-area-inset-bottom));padding-top:calc(14px + env(safe-area-inset-top));}
+    body.con-sesion.freaky-vuelo-desactivado .pantalla{padding-top:calc(60px + env(safe-area-inset-top));}
     body.con-sesion .panel-acciones-rapidas{display:none;}
     body.con-sesion .btn-config-flotante{bottom:calc(88px + env(safe-area-inset-bottom));}
     body.con-sesion .btn-fab-agregar{bottom:calc(88px + env(safe-area-inset-bottom));}
@@ -1447,9 +1444,6 @@
   <button type="button" onclick="cerrarMenuAgregarGastoCentral(); abrirFreaky();"><span class="menu-agregar-item"><span class="menu-agregar-icono"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="3.3" rx="5.8" ry="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M5,13 A7,7 0 1 0 19,13 A7,7 0 1 0 5,13 Z M8.3,12.5 A1,1 0 1 0 10.3,12.5 A1,1 0 1 0 8.3,12.5 Z M13.7,12.5 A1,1 0 1 0 15.7,12.5 A1,1 0 1 0 13.7,12.5 Z"/><path d="M14,18.3 Q18.5,17 20,21.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="18.5,20.5 21.8,19.3 20.5,23.8" fill="currentColor"/></svg></span><span data-i18n="cuentas.menu_gasto_freaky">Contarle a Freaky</span></span></button>
 </div>
 
-<button type="button" class="marca-flotante" onclick="abrirPanel()" aria-label="Ir a Inicio" data-i18n-aria-label="navinf.inicio">
-  <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg>
-</button>
 <button type="button" class="btn-asistente-flotante" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
   <span class="btn-asistente-flotante-avatar"><img class="freaky-avatar-dinamico" alt=""></span>
   <span>Freaky</span>
@@ -10402,10 +10396,12 @@ function iniciarVueloFreaky(){
 
   if(typeof gsap === 'undefined'){
     // Sin GSAP (ej. CDN bloqueado) el personaje se quedaría atorado en (0,0) —
-    // mejor caer de regreso al botón simple que dejarlo roto.
-    el.style.display = 'none';
-    const respaldo = document.querySelector('.btn-asistente-flotante');
-    if(respaldo) respaldo.style.display = 'flex';
+    // mejor caer de regreso al botón simple que dejarlo roto. Se hace vía la
+    // misma clase que usa la preferencia real de "vuelo desactivado" (en vez
+    // de solo un display:flex inline) para que el CSS que le reserva espacio
+    // al botón (.pantalla/.tabs-cuentas padding-top) también se active aquí
+    // -- si no, el botón de respaldo queda tapando el encabezado.
+    document.body.classList.add('freaky-vuelo-desactivado');
     return;
   }
 
@@ -10554,8 +10550,10 @@ function freakyProgramarBlinkEspontaneo(){
 }
 
 // Busca "muebles" reales donde Freaky se pueda quedar, restringido a
-// elementos genuinamente position:fixed — el logo de Inicio (marca-flotante),
-// el botón de configuración y el FAB de "+" de la barra inferior. ANTES
+// elementos genuinamente position:fixed — el botón de configuración y el
+// FAB de "+" de la barra inferior (el logo flotante de Inicio, marca-flotante,
+// se quitó para recuperar espacio arriba de cada pantalla; Freaky se quedó
+// sin ese lugar para colgarse, ahora solo se sienta en los otros 2). ANTES
 // también entraban .panel-tarjeta y .btn-volver, pero esos viven en el flujo
 // normal de la pantalla (se mueven con el scroll) mientras que Freaky es
 // position:fixed (nunca se mueve con el scroll) — si aterrizaba sobre una
@@ -10569,19 +10567,10 @@ function freakyProgramarBlinkEspontaneo(){
 function freakyEncontrarPerchas(){
   const el = document.getElementById('freaky-personaje');
   const tam = el ? (el.offsetWidth || 74) : 74;
-  const candidatosSel = [
-    // El logo es el único de donde Freaky CUELGA (agarrado del borde de
-    // abajo) en vez de sentarse encima — pedido explícito del usuario. No
-    // hay una pose de "colgando" en el set de artes (flotando/pensando/
-    // hablando/sentado/saludando/ojos_cerrados) — se usa "flotando" como la
-    // aproximación menos rara: no implica que esté parado sobre algo.
-    { sel: '.marca-flotante', tipo: 'colgar' },
-    { sel: '.btn-config-flotante', tipo: 'sentar' },
-    { sel: '.nav-inferior-fab', tipo: 'sentar' },
-  ];
+  const candidatosSel = ['.btn-config-flotante', '.nav-inferior-fab'];
 
   const perchas = [];
-  candidatosSel.forEach(({ sel, tipo }) => {
+  candidatosSel.forEach(sel => {
     document.querySelectorAll(sel).forEach(cand => {
       // offsetParent no sirve aquí: al ser position:fixed, siempre reporta
       // offsetParent null aunque el botón esté visible — no es señal de
@@ -10591,11 +10580,9 @@ function freakyEncontrarPerchas(){
       if(r.width < 18 || r.height < 18) return;
       if(r.bottom > window.innerHeight - 4 || r.left < 0 || r.right > window.innerWidth) return;
       const x = r.left + r.width / 2 - tam / 2;
-      const y = tipo === 'colgar'
-        ? r.bottom - tam * 0.22 // cuelga hacia abajo, agarrado del borde inferior
-        : r.top - tam * 0.72;   // sentado encima, apoyado en el borde superior
+      const y = r.top - tam * 0.72; // sentado encima, apoyado en el borde superior
       perchas.push({
-        tipo,
+        tipo: 'sentar',
         x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
         y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
       });
@@ -10647,9 +10634,9 @@ function freakyIrAPerchaDePantalla(){
   if(!freakyHablandoActivo) freakyMostrarPose('flotando'); // despega: si estaba sentado, vuelve a la pose de vuelo
 
   const perchas = freakyEncontrarPerchas();
-  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el logo,
-  // el botón de configuración y el "+" son chrome global, casi siempre
-  // presentes) se conforma con un punto libre de la zona segura.
+  // Solo si esta pantalla no ofrece ninguna percha real (caso raro: el botón
+  // de configuración y el "+" son chrome global, casi siempre presentes) se
+  // conforma con un punto libre de la zona segura.
   const percha = perchas.length > 0 ? perchas[Math.floor(Math.random() * perchas.length)] : null;
   let destinoX, destinoY;
   if(percha){
@@ -10670,9 +10657,9 @@ function freakyIrAPerchaDePantalla(){
   const tl = gsap.timeline({
     onUpdate: () => freakyDejarEstela(el),
     onComplete: () => {
-      // 'sentar' → pose sentado, quieto encima. 'colgar' o sin percha (punto
-      // libre) → pose flotando, colgando/flotando debajo o en el aire — en
-      // ningún caso parado sobre nada que no sea real.
+      // 'sentar' → pose sentado, quieto encima. Sin percha (punto libre) →
+      // pose flotando, en el aire — en ningún caso parado sobre nada que no
+      // sea real.
       const sentado = percha ? percha.tipo === 'sentar' : false;
       freakyEstaSentado = sentado;
       freakyIniciarReposo(sentado);
@@ -15006,8 +14993,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 68;
+const VERSION_APP_ACTUAL = 69;
 const CHANGELOG_APP = [
+  {
+    version: 69,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Se quitó el botón flotante circular de Inicio -- ya no hacía falta (la barra de abajo y el botón "‹" ya llevan al mismo lugar) y liberó bastante espacio arriba en todas las pantallas.',
+      '"Mis cuentas" ahora muestra las 6 tarjetas en 3 columnas en vez de 2 -- ocupan menos alto.'
+    ],
+    cambios_en: [
+      'Removed the floating circular Home button -- it was redundant (the bottom bar and the "‹" button already go to the same place) and freed up a good chunk of space at the top of every screen.',
+      '"My accounts" now shows all 6 cards in 3 columns instead of 2 -- takes up less height.'
+    ]
+  },
   {
     version: 68,
     fecha: '2026-08-30',
