@@ -837,9 +837,10 @@
     border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom, 0px);
     box-shadow:0 -12px 32px rgba(0,0,0,0.45);overflow:hidden;
     transform:translateY(100%);transition:transform 260ms var(--ease-out);
+    touch-action:none; /* el arrastre para cerrar lo maneja el JS entero -- si no, el navegador compite con su propio scroll/rebote y se siente "trabado" */
   }
   .menu-agregar.visible{display:block;transform:translateY(0);}
-  .menu-agregar-agarradera{width:36px;height:4px;border-radius:2px;background:var(--borde-fuerte);margin:10px auto 6px;}
+  .menu-agregar-agarradera{width:40px;height:5px;border-radius:3px;background:var(--borde-fuerte);margin:12px auto 8px;}
   .menu-agregar button{
     display:block;width:100%;background:none;border:none;border-bottom:1px solid var(--borde);
     text-align:left;padding:14px 16px;font-family:var(--sans);font-size:13.5px;color:var(--texto);
@@ -7497,13 +7498,17 @@ function mostrarBackdropSheet(){
 function ocultarBackdropSheet(){
   document.getElementById('sheet-backdrop').classList.remove('visible');
 }
+const MEDIA_SHEET_MOVIL = window.matchMedia('(max-width:899px)');
+
 function abrirMenuAgregarSheet(idMenu){
   document.getElementById(idMenu).classList.add('visible');
   mostrarBackdropSheet();
+  if(MEDIA_SHEET_MOVIL.matches) document.body.style.overflow = 'hidden'; // que la página de atrás no se mueva mientras el sheet está abierto -- si no, el gesto de arrastrar se siente doble/confuso
 }
 function cerrarMenuAgregarSheet(idMenu){
   document.getElementById(idMenu).classList.remove('visible');
   ocultarBackdropSheet();
+  document.body.style.overflow = '';
 }
 
 function cerrarTodosLosMenusAgregar(){
@@ -7512,36 +7517,58 @@ function cerrarTodosLosMenusAgregar(){
   document.getElementById('btn-fab-cuentas')?.classList.remove('abierto');
 }
 
-// Arrastrar el "agarradera" (la barrita del sheet) hacia abajo lo cierra --
-// acotado a esa barrita, no a todo el sheet, para no confundirse con tocar
-// uno de los botones de la lista.
+// Arrastrar el sheet hacia abajo lo cierra. Primera versión solo escuchaba
+// en la "agarradera" (la barrita visual) -- reportado por el usuario que no
+// fluía, porque esa barrita mide unos 36×4px, un blanco casi imposible de
+// tocar bien con el dedo (mínimo recomendado 44×44). Ahora escucha en todo
+// el sheet, con el mismo patrón de "no reaccionar hasta que de verdad se
+// mueva" que ya usa activarSwipeEliminarGasto -- un toque corto en un botón
+// nunca llega a los 8px de movimiento, así que nunca se confunde con un
+// arrastre y los botones se siguen pudiendo tocar normal.
 function inicializarSwipeSheet(idMenu, alCerrar){
   const menu = document.getElementById(idMenu);
-  const agarradera = menu?.querySelector('.menu-agregar-agarradera');
-  if(!agarradera || menu.dataset.swipeListo) return;
+  if(!menu || menu.dataset.swipeListo) return;
   menu.dataset.swipeListo = '1';
-  let inicioY = null;
+  const backdrop = document.getElementById('sheet-backdrop');
+  let arrastre = null;
 
-  agarradera.addEventListener('touchstart', (e) => {
-    if(REDUCIR_MOVIMIENTO) return;
-    inicioY = e.touches[0].clientY;
-    menu.style.transition = 'none';
+  menu.addEventListener('touchstart', (e) => {
+    if(REDUCIR_MOVIMIENTO || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    arrastre = { inicioX: t.clientX, inicioY: t.clientY, inicioT: Date.now(), mover: false, altoSheet: menu.offsetHeight || 1 };
   }, { passive: true });
 
-  agarradera.addEventListener('touchmove', (e) => {
-    if(inicioY === null) return;
-    const dy = e.touches[0].clientY - inicioY;
-    if(dy > 0) menu.style.transform = `translateY(${dy}px)`;
-  }, { passive: true });
+  menu.addEventListener('touchmove', (e) => {
+    if(!arrastre) return;
+    const t = e.touches[0];
+    const dy = t.clientY - arrastre.inicioY;
+    const dx = t.clientX - arrastre.inicioX;
+    if(!arrastre.mover){
+      if(Math.abs(dy) < 8 && Math.abs(dx) < 8) return; // todavía no se sabe si es un toque o un arrastre
+      if(dy < 0 || Math.abs(dx) > Math.abs(dy)){ arrastre = null; return; } // hacia arriba u horizontal -- no es este gesto
+      arrastre.mover = true;
+      menu.style.transition = 'none';
+    }
+    e.preventDefault();
+    menu.style.transform = `translateY(${dy}px)`;
+    backdrop.style.opacity = String(Math.max(0, 1 - dy / arrastre.altoSheet));
+  }, { passive: false });
 
-  agarradera.addEventListener('touchend', (e) => {
-    if(inicioY === null) return;
-    const dy = e.changedTouches[0].clientY - inicioY;
+  const soltar = (e) => {
+    if(!arrastre) return;
     menu.style.transition = '';
-    menu.style.transform = '';
-    inicioY = null;
-    if(dy > 80) alCerrar();
-  });
+    backdrop.style.opacity = '';
+    if(arrastre.mover){
+      const t = e.changedTouches[0] || { clientY: arrastre.inicioY };
+      const dy = t.clientY - arrastre.inicioY;
+      const velocidad = dy / Math.max(Date.now() - arrastre.inicioT, 1); // px/ms -- un manotazo rápido cierra aunque no haya llegado muy lejos
+      if(dy > arrastre.altoSheet * 0.3 || velocidad > 0.5) alCerrar();
+      else menu.style.transform = '';
+    }
+    arrastre = null;
+  };
+  menu.addEventListener('touchend', soltar);
+  menu.addEventListener('touchcancel', soltar);
 }
 
 function toggleMenuAgregar(){
@@ -14905,8 +14932,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 58;
+const VERSION_APP_ACTUAL = 59;
 const CHANGELOG_APP = [
+  {
+    version: 59,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Arreglado: deslizar hacia abajo para cerrar el menú de "+" no siempre respondía -- ahora funciona tocando cualquier parte del menú, no solo la barrita de arriba.'
+    ],
+    cambios_en: [
+      'Fixed: swiping down to close the "+" menu did not always respond -- now it works from anywhere on the menu, not just the small bar at the top.'
+    ]
+  },
   {
     version: 58,
     fecha: '2026-08-30',
