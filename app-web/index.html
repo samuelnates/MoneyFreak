@@ -1786,19 +1786,6 @@
       <option value="tipo" data-i18n="cuentas.orden_tipo">Orden: tipo de cuenta</option>
       <option value="liquidez" data-i18n="cuentas.orden_liquidez">Orden: liquidez primero</option>
     </select>
-    <select id="filtro-tipo-cuenta" aria-label="Filtrar cuentas por tipo" data-i18n-aria-label="cuentas.filtro_tipo_aria" onchange="renderListaCuentas()">
-      <option value="" data-i18n="cuentas.todos_tipos">Todos los tipos</option>
-      <option value="Efectivo" data-i18n="tipo_cuenta.efectivo">Efectivo</option>
-      <option value="Débito" data-i18n="tipo_cuenta.debito">Débito</option>
-      <option value="Ahorro" data-i18n="tipo_cuenta.ahorro">Ahorro</option>
-      <option value="Inversión" data-i18n="tipo_cuenta.inversion">Inversión</option>
-      <option value="Otra" data-i18n="tipo_cuenta.otra">Otra</option>
-    </select>
-    <select id="filtro-liquidez-cuenta" aria-label="Filtrar cuentas por liquidez" data-i18n-aria-label="cuentas.filtro_liquidez_aria" onchange="renderListaCuentas()">
-      <option value="" data-i18n="cuentas.liquidas_y_no">Líquidas y no líquidas</option>
-      <option value="liquida" data-i18n="cuentas.solo_liquidas">Solo líquidas</option>
-      <option value="no-liquida" data-i18n="cuentas.solo_no_liquidas">Solo no líquidas</option>
-    </select>
   </div>
   <div id="lista-cuentas-inversion" class="lista"></div>
   <button class="btn-grande" id="btn-agregar-cuenta" onclick="mostrar('vista-agregar-cuenta')" data-i18n="cuentas.agregar_cuenta">+ Agregar cuenta</button>
@@ -4314,17 +4301,11 @@ const TRADUCCIONES = {
     'cuentas.orden_alfabetico': 'Orden: alfabético',
     'cuentas.orden_tipo': 'Orden: tipo de cuenta',
     'cuentas.orden_liquidez': 'Orden: liquidez primero',
-    'cuentas.filtro_tipo_aria': 'Filtrar cuentas por tipo',
-    'cuentas.todos_tipos': 'Todos los tipos',
     'tipo_cuenta.efectivo': 'Efectivo',
     'tipo_cuenta.debito': 'Débito',
     'tipo_cuenta.ahorro': 'Ahorro',
     'tipo_cuenta.inversion': 'Inversión',
     'tipo_cuenta.otra': 'Otra',
-    'cuentas.filtro_liquidez_aria': 'Filtrar cuentas por liquidez',
-    'cuentas.liquidas_y_no': 'Líquidas y no líquidas',
-    'cuentas.solo_liquidas': 'Solo líquidas',
-    'cuentas.solo_no_liquidas': 'Solo no líquidas',
     'cuentas.agregar_cuenta': '+ Agregar cuenta',
     'cuentas.agregar_bien': '+ Agregar bien',
     'cuentas.ordenar_acciones_aria': 'Ordenar acciones',
@@ -5274,17 +5255,11 @@ const TRADUCCIONES = {
     'cuentas.orden_alfabetico': 'Sort: alphabetical',
     'cuentas.orden_tipo': 'Sort: account type',
     'cuentas.orden_liquidez': 'Sort: liquidity first',
-    'cuentas.filtro_tipo_aria': 'Filter accounts by type',
-    'cuentas.todos_tipos': 'All types',
     'tipo_cuenta.efectivo': 'Cash',
     'tipo_cuenta.debito': 'Debit',
     'tipo_cuenta.ahorro': 'Savings',
     'tipo_cuenta.inversion': 'Investment',
     'tipo_cuenta.otra': 'Other',
-    'cuentas.filtro_liquidez_aria': 'Filter accounts by liquidity',
-    'cuentas.liquidas_y_no': 'Liquid and non-liquid',
-    'cuentas.solo_liquidas': 'Liquid only',
-    'cuentas.solo_no_liquidas': 'Non-liquid only',
     'cuentas.agregar_cuenta': '+ Add account',
     'cuentas.agregar_bien': '+ Add asset',
     'cuentas.ordenar_acciones_aria': 'Sort stocks',
@@ -8322,8 +8297,6 @@ function renderListaCuentas(animar){
 
   const busqueda = (document.getElementById('buscar-cuentas')?.value || '').trim().toLowerCase();
   const orden = document.getElementById('orden-cuentas')?.value || 'creacion';
-  const filtroTipo = document.getElementById('filtro-tipo-cuenta')?.value || '';
-  const filtroLiquidez = document.getElementById('filtro-liquidez-cuenta')?.value || '';
   localStorage.setItem('pro_orden_cuentas', orden);
 
   const incluidas = cuentasInversionData.filter(c => c.incluir_patrimonio !== false);
@@ -8340,9 +8313,6 @@ function renderListaCuentas(animar){
   if(busqueda){
     lista = lista.filter(c => c.nombre.toLowerCase().includes(busqueda));
   }
-  if(filtroTipo) lista = lista.filter(c => (c.tipo || 'Inversión') === filtroTipo);
-  if(filtroLiquidez === 'liquida') lista = lista.filter(c => c.es_liquida !== false);
-  if(filtroLiquidez === 'no-liquida') lista = lista.filter(c => c.es_liquida === false);
 
   const comparadores = {
     creacion: (a, b) => new Date(a.created_at) - new Date(b.created_at),
@@ -14937,8 +14907,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 60;
+const VERSION_APP_ACTUAL = 61;
 const CHANGELOG_APP = [
+  {
+    version: 61,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Cuentas de inversión: se quitaron los filtros de "tipo" y "líquidas/no líquidas" -- se quedó solo el buscador y el orden.'
+    ],
+    cambios_en: [
+      'Investment accounts: removed the "type" and "liquid/non-liquid" filters -- just the search box and sort order remain.'
+    ]
+  },
   {
     version: 60,
     fecha: '2026-08-30',
