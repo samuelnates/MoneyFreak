@@ -1,48 +1,48 @@
-# Contexto del proyecto — Abuelo Inversiones Pro
+# Contexto del proyecto — Money Freak
 
-> **Qué es este archivo:** respaldo completo del contexto y el historial de decisiones de este proyecto, guardado dentro de la propia carpeta del código (`Desktop/abuelo-inversiones-pro/`) para que sobreviva aunque falle la app de Claude, se pierda una sesión, o se cambie de máquina/herramienta. Está pensado para que cualquier sesión nueva (Claude u otra IA) pueda leerlo y quedar al día sin tener que reconstruir la conversación desde cero.
+> **Qué es este archivo:** documentación de referencia completa de Money Freak, guardada dentro del propio repo (`app-web/CONTEXTO_PROYECTO.md`) para que cualquier persona o IA nueva pueda entrar y entender la app sin reconstruir la conversación desde cero. Tiene dos partes muy distintas:
+> - **Secciones de referencia** (esta, y las que van después de "0. Avances recientes"): estado *actual* de la app — se **reescriben** cada vez que quedan desactualizadas (no se acumulan versiones viejas aquí).
+> - **"0. Avances recientes"**: historial cronológico, **append-only** — nunca se edita ni se resume, solo se agrega una entrada nueva al principio (más nuevo primero) cada vez que hay un avance real (feature, bug, decisión). Es la fuente de verdad de "por qué" se hizo algo; las secciones de referencia son la fuente de verdad de "cómo está hoy".
 >
-> **Regla de mantenimiento:** cada vez que se haga un avance real en este proyecto (feature nueva, bug corregido, decisión de diseño, migración pendiente), hay que añadir una entrada nueva a este archivo — no reemplazar el historial, agregar al final de la sección correspondiente. Última actualización: **2026-08-19**.
+> **Regla de mantenimiento:** (1) agrega una entrada nueva en "0. Avances recientes" por cada avance real, nunca borres ni reescribas entradas viejas; (2) si ese avance cambia algo que ya describen las secciones de referencia (una tabla nueva, una pantalla nueva, un pendiente que se resolvió), actualiza también esa sección — así no se repite lo que pasó aquí: esta reescritura completa fue necesaria porque las secciones de referencia llevaban desde 2026-08-19 sin tocarse mientras el log siguió 75 partes más.
 >
-> **Este proyecto (`Desktop/abuelo-inversiones-pro/`) SÍ tiene git ahora — inicializado y subido 2026-08-19.** Antes no tenía control de versiones (todo se editaba y desplegaba directo desde esta carpeta local con `wrangler pages deploy` / `supabase functions deploy`). Se decidió con el usuario meterlo como **monorepo dentro del mismo repo `github.com/samuelnates/MoneyFreak`** (que hasta entonces solo tenía el wrapper nativo Capacitor de iOS/Android) en vez de crear un repo aparte:
->   - `app-web/` — este proyecto (la app real, lo que se despliega a moneyfreak.app). Historial propio preservado vía `git subtree add --prefix=app-web`.
->   - `app-nativa/` — el proyecto Capacitor que antes vivía en la raíz del repo (movido con `git mv`, mismo historial, sin recrear nada). El workflow de CI (`ios-build.yml`) se actualizó para apuntar a la nueva ruta (`working-directory: app-nativa`).
->   - La carpeta local `Desktop/abuelo-inversiones-pro/` sigue siendo donde se trabaja y se despliega (el remote `origin` de este repo local todavía no se configuró — el usuario puede correr `git remote add origin https://github.com/samuelnates/MoneyFreak.git` si quiere hacer push directo desde aquí en vez de repetir el proceso de `git subtree`).
->   - Motivo del cambio: el usuario quería continuar el trabajo desde **Claude Code en la web** (claude.ai/code), que necesita un repo de GitHub para tener acceso al código real — antes de esto, una sesión web solo encontraba el repo `MoneyFreak` (el nativo) y creía que el proyecto real llevaba una semana sin tocarse, cuando en realidad todo el trabajo pasaba por aquí, sin subir nunca a ningún lado.
->
-> **Migración SQL de `score_historico`: CONFIRMADA CORRIDA por el usuario el 2026-08-11.** Sin pendiente.
->
-> **Migración SQL de `transferencias`: CONFIRMADA CORRIDA por el usuario el 2026-08-12** (verificado en vivo — `select` a la tabla ya responde `200` en vez de `404`). Sin pendiente.
->
-> **Migración SQL de `compras_a_meses` (columnas `compra_meses_deuda_id`/`compra_meses_aplicado` en `gastos`): estuvo SIN APLICAR en producción desde que se construyó esa feature — causó que TODO guardado de gasto fallara (no solo compras a meses). Corregida en vivo 2026-08-18/19, ver detalle completo abajo.** Sin pendiente.
+> Última reescritura completa de las secciones de referencia: **2026-08-30**.
 
-## 0.1 Pendientes marcados por el usuario para resolver AL FINAL (no tocar todavía, solo recordar)
+## Resumen ejecutivo
 
-- **3 avatares seleccionables para Freaky (antes un solo diseño fijo) — pedido 2026-08-19, IMPLEMENTADO EN CÓDIGO, sin desplegar/migrar todavía.** Ver detalle técnico completo en "Avances recientes" 2026-08-19. Queda pendiente: (1) que el usuario corra la migración `20260819000000_avatar_asesor.sql`, (2) desplegar a producción (`wrangler pages deploy`, requiere `wrangler login` del usuario en el entorno donde se trabaje), (3) verificar en navegador real — no se pudo probar visualmente en este entorno.
-  - ~~Animación con las poses reales para `point`/`happy`~~ **IMPLEMENTADO 2026-08-19** — ver detalle en "Avances recientes". Corrección sobre lo que se dijo antes: las 18 imágenes que se pidieron son solo las mismas 6 poses que ya tenía Freaky (`flotando`/`pensando`/`hablando`/`sentado`/`sentado-recortado`/`avatar`), no hay poses dedicadas de "señalar" ni "festejo" como archivos aparte — la mejora real fue reasignar cuál de esas 4 poses base se muestra en cada gesto, no arte nuevo.
-- **App para iOS + publicación en App Store — pedido 2026-08-12, en progreso.** Repo `github.com/samuelnates/MoneyFreak` creado, plataforma iOS agregada, workflow de GitHub Actions (runner macOS gratuito) **compilando exitosamente** desde el 2026-08-13 — ver detalle completo en "Avances recientes". Inscripción en Apple Developer Program ya pagada por el usuario (cuenta Individual, 2FA activa) — pendiente de que Apple confirme la validación de identidad. Siguiente paso real: certificado de distribución + perfil de aprovisionamiento (paso 5 de la ruta acordada), una vez confirmada la cuenta.
-- **Conectar la app a la banca electrónica de los usuarios (solo lectura, sin mover dinero) — idea 2026-08-12, requiere decisión de negocio antes de tocar código.** Necesita contratar un agregador de open banking autorizado (el más relevante para México: Belvo) — tiene costo recurrente y revisión de cumplimiento, no es algo que se pueda "solo construir". **Pendiente de que el usuario decida presupuesto/proveedor — no evaluado a fondo.**
-- **"Scrapear" el score crediticio de los usuarios como valor agregado — idea 2026-08-12, desaconsejada tal como se planteó.** Obtener datos de buró de crédito sin una API autorizada y consentimiento explícito es legalmente riesgoso (términos de servicio + LFPDPPP, datos financieros de terceros). Se le explicó el riesgo al usuario y se sugirió buscar una API oficial/autorizada en vez de scraping si se retoma la idea. **Pausado, sin decisión del usuario todavía.**
-- ~~Cotizaciones de acciones mostraban $0 cuando no había precio disponible.~~ **RESUELTO 2026-08-05** — ver detalle en "Avances recientes". Queda pendiente aparte, no tocado: la idea de negocio de que cotizaciones más frecuentes/en tiempo real sean un beneficio exclusivo de una futura versión de pago — evaluar cuando se retome el tema de monetización.
-- ~~Face ID / biométricos~~ **IMPLEMENTADO 2026-08-05** (ver "Avances recientes"). La prueba en dispositivo real con biometría configurada **se deja de lado como pendiente explícito** — mismo caso que el login nativo con Google (ver abajo): solo se puede confirmar de verdad usando la app publicada en el mundo real, no tiene caso seguir marcándolo como tarea abierta antes de eso.
-- ~~Login nativo con Google (Android)~~ **IMPLEMENTADO** (PKCE + navegador del sistema + deep link) — la confirmación end-to-end en un dispositivo real **se deja de lado como pendiente explícito** a petición del usuario ("eliminalo hasta que salga la app podremos saber") — solo se sabrá con certeza cuando la app esté publicada y en uso real.
-- ~~Cotizaciones de acciones del papá del usuario~~ **RESUELTO POR COMPLETO 2026-08-07** — causa raíz (límite de 8 símbolos/minuto de Twelve Data) corregida en código el 2026-08-06; los 6 símbolos que necesitaban corrección manual (`BRK B*`→`BRK.B`, quitar asterisco de `LLY*`/`META*`/`MRK*`/`MSFT*`/`MU*`, precio manual para `1211N`) ya fueron corregidos por el usuario en la app. Sin pendiente.
-- ~~Agente de IA como valor agregado de pago~~ **IMPLEMENTADO como "Freaky", 2026-08-18** — mentor financiero conversacional con contexto financiero completo (`construirSnapshotFinanciero()`), personaje animado (GSAP + artwork real), y capacidad de proponer/escribir gastos, presupuesto, saldo de cuenta, ingresos y pagos de deuda (siempre con confirmación del usuario). Gate de acceso implementado como **código de acceso individual** (`accesos_ia_usuarios`), no como suscripción de pago recurrente — el usuario ya le dio acceso a su papá con este mecanismo. Si más adelante se quiere monetizar formalmente (tiers, cobro recurrente), es una capa aparte sobre este mismo sistema de acceso, no hay que reconstruir nada. Ver detalle completo en "Avances recientes".
-- ~~Conectar el registro de gastos con las cuentas/tarjetas de las que se pagan~~ **IMPLEMENTADO 2026-08-05** — ver "Avances recientes". Pendiente de correr la migración SQL y desplegar.
-- ~~Registrar gastos más rápido — Paso 1 (sin IA) IMPLEMENTADO 2026-08-05~~, rediseño completo del formulario. **Pasos 2 y 3, marcados pendientes en esa fecha, en realidad YA QUEDARON IMPLEMENTADOS el 2026-08-18 como parte de Freaky — esta nota nunca se había actualizado para reflejarlo (descubierto y corregido el 2026-08-20, al revisar pendientes con el usuario).**
-  - ~~Paso 2: categorización automática por texto libre con IA~~ **IMPLEMENTADO** — describírselo a Freaky en el chat (ej. "Uber al aeropuerto, 200 pesos") lo categoriza solo (categoría, subcategoría, medio de pago, si es a meses o recurrente) y propone el gasto con un botón de confirmar (`preguntar-sobre-app`, campo `accion`/`proponer_gasto`). Vive dentro de la conversación con Freaky, no como autocompletado del formulario manual — el usuario confirmó 2026-08-20 que esto ya cubre la necesidad, no hace falta construir la versión de autocompletado en el formulario aparte.
-  - ~~Paso 3: foto de ticket/recibo con OCR/visión~~ **IMPLEMENTADO** — Edge Function `procesar-solicitud-gasto` (usa OpenAI, visión sobre la foto) llena los campos y guarda una fila en `solicitudes_gasto_pendientes`; el usuario la revisa y aprueba/rechaza desde "Aprobaciones" (dentro de Gastos) antes de que cuente — nunca se guarda directo. Conectado end-to-end en `index.html` (captura de foto → llamada a la función → cola de aprobaciones → aprobar/rechazar).
-  - Ambos pasos requieren el mismo código de acceso de IA (`accesos_ia_usuarios`) que el resto de las funciones de Freaky — no son gratis para todo usuario, a diferencia del formulario manual del Paso 1.
-- ~~Notificaciones push configurables~~ **IMPLEMENTADO 2026-08-06** — ver "Avances recientes".
-- **Tutorial paso a paso de cómo sacarle provecho a la app — EN DEFINICIÓN 2026-08-07.** Se descartó la idea original de video grabado/narrado (resolvía mal la pregunta de "¿quién lo graba/narra?"). Nuevo enfoque acordado: yo genero el material (capturas reales de la app + texto explicativo paso a paso, estilo "script") y se decide formato final de publicación. Pendiente confirmar con el usuario el formato exacto (página HTML dentro de la app, materiales para armar un video con IA, PDF descargable, o documento editable tipo Notion) antes de construirlo.
-- ~~Proveedor de cotizaciones complementario (ej. Finnhub) para cubrir símbolos de la BMV~~ **CANCELADO 2026-08-07** a petición del usuario — no se persigue más.
-- **Roadmap 2026-08-10, basado en feedback externo (un amigo del usuario con background de producto, y una lluvia de ideas con la novia del usuario).** Decidido con el usuario vía preguntas explícitas antes de construir. Orden de prioridad confirmado: **Fase A primero, todo lo demás después** (evita dispersar esfuerzo antes de validar el diferenciador, que es justo lo que pedía el feedback del amigo).
-  - **Fase A — de "tracking" a "decisión" (COMPLETA 2026-08-10).** A1: motor de insights sin IA en el Panel — **IMPLEMENTADO**, ver detalle abajo. A2: notificaciones push con contenido de insight real — **IMPLEMENTADO**, ver detalle abajo. A3: onboarding progresivo ligero — **IMPLEMENTADO**, ver detalle abajo. Decisión técnica tomada para A3 (quedaba pendiente): los 5 números se convierten directo en el primer registro real de cada tabla (ingreso, cuenta líquida, deuda, cuenta de ahorro) en vez de vivir como "estimado" aparte — evita una migración SQL nueva y el usuario los edita después con las pantallas normales de siempre.
-  - **Widget de captura rápida de gastos — IMPLEMENTADO 2026-08-10** (dentro de Fase A, a petición explícita del usuario, no parte del feedback original). Decisiones confirmadas con el usuario: (1) alcance = atajo que abre la app directo en "Registrar gasto" reusando el deep link ya construido para el regreso del login de Google — NO captura nativa sin abrir la app; (2) plataforma = solo Android por ahora. Ver detalle completo en "Avances recientes".
-  - **Fase B — Viajes, después de A (NO INICIADA, salvo navegación con scroll lateral — ver abajo, adelantada 2026-08-10 a petición del usuario).** Nueva sección con el mismo patrón CRUD que Ingresos/Cuentas/Bienes/Acciones/Deudas: viajes (nombre, fechas, presupuesto, moneda) + gastos vinculados a un viaje + ahorro/meta del viaje. Idea de la novia del usuario. Widget nativo de viajes: proyecto técnico aparte.
-  - **Navegación móvil — IMPLEMENTADA 2026-08-10, dos rondas.** Primera ronda: franja de pestañas con scroll lateral (arriba, 7 secciones). El usuario la rechazó tras verla en uso real ("está pésima... ya me estoy hartando de los chips") y mandó capturas de la app competidora **Finno** (`finno_mx`, anuncio de Instagram) como referencia de lo que sí quería. Segunda ronda, la que quedó: **barra inferior fija** con 5 destinos + botón "+" central elevado, mismo patrón estructural que Finno pero con la paleta monocromática propia (no se copió su estética de colores). Ver detalle completo en "Avances recientes".
-  - **Inteligencia competitiva de Finno (`finno_mx`), capturada 2026-08-10 para referencia futura, NO implementada todavía:** calendario mensual de gastos con puntos de color por día; dashboard con "Sincroniza tu banco" (open banking, +30 bancos) — Mis Cuentas Pro es 100% captura manual, esto es una brecha real de fricción; salud financiera con score único 0-100 (no solo texto) + 4 sub-scores (Flujo de caja/Distribución/Ahorro/Emergencia) en grid 2x2; presupuestos con gauge circular de calificación + conteo "X en rango, Y en riesgo, Z excedidos"; análisis con "Top categorías del mes" mostrando % de cambio vs. mes anterior (muy cercano a lo que ya hace el insight de A1, podría inspirar cómo mostrarlo mejor). La sincronización bancaria (Bancos+) es la brecha más grande pero también la más cara/compleja — no evaluada a fondo, solo anotada.
-  - **Fase C — "Girly Finances", después de A y B (NO INICIADA).** Producto aparte, idea de la novia del usuario. Decisión confirmada con el usuario: mismo patrón que la versión "light" ya descontinuada — carpeta/deploy propios, dominio/nombre propios, pero **comparte el proyecto de Supabase** (mismo login, mismas cuentas) — reutiliza ~90% del código y el motor de insights de la Fase A. Identidad visual nueva (paleta tipo tamagotchi) + mismos títulos técnicos con "flechita"/tooltip que explica en lenguaje coloquial (sin tecnicismos) + gamificación (mascota/planta animada cuyo estado depende de comportamiento financiero real: gasto vs. presupuesto, patrimonio subiendo/bajando, deuda — reglas mascota↔métrica sin definir todavía). Widget también aquí, mismo trabajo técnico que en Fase B.
+Money Freak es una app web de finanzas personales en español (**una sola página**, `index.html`, HTML/CSS/JS plano sin framework, ~15 400 líneas) para llevar patrimonio completo: cuentas, bienes, acciones, deudas, ingresos, gastos/presupuesto, salud financiera y flujo de efectivo, con un simulador de crédito y un asistente conversacional con IA (**Freaky**). Nació como app sencilla para el abuelo del usuario y evolucionó a un producto único llamado **Money Freak** (antes "Mis Cuentas Pro" / "Abuelo Inversiones Pro" — el nombre visible cambió, el nombre técnico interno de carpeta/proyecto/dominio de Cloudflare no).
+
+Está en producción en **https://moneyfreak.app** (dominio propio, alias del proyecto de Cloudflare Pages `abuelo-inversiones-pro`), con backend en Supabase (Postgres + Auth + Edge Functions), y también existe como app nativa iOS/Android vía Capacitor (repo hermano `app-nativa/` en el mismo monorepo), actualmente en revisión ante Apple para el App Store.
+
+Filosofía de diseño no negociable: **botones grandes, pocas opciones, sin complicaciones**. No se cambia sin que el usuario lo pida explícitamente.
+
+## Pendientes consolidados
+
+Todo pendiente real disperso en el historial, en un solo lugar. Verificado contra el código donde fue posible — varios que el doc viejo daba por abiertos ya estaban resueltos y nadie había actualizado la nota (ver "Discrepancias encontradas" al final de esta sección).
+
+**Bloqueados por terceros / esperando al usuario:**
+- **App Store (iOS): en revisión.** Pipeline de CI completo (GitHub Actions firma, archiva y sube a App Store Connect solo). Apple rechazó una primera vez (Guideline 2.1); se corrigieron 3 bugs reales encontrados grabando el video de respuesta y se reenvió el 2026-08-28. **Esperando la respuesta de Apple** — puede tardar horas o días. Si Apple pide algo más, retomar desde la parte 69 del log.
+- **App Store: riesgo estructural de `server.url`** (la app nativa carga el sitio remoto en vez de bundlear el HTML) — documentado, no resuelto, requiere decisión explícita antes de publicar (ver detalle en el log, partes 30/35).
+- **Face ID y login nativo con Google (Android): implementados en código, sin confirmar en dispositivo real** — a propósito, el usuario decidió no seguir marcándolos como tarea abierta hasta que la app esté publicada y en uso real.
+- **Client secret de Sign in with Apple expira 2027-02-24** — hay que regenerarlo antes de esa fecha o el login con Apple deja de funcionar sin aviso.
+
+**Decisiones de negocio pendientes (no es código, requiere que el usuario decida):**
+- **Conectar la app a banca electrónica (open banking, solo lectura)** — necesita contratar un agregador autorizado (candidato: Belvo, México), tiene costo recurrente. Sin evaluar a fondo, sin presupuesto/proveedor decidido.
+- **"Scrapear" score crediticio de buró** — desaconsejado (riesgo legal real, LFPDPPP + términos de servicio de terceros). Pausado, sin retomarse.
+- **Monetización formal** (tiers, cobro recurrente) — hoy Freaky se gatea por código de acceso individual (`accesos_ia_usuarios`), actualmente **abierto a todos sin código** (`GATE_CODIGO_IA_ACTIVO = false` en las 3 Edge Functions de IA — se reactiva con ese flag si el uso satura la cuenta de OpenAI). El flag `perfil_financiero.sin_anuncios` y el sistema de referidos ya existen, pero **no hay ningún sistema de anuncios construido todavía** — es una recompensa preparada para una monetización que aún no se decide ni se construye.
+- **Cotizaciones de acciones en tiempo real como beneficio exclusivo de pago** — anotado como idea, no evaluado.
+- **Tutorial paso a paso de la app** — en definición desde 2026-08-07, formato de publicación sin decidir (¿página HTML in-app? ¿material para video con IA? ¿PDF?).
+- **Fase B (Viajes)** y **Fase C ("Girly Finances")** del roadmap — no iniciadas. Girly Finances es una app hermana (idea de la novia del usuario): mismo patrón que la vieja versión "light" descontinuada — carpeta/deploy/dominio propios pero **comparte el proyecto de Supabase** (mismo login), reutilizando ~90% del código y el motor de insights. Ver la sección "Cómo replicar esta app" más abajo — es el ejemplo concreto de qué tan reutilizable es esta base.
+- **Apple Server-to-Server Notifications** (`apple-notificaciones`): solo registra el evento en el log todavía, no verifica la firma criptográfica ni conecta `account-delete` con el borrado real de cuenta — a propósito, para no abrir un hueco de seguridad. Falta el Services ID para poder verificar contra `appleid.apple.com/auth/keys`.
+
+**Ya resueltos (el doc viejo los daba por abiertos):**
+- Los 6 avatares de Freaky (ya no son 3) están migrados y en producción — la nota vieja de "sin desplegar/migrar todavía" quedó obsoleta.
+- Todas las migraciones SQL listadas en `supabase/migrations/` están aplicadas en producción (confirmado contra el esquema real vía la Management API de Supabase el 2026-08-30) — la nota vieja de "estado incierto, verificar" ya no aplica.
+- El nombre y dominio nuevos (antes "pausado, sin decisión final") sí se decidieron: **Money Freak**, dominio propio `moneyfreak.app` conectado desde 2026-08-10.
+- La notificación push para recordar actualizar saldos (antes "no construida") sí está construida — `notif_saldos_frecuencia`, configurable en Configuración → Notificaciones.
+- El remote `origin` de git (antes "todavía no configurado") ya está configurado (`github.com/samuelnates/MoneyFreak`).
+
+**Discrepancias encontradas al reescribir este documento (2026-08-30):** el doc de referencia llevaba desactualizado desde 2026-08-19 mientras el log siguió 75 partes más — todo lo de "ya resueltos" arriba, más: el proyecto pasó de tener 3 avatares de Freaky a 6 (con sistema de referidos completo), apareció un panel de administración entero (`admin.html`, 8 pestañas de KPIs) que el doc viejo no mencionaba, apareció el registro de negocio propio (`negocio_movimientos`), el sistema de referidos, el Service Worker/PWA offline, la pantalla "Score" (que se fusionó con Salud financiera), y Freaky pasó de ser un mentor de texto a poder ver fotos de tickets, escuchar notas de voz y proponer gastos directamente. Nada de esto vivía en las secciones 1-9 viejas.
 
 ## 0. Avances recientes (más nuevo primero)
 
@@ -1062,199 +1062,252 @@
 
 ---
 
-## 1. Resumen del proyecto
+## 1. Stack técnico y arquitectura
 
-> **Nombre visible actual: "Money Freak"** (cambiado el 2026-08-10, ver entrada correspondiente en "Avances recientes" — antes "Mis Cuentas Pro"). El nombre interno de la carpeta/proyecto (`abuelo-inversiones-pro`, dominio `abuelo-inversiones-pro.pages.dev`, `appId` de Android `com.miscuentaspro.app`) **no cambió** — solo el texto que ve el usuario dentro de la app y las páginas públicas. Las entradas de este historial anteriores a esa fecha dicen "Mis Cuentas Pro" a propósito, reflejan el nombre real en el momento en que se escribieron.
+**Frontend:**
+- `index.html` — toda la app: HTML + CSS (variables custom, sin framework) + JS plano, ~15 400 líneas, una sola página con ~50 "pantallas" (`.pantalla`) mostradas/ocultadas con `mostrar(idVista)`.
+- Librerías vía CDN (sin build step, sin npm en el frontend): `@supabase/supabase-js@2`, Chart.js 4 (gráficas), jsPDF 2.5.1 (exportar PDF), GSAP 3.12.5 (animación de Freaky).
+- `config.js` — variables públicas cargadas antes que `index.html`, ver más abajo.
+- `manifest.json` + `sw.js` — PWA instalable con soporte offline básico (cascarón, no datos — ver sección de Funcionalidades).
+- Páginas públicas independientes (sin JS, sin Supabase, no pueden romperse si la app falla): `privacidad.html`, `borrar-datos.html`, `soporte.html`.
+- `admin.html` — panel de administración, página aparte (ver sección de Funcionalidades).
 
-App web de finanzas personales en español, **una sola página** (`index.html`, ~7000 líneas, HTML/CSS/JS plano sin framework ni build step) + `config.js` con las llaves. Nació como app sencilla para el abuelo del usuario (Gastón) y evolucionó en dos productos:
+**Backend:** Supabase (Postgres + Auth + RLS + Edge Functions), proyecto ref `vtjljpwcyiaaaqbqstvj`. El cliente llama a `sb.from(...)` directo desde cientos de lugares de `index.html` — no hay capa de datos local ni caché de escritura (relevante para cualquier plan de "offline-first de verdad", ver Funcionalidades → Offline/PWA).
 
-- **`abuelo-inversiones`** (la "light"): versión gratuita simple, solo cuentas de inversión. **DESCONTINUADA el 2026-07-30** — el usuario decidió que Pro fuera el único producto activo. Su `index.html` fue reemplazado por una redirección automática a Pro; el original quedó respaldado como `index_light_original_backup.html` en esa misma carpeta.
-- **`abuelo-inversiones-pro`** (esta carpeta): producto activo. Patrimonio completo — cuentas, bienes, acciones, deudas, ingresos, gastos/presupuesto, salud financiera, flujo de efectivo, simulador de crédito, balance general con PDF exportable.
+**Edge Functions** (Deno, en `supabase/functions/`), cada una con CORS abierto y su propia verificación de JWT:
 
-Ambas apps **comparten el mismo proyecto de Supabase** (`vtjljpwcyiaaaqbqstvj`) a propósito, para que el login y las cuentas básicas sean uno solo — decisión explícita del usuario.
+| Function | Qué hace |
+|---|---|
+| `preguntar-sobre-app` | Chat de Freaky: responde dudas de la app y de la situación financiera real del usuario (usa el snapshot que ya calcula el cliente), puede proponer gastos/registros con confirmación explícita. Usa OpenAI (`gpt-5.4-mini`) + transcripción de audio. |
+| `procesar-solicitud-gasto` | Recibe una foto de ticket (cámara o galería), extrae los datos con OpenAI y visión, guarda una fila **pendiente** en `solicitudes_gasto_pendientes` — nunca escribe `gastos` directo. |
+| `radiografia-mensual` | Recibe un snapshot financiero ya calculado por el cliente, usa OpenAI solo para redactar/interpretar (nunca para calcular cifras), valida con Zod, guarda en `reportes_financieros`. |
+| `canjear-codigo-ia` | Canjea un código de acceso a las funciones de IA (`accesos_ia_usuarios`) — actualmente sin efecto real, el gate está desactivado (ver Pendientes). |
+| `referidos` | Sistema de "invita a un amigo": lee el conteo de referidos activados, resuelve el canje de código al registrarse, calcula qué avatares/recompensas hay que desbloquear. |
+| `eliminar-mi-cuenta` | Borra por completo la cuenta de quien llama (todas las tablas de `_shared/cuenta.ts::TABLAS_A_BORRAR` + `auth.users`) — requisito de Apple Guideline 5.1.1(v). |
+| `apple-notificaciones` | Endpoint Server-to-Server de Sign in with Apple — hoy solo registra el evento en el log, no verifica firma ni actúa (ver Pendientes). |
+| `panel-admin-kpis` | KPIs del panel de administración (crecimiento, activación, uso, salud, altas recientes). Solo `CORREOS_ADMIN`. |
+| `admin-usuarios` | Acciones reversibles sobre OTRO usuario desde el panel: banear/desbanear, editar correo. Solo `CORREOS_ADMIN`. |
+| `admin-eliminar-usuario` | Borra por completo la cuenta de OTRO usuario, a petición del admin — mismo alcance que `eliminar-mi-cuenta`. Solo `CORREOS_ADMIN`. |
+| `admin-logs` | Lee logs reales de Edge Functions/Postgres vía la Management API de Supabase, para el panel. Requiere el secreto `SB_MANAGEMENT_TOKEN`. Solo `CORREOS_ADMIN`. |
+| `negocio-movimientos` | CRUD de la contabilidad propia del negocio (`negocio_movimientos`) — inversión, gastos operativos, ingresos. Solo `CORREOS_ADMIN`. |
+| `_shared/cuenta.ts` | Constante `TABLAS_A_BORRAR` compartida entre `eliminar-mi-cuenta` y `admin-eliminar-usuario`. |
+| `_shared/gastos.ts` | `CATALOGO_GASTOS` y helpers de validación compartidos entre las Edge Functions de IA que categorizan gastos. |
 
-**Filosofía de diseño no negociable:** botones grandes, pocas opciones, sin complicaciones. Nada de esto se cambia sin que el usuario lo pida explícitamente.
+`CORREOS_ADMIN` está hardcodeado en cada función admin (hoy solo `samuelnates@gmail.com`) — para dar acceso a otra persona hay que agregar su correo en la lista de **cada** función admin y redesplegar.
 
----
+**APIs externas:**
+- **Twelve Data** — cotizaciones de acciones, plan gratis ~800 consultas/día, no cubre símbolos directos de la BMV (solo mercado de EUA y ADRs).
+- **Frankfurter.dev + CoinGecko** — tipos de cambio, gratis sin key.
+- **OpenAI** (`gpt-5.4-mini`, `gpt-4o-mini-transcribe`) — todas las funciones de Freaky (chat, foto de ticket, radiografía, transcripción de voz). Llamado solo desde Edge Functions, la API key nunca llega al cliente.
+- **Cloudflare Turnstile** — captcha en registro.
+- **Resend** — SMTP propio para correos de Supabase Auth (dominio `moneyfreak.app` verificado), reemplazó el mailer gratuito de Supabase (tope de 2 correos/hora).
 
-## 2. Stack técnico y deploy
-
-- **Frontend:** HTML/CSS/JS plano (sin framework), Chart.js (gráficas), jsPDF (exportar PDF), todo vía CDN.
-- **Backend:** Supabase (Postgres + Auth + RLS), proyecto ref `vtjljpwcyiaaaqbqstvj`.
-- **APIs externas:** Twelve Data (cotizaciones de acciones, plan gratis ~800 consultas/día — **no cubre símbolos directos del BMV**, solo mercado de EUA y ADRs como AMX/FMX/CX), Frankfurter.dev + CoinGecko (tipos de cambio, gratis sin key).
-- **Captcha:** Cloudflare Turnstile.
-- **Hosting/deploy:** Cloudflare Pages vía Wrangler.
+**Hosting y deploy:**
+- Cloudflare Pages vía Wrangler. Nombre del proyecto en Cloudflare: **`abuelo-inversiones-pro`** (quedó con el nombre viejo, es solo un identificador interno — no se ve en ningún lado de la app ni afecta nada, es normal no renombrarlo).
   ```bash
   npx wrangler pages deploy . --project-name=abuelo-inversiones-pro --branch=main
   ```
-  URL producción: https://abuelo-inversiones-pro.pages.dev
-  Preview local: puerto 5502, configurado en el `launch.json` raíz de `Desktop/`.
-- **`config.js`** contiene: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (pública, segura de exponer), `TWELVE_DATA_API_KEY`, `TURNSTILE_SITE_KEY` (pública), y estos opcionales que activan su feature solo si tienen valor (vacíos/ausentes = esa parte del código no hace nada, ver parte 39): `APPLE_APP_STORE_ID` (Smart Banner de Safari — el "Apple ID" numérico de App Information en App Store Connect, no el Bundle ID), `TIKTOK_URL`/`INSTAGRAM_URL` (enlaces en Configuración → Síguenos). `SENTRY_DSN` ya no aplica — se quitó Sentry (parte 38).
-- **`_headers`**: `Cache-Control: no-cache, must-revalidate` en `/*` — se agregó tras un bug de caché agresivo de Cloudflare Pages con este archivo único sin hash.
+- **URL de producción real: https://moneyfreak.app** (dominio propio comprado en GoDaddy, conectado como dominio externo de Cloudflare Pages desde 2026-08-10). `https://abuelo-inversiones-pro.pages.dev` sigue funcionando como URL de respaldo del mismo deploy.
+- Edge Functions: `supabase functions deploy <nombre>` (o vía la Management API si `SUPABASE_ACCESS_TOKEN` está en el entorno).
+- `_headers`: `Cache-Control: no-cache, must-revalidate` en `/*` (bug de caché agresivo de Cloudflare con este archivo único) + `Content-Type: application/json` forzado para los archivos de Universal Links/App Links (`apple-app-site-association`, `assetlinks.json`).
+
+**`config.js`** — variables públicas, cargadas antes que `index.html`:
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY` — públicas por diseño (protegidas por RLS, no por secreto).
+- `TWELVE_DATA_API_KEY`, `TURNSTILE_SITE_KEY` (pública).
+- `TIKTOK_URL` / `INSTAGRAM_URL` — enlaces en Configuración → Síguenos, solo se muestran si tienen valor.
+- `APPLE_APP_STORE_ID` — Apple ID numérico (no el Bundle ID) para el Smart Banner de Safari; vacío hasta que la app esté aprobada.
+- Secretos reales (`OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SB_MANAGEMENT_TOKEN`, Turnstile Secret Key, credenciales de Apple/Resend) viven **solo** como variables de entorno de las Edge Functions / dashboard de Supabase, nunca en `config.js` ni en el repo.
+
+**Monorepo:** este proyecto (`app-web/`) vive junto con la app nativa Capacitor (`app-nativa/`) en `github.com/samuelnates/MoneyFreak`. `app-nativa/` es un wrapper Capacitor que (hoy) carga `server.url` apuntando al sitio remoto en vez de bundlear `index.html` — ver Pendientes para el riesgo asociado. El workflow de CI `ios-build.yml` (GitHub Actions, runner macOS) compila, firma y sube el `.ipa` a App Store Connect automáticamente.
 
 ---
 
-## 3. Regla fija: credenciales y cuentas externas
+## 2. Regla fija: credenciales y cuentas externas
 
-**Nunca creo cuentas en servicios externos (Supabase, Cloudflare, GitHub, etc.) ni escribo/ingreso contraseñas**, aunque se pida explícitamente. Es un límite de seguridad fijo. En su lugar: hago todo lo que sí puedo (código, SQL, deploy, pruebas) y doy pasos numerados y concretos para la parte de credenciales, verificando el resultado por otros medios (ej. confirmando que una policy RLS bloquea acceso anónimo, sin necesitar la contraseña).
+**Nunca crear cuentas en servicios externos (Supabase, Cloudflare, GitHub, Apple, etc.) ni escribir/ingresar contraseñas**, aunque se pida explícitamente. Es un límite de seguridad fijo. En su lugar: hacer todo lo que sí se puede (código, SQL, deploy, pruebas) y dar pasos numerados y concretos para la parte de credenciales, verificando el resultado por otros medios (ej. confirmar que una policy RLS bloquea acceso anónimo, sin necesitar la contraseña).
 
 ---
 
-## 4. Modelo de datos (tablas en Supabase, todas con RLS `auth.uid() = user_id` + policy espejo `to anon` para la cuenta de muestra)
+## 3. Modelo de datos
 
-- `cuentas` / `saldos` — compartida con la app light. Columnas Pro añadidas: `institucion`, `tipo`, `es_liquida`, `categoria`, `incluir_patrimonio`, `importancia_manual` (1-5), `notas`, `aportacion_mensual`, `dia_aportacion`. (`ultimos_digitos` existe en la tabla pero **ya no se usa** — se eliminó de la UI por razones de seguridad, columna no dropeada).
-- `bienes` (nombre, tipo: Inmueble/Vehículo/Otro, valor, moneda) + `bienes_historico` (snapshot en cada guardado).
-- `deudas` (nombre, tipo, saldo, moneda, tasa_interes, `pago_mensual`, `limite_credito`, `anualidad`, `cashback_pct`, `gasto_mensual_promedio`, `dia_corte`, `dia_limite_pago`, `monto_proximo_pago`) + `deudas_historico`. Las tarjetas de crédito viven aquí (tipo='Tarjeta de crédito'), no en tabla aparte — decisión de arquitectura deliberada (fuente única de verdad).
-- `acciones` (simbolo, cantidad, + `precio_manual`/`moneda_manual`/`precio_manual_fecha` para símbolos no soportados por Twelve Data, ej. BMV).
-- `ingresos` (nombre, monto, moneda, `dia_del_mes` nullable — reemplazó por completo el viejo esquema de "sueldo fijo" en `perfil_financiero`).
-- `gastos` (fecha, categoria, subcategoria, monto, moneda, nota) y `presupuestos` (categoria, subcategoria, monto_mensual, moneda, unique en user_id+categoria+subcategoria).
-- `perfil_financiero` (PK `user_id`, `umbral_amarillo` default 20, `umbral_rojo` default 35, `meses_cobertura_objetivo` default 3). **`ingreso_mensual`, `dia_pago_sueldo_1`, `dia_pago_sueldo_2` quedaron deprecados** (reemplazados por la tabla `ingresos`) — columnas siguen ahí sin usarse, no se borraron.
-- `patrimonio_historico` (fecha, patrimonio_neto, unique(user_id,fecha) — se auto-guarda al abrir el balance general, salvo en modo demo).
-- `score_historico` (fecha, score, liquidez, endeudamiento, presupuesto, tendencia, unique(user_id,fecha) — se auto-guarda al abrir Inicio, salvo en modo demo).
-- `transferencias` (fecha, tipo: transferencia/pago_deuda, cuenta_origen_id, cuenta_destino_id nullable, deuda_destino_id nullable, monto, moneda, nota) — mueve saldo entre cuentas propias o abona a una deuda desde una cuenta, sin contar como gasto real.
+Todas las tablas de datos de usuario tienen RLS `auth.uid() = user_id` (o vía join a una tabla padre) **más una policy espejo `to anon` que solo deja pasar el `user_id` de la cuenta de muestra** — verificado en vivo contra las policies reales de Postgres el 2026-08-30. Las tablas de negocio/administración (`negocio_movimientos`, `referidos`, `accesos_ia_usuarios`, `codigos_acceso_ia`) tienen RLS activado **sin ninguna policy** — solo las Edge Functions con la service role key (que ignora RLS) pueden tocarlas.
 
-**Catálogo de gastos** (`CATALOGO_GASTOS`, constante JS, NO tabla): 11 categorías fijas (Vivienda, Transporte, Alimentación, Salud, Entretenimiento, Educación, Cuidado personal, Mascotas, Servicios y suscripciones, Ahorro e inversión, Otros) con 3-5 subcategorías cada una. Incluye `'Empleada del hogar'` (Vivienda), `'Crédito de auto'` (Transporte), `'Vacaciones'` (Entretenimiento) agregados a petición del usuario.
+**Tablas de datos financieros del usuario:**
+- `cuentas` / `saldos` — cuentas de inversión/bancarias. `cuentas`: nombre, tipo, moneda, institución, `es_liquida`, `categoria`, `incluir_patrimonio`, `importancia_manual` (1-5), notas, `aportacion_mensual`, `dia_aportacion`, `tasa_interes`. (`ultimos_digitos` existe en la tabla pero ya no se usa en la UI, por seguridad — columna no eliminada.)
+- `bienes` (nombre, tipo, valor, moneda) + `bienes_historico` (snapshot en cada guardado).
+- `deudas` (nombre, tipo, saldo, moneda, tasa, `pago_mensual`, `limite_credito`, `anualidad`, `cashback_pct`, `gasto_mensual_promedio`, `dia_corte`, `dia_limite_pago`, `monto_proximo_pago`) + `deudas_historico`. Las tarjetas de crédito viven aquí (`tipo='Tarjeta de crédito'`), no en tabla aparte — fuente única de verdad del patrimonio.
+- `acciones` (símbolo, cantidad, + `precio_manual`/`moneda_manual`/`precio_manual_fecha` para símbolos que Twelve Data no cubre, ej. BMV).
+- `ingresos` (nombre, monto, moneda, `periodicidad` mensual/semestral/anual, `dia_del_mes`, `mes_pago`).
+- `gastos` (fecha, categoria, subcategoria, monto, moneda, nota, `cuenta_pago_id`, `deuda_pago_id`, `compra_meses_deuda_id`, `compra_meses_aplicado`, `compra_meses_tarjeta`) y `presupuestos` (categoria, subcategoria, monto, moneda, `periodicidad`).
+- `transferencias` (fecha, tipo transferencia/pago_deuda, cuenta_origen_id, cuenta_destino_id, deuda_destino_id, monto, moneda, nota) — mueve saldo entre cuentas propias o abona a deuda sin contar como gasto real.
+- `patrimonio_historico` (fecha, patrimonio_neto) y `score_historico` (fecha, score, liquidez, endeudamiento, presupuesto, tendencia, constancia) — se auto-guardan al abrir Balance/Inicio, salvo en modo demo.
+- `solicitudes_gasto_pendientes` — cola de gastos capturados por foto (o antes, por voz), pendientes de aprobación del usuario antes de convertirse en un gasto real.
+- `reportes_financieros` — historial de radiografías generadas por IA (solo la Edge Function escribe, con service role).
+- `eventos_uso` — "pixel" propio (sin SDK de terceros): un evento por cambio de pantalla real + cuánto tiempo estuvo activa, y clics en redes sociales. Solo insert desde el cliente, solo se lee agregado desde el panel de admin.
+- `errores_app` — registro propio de errores/crasheos (reemplaza a Sentry, nunca terminó de configurarse). Cualquiera puede insertar (hay errores antes de login), nadie puede leer filas de otros desde el cliente.
 
-**Cuenta de muestra (demo):** `admin@admin.com`, UID `425f88c2-1ee1-4f86-ba61-8cd52e055ed3`, RLS `to anon` en las tablas nuevas de Pro. Botón "Ver cuenta de muestra" en login + `?demo=1`. **No se puede editar directo** (rol anon, solo lectura) — cualquier actualización a los datos demo requiere dar el SQL para que el usuario lo corra él mismo.
+**`perfil_financiero`** (PK `user_id`, una fila por usuario) — además de los umbrales de salud financiera (`umbral_amarillo`, `umbral_rojo`, `meses_cobertura_objetivo`), acumula banderas y preferencias que se movieron de `localStorage` a la base para que sobrevivan cambios de navegador/dispositivo: `avatar_asesor`, `terminos_aceptados_en`, `onboarding_rapido_en`, `idioma_preferido`, `tema_preferido`, `origen_registro`, `notif_gastos_frecuencia`, `notif_saldos_frecuencia`, `notif_reporte_mes`, `freaky_vuelo_desactivado`, `freaky_dias_aviso_tarjeta`, `codigo_referido` (asignado por trigger), `sin_anuncios`. `ingreso_mensual`/`dia_pago_sueldo_1`/`dia_pago_sueldo_2` quedaron deprecados (reemplazados por la tabla `ingresos`), columnas sin borrar.
 
-### Migraciones SQL — estado incierto, verificar contra Supabase antes de asumir
+**Tablas de acceso a IA** (sin policies para el cliente, solo service role): `codigos_acceso_ia` (catálogo de códigos canjeables) y `accesos_ia_usuarios` (quién ya canjeó uno).
 
-Estas migraciones aparecieron como "pendientes de correr por el usuario" en distintos momentos del historial. Las fases 1, 2 y 3 del roadmap grande **sí se confirmaron corridas**. El resto no tiene confirmación explícita en el historial — varias funcionalidades que dependen de ellas ya se ven usadas en rondas posteriores, lo que sugiere que probablemente ya se corrieron, pero **no está confirmado por escrito**. Revisar directo en Supabase o preguntar al usuario antes de asumir.
+**Tablas de negocio/administración** (sin `user_id`, sin policies para el cliente): `negocio_movimientos` (contabilidad propia de Money Freak: inversión, gastos operativos, ingresos, con `tipo_cambio` capturado al pagar en USD) y `referidos` (`referente_id`, `referido_id`, `activado`, `activado_en` — activado por trigger cuando el referido registra su primera cuenta o gasto).
 
-```sql
--- Compromisos mensuales / aportación de ahorro
-alter table cuentas add column if not exists aportacion_mensual numeric;
-alter table cuentas add column if not exists dia_aportacion integer;
+**Catálogo de gastos** (`CATALOGO_GASTOS`, constante JS en `index.html`, **NO es tabla**): 11 categorías fijas (Vivienda, Transporte, Alimentación, Salud, Entretenimiento, Educación, Cuidado personal, Mascotas, Servicios y suscripciones, Ahorro e inversión, Otros), 3-6 subcategorías cada una. Traducción a inglés en `CATALOGO_GASTOS_TRAD_EN` (constante paralela, mismas claves). El valor guardado en base siempre es el texto en español — cambiar este catálogo es 100% edición de JS, sin migración.
 
--- Precio manual para acciones no soportadas por la API (ej. BMV)
-alter table acciones add column if not exists precio_manual numeric;
-alter table acciones add column if not exists moneda_manual text;
-alter table acciones add column if not exists precio_manual_fecha date;
+**Cuenta de muestra (demo):** `admin@admin.com`, UID `425f88c2-1ee1-4f86-ba61-8cd52e055ed3`. Botón "Ver cuenta de muestra" en login + `?demo=1`. Rol `anon`, solo lectura (las policies espejo de arriba) — cualquier cambio a los datos demo requiere correr SQL a mano.
 
--- Próximo pago (WhatsApp feedback)
-alter table deudas add column if not exists monto_proximo_pago numeric;
+**Migraciones** (`supabase/migrations/`, 18 archivos, todas con fecha 2026-08-17 en adelante): **todas confirmadas aplicadas en producción** (verificado el 2026-08-30 comparando el esquema real de Postgres contra cada archivo — coinciden columna por columna). Las tablas base (`cuentas`, `gastos`, `perfil_financiero`, etc.) son anteriores a que este proyecto tuviera control de versiones y no tienen archivo de migración propio — solo existen en Supabase. Cualquier tabla o columna nueva a partir de ahora debe llevar su migración en esta carpeta.
 
--- Fechas de sueldo (perfil_financiero) — DEPRECADO por la tabla `ingresos`, inofensivo si ya se corrió o no
-alter table perfil_financiero add column if not exists dia_pago_sueldo_1 integer;
-alter table perfil_financiero add column if not exists dia_pago_sueldo_2 integer;
+---
 
--- Tabla ingresos (reemplaza el sueldo fijo) — ver migracion_ingresos.sql del scratchpad
--- + migracion_ingresos_periodicidad.sql (agrega periodicidad, mes_pago)
+## 4. Mapa de navegación y pantallas
 
--- Presupuesto por subcategoría (no solo por categoría)
--- ver migracion_presupuesto_subcategoria.sql
+**Navegación de escritorio** (`≥900px`, `.sidebar-desktop`, solo visible con sesión activa): Inicio · Mis cuentas · Balance general · Flujo de efectivo · Gastos y presupuesto · Simulador de crédito · Configuración y privacidad · Salir.
 
--- Gastos vs presupuesto (tablas nuevas)
--- ver migracion_gastos_presupuesto.sql
-```
+**Navegación móvil** (`.nav-inferior-movil`, barra inferior fija, 5 destinos): Inicio · Cuentas · **"+"** (FAB central elevado, abre menú de agregar) · Gastos · Flujo. Tocar el tab en el que ya estás sube al inicio de esa pantalla (patrón Instagram/Twitter) en vez de no hacer nada.
+
+**`mostrar(idVista)`** es la función central de navegación: alterna la clase `.activa` entre `.pantalla` (todas viven en el mismo documento, nunca se desmontan). Hooks importantes: dispara `cargarX()` según la vista (`cargarTodo`, `cargarIngresos`, `cargarCuentasInversion`, etc.), controla `body.con-sesion` (oculta sidebar/nav en pantallas sin sesión — lista en `VISTAS_SIN_SESION`), reinicia el temporizador de inactividad (cierre de sesión a los 15 min), dispara el mini-tour de esa pantalla la primera vez, y decide si Freaky debe volar a una nueva "percha" (solo en cambios reales de pantalla, nunca por temporizador).
+
+**Patrón `abrirX()` / `cargarX()` / `renderListaX()`:** cualquier pantalla con datos propios separa "traer de Supabase" de "pintar en el DOM". **Regla importante:** tras guardar/editar/borrar algo, navegar llamando a su `abrirX()` propio, nunca a `mostrar('vista-X')` a secas — causó un bug real donde borrar un gasto no refrescaba la pantalla.
+
+**Pantallas principales** (agrupadas por función; hay ~50 `id="vista-*"` en total, esto no es exhaustivo de las de agregar/editar/historial que siguen el mismo patrón por cada entidad):
+
+| Grupo | Pantallas |
+|---|---|
+| Sesión | `vista-login`, `vista-crear-cuenta`, `vista-aviso-legal`, `vista-olvide-contrasena`, `vista-nueva-contrasena`, `vista-elegir-asesor` (elegir avatar de Freaky), `vista-onboarding-rapido` (5 preguntas, primera vez) |
+| Panel | `vista-inicio` (dashboard/Panel, entrada tras login) |
+| Mis cuentas | `vista-cuentas` (hub, 5 secciones en acordeón) → `vista-cuentas-ingresos`, `-inversion`, `-bienes`, `-acciones`, `-deudas`, `-transferencias` (+ agregar/editar/historial de cada una) |
+| Análisis | `vista-balance` (+ `-graficas`, `-pdf`), `vista-salud` (+ `-detalle`), `vista-flujo`, `vista-score`, `vista-simulador` |
+| Gastos | `vista-gastos` (hub) → `vista-solicitudes-gasto` (aprobaciones de foto/voz), `vista-gastos-movimientos`, `vista-agregar-gasto`, `vista-editar-gasto`, `vista-presupuesto` |
+| Config/legal | `vista-privacidad`, `vista-config-general`, `vista-seguridad-privacidad`, `vista-editar-perfil` |
+| Crecimiento | `vista-reportes` (radiografía IA), `vista-referidos`, `vista-amigos-app`, `vista-ayuda-ia`, `vista-radiografia-resultado` |
+
+**`admin.html`** es una página HTML **separada** de `index.html` (no una `.pantalla` más) — su propio login (mismo Supabase Auth, gate por correo del lado del servidor en cada Edge Function `admin-*`), 8 pestañas: Crecimiento · Activación y retención · Salud · Audiencia y perfil · Uso y Freaky · Usuarios · Negocio · Logs.
 
 ---
 
 ## 5. Sistema de diseño visual — vigente, NO revertir sin que el usuario lo pida
 
-Pasó por 3 iteraciones rechazadas antes de llegar a la actual:
-1. Dark mode + acento índigo/morado, tarjetas redondeadas → rechazado ("se ve muy genérica de Claude").
-2. Papel hueso + serif + verde bosque/vino → tampoco convenció.
-3. Acento verde lima estilo Mercury → rechazado de inmediato ("está radioactiva").
+Pasó por 3 iteraciones rechazadas antes de llegar a la actual (dark+índigo "genérico de Claude", papel hueso+serif, verde lima "radioactiva").
 
-**Vigente (4ª iteración):** inspirado en Mercury/Linear/Stripe — fondo negro puro, **cifras en tipografía monoespaciada** (JetBrains Mono), texto en Inter, **monocromático puro** (crema `#EDEAE2` sobre negro, sin acento de color). Deudas en gris cálido apagado (`--neg: #9C9184`), la señal de "es una deuda" la da el signo "−" y el contexto, no el color.
+**Vigente:** inspirado en Mercury/Linear/Stripe — fondo negro puro, **cifras en tipografía monoespaciada** (JetBrains Mono), texto en Inter, **monocromático puro** (crema `#EDEAE2` sobre negro `#000000`, sin acento de color). Las deudas usan gris cálido apagado (`--neg: #9C9184`) — la señal de "es una deuda" la da el signo "−" y el contexto, no el color.
 
-**Excepción deliberada, la única:** 3 colores semánticos apagados **solo** para los estados riesgo/atención/saludable (usados en salud financiera, tarjetas de crédito, presupuesto, etc.):
-- `--color-riesgo: #B2645A` (terracota apagado)
-- `--color-atencion: #BF9552` (ámbar apagado)
-- `--color-saludable: #7C9473` (verde salvia apagado)
+**Tokens CSS** (`:root`, con overrides en `:root[data-theme="light"]` y `@media(prefers-color-scheme:light)`):
 
-Todo lo demás se queda monocromático. El PDF exportado (`compartirBalance()`) usa esta misma paleta con fondo blanco/claro (decisión consciente — un PDF con fondo negro sería poco práctico para imprimir/compartir).
+```
+--bg, --superficie, --borde, --borde-fuerte, --texto, --texto-tenue, --texto-tenue-2,
+--acento, --acento-texto, --neg,
+--color-riesgo, --color-atencion, --color-saludable,
+--mono ('JetBrains Mono'…), --sans ('Inter'…),
+--ease-out, --ease-in-out
+```
 
-**Lección clave para cualquier rediseño futuro (aquí o en otro proyecto):** lo que más ayudó a dejar de sentirse "genérico de IA" fue la disciplina de un solo acento usado en 2-3 lugares + tipografía monoespaciada para cifras — más que el tono de color en sí.
+**Excepción deliberada, la única:** 3 colores semánticos apagados para riesgo/atención/saludable (`--color-riesgo:#B2645A`, `--color-atencion:#BF9552`, `--color-saludable:#7C9473`, con sus propios valores más oscuros en tema claro) — usados en salud financiera, tarjetas de crédito, presupuesto, Score. Todo lo demás se queda monocromático.
 
-**Modo claro/oscuro/automático:** implementado con variables CSS (`:root[data-theme="light"]` + `@media(prefers-color-scheme:light)` para "Automático" tipo iOS). Selector en "Configuración y privacidad" y en "Crear cuenta". `cambiarTema()` hace `location.reload()` porque Chart.js no repinta canvases ya creados al cambiar variables CSS.
+**Lección para cualquier rediseño futuro (aquí o en otro proyecto):** lo que más ayudó a dejar de sentirse "genérico de IA" fue la disciplina de un solo acento usado en 2-3 lugares + tipografía monoespaciada para cifras — más que el tono de color en sí.
 
-**Tema Pro y light son intencionalmente distintos** — es la diferenciación fuerte entre "gratis, sencilla" (light, descontinuada) y "de paga, seria" (Pro).
+**Modo claro/oscuro/automático:** vía los tokens de arriba + `:root[data-theme="light"]` (elegido explícito) + `@media(prefers-color-scheme:light)` guardado como `:root:not([data-theme="dark"])` (automático, tipo iOS). Selector en Configuración y en Crear cuenta. Cambiar de tema hace `location.reload()` porque Chart.js no repinta canvases existentes al cambiar variables CSS.
 
----
-
-## 6. Arquitectura de navegación (mapa de referencia)
-
-- **`vista-inicio`** = el **Panel/dashboard** (pantalla de entrada tras login). Tarjeta "hero" con patrimonio neto animado (lleva a Balance general) + tarjetas de navegación con ícono SVG y dato en vivo: Mis cuentas, Salud financiera, Flujo de efectivo, Gastos y presupuesto, Simulador de crédito, Privacidad y seguridad.
-- **`vista-cuentas`** = "Mis cuentas" — las 5 secciones en acordeón (Ingresos, Cuentas de inversión, Bienes, Acciones, Deudas), todas colapsadas por default mostrando solo título+total. Botón flotante "+" con menú de 5 opciones para agregar.
-- `mostrar(idVista)` es la función central de navegación (alterna `display:none/block` entre `.pantalla`, todas viven en el mismo documento). Tiene hooks especiales: `cargarTodo()` si `idVista==='vista-cuentas'`, controla la clase `body.con-sesion` (oculta sidebar de escritorio en pantallas sin sesión), dispara `iniciarMiniTourSiPrimeraVez(idVista)`, hace `window.scrollTo(0,0)` (excepto que se restaura el scroll guardado al volver a `vista-cuentas`).
-- **Sidebar de escritorio** (`≥900px`): Inicio, Mis cuentas, Balance general, Salud financiera, Flujo de efectivo, Gastos y presupuesto, Simulador de crédito, Salir.
-- **Patrón `abrirX()`/`cargarX()`/`renderListaX()`**: cualquier pantalla con datos propios (cuentas, acciones, balance, salud, flujo, gastos) separa "traer datos" de "pintar" para poder reordenar/filtrar sin re-pedir a la API. **Regla importante:** tras guardar/editar/borrar algo en una vista así, navegar llamando a su `abrirX()`, nunca a `mostrar('vista-X')` genérico (causó un bug real: borrar un gasto parecía fallar porque la pantalla no se refrescaba).
+**PDF exportado** (`compartirBalance()`): misma paleta pero con fondo blanco/claro — un PDF con fondo negro no es práctico para imprimir/compartir.
 
 ---
 
-## 7. Funcionalidades completas (roadmap de 7 fases + rondas posteriores)
+## 6. Funcionalidades completas
 
 Todo lo siguiente está **implementado y desplegado a producción**, salvo que se indique lo contrario.
 
-**Cuentas de inversión:** CRUD completo en Pro (antes solo lectura), buscador+orden+filtros, formulario colapsado a 4 campos rápidos (nombre/tipo/moneda/tasa) con "Mostrar más detalles" para el resto. Tipos de cuenta ya NO incluyen "Tarjeta de crédito"/"Préstamo" (esos son solo Deudas, para no duplicar el modelo de patrimonio).
+**Cuentas / patrimonio:** CRUD completo de cuentas de inversión, bienes, acciones (con buscador+autocompletado contra Twelve Data y precio manual para BMV), deudas (con análisis de ROI de cashback, uso de límite, cobertura del próximo pago) e ingresos (con periodicidad). Transferencias entre cuentas propias o abonos a deuda sin contar como gasto. Balance general con patrimonio neto, desglose líquido/no líquido, gráficas de composición/evolución (rangos 1M/3M/6M/1A/Todo), PDF exportable en formato balance contable (dos columnas, folio único, gráficas embebidas como JPEG).
 
-**Salud financiera:** cobertura de liquidez a 30 días + tasa de endeudamiento mensual, con motor de recomendación en texto (severidad tipográfica, sin color hasta la excepción semántica descrita arriba). Ya no es pantalla de primer nivel — se llega desde Balance general.
+**Gastos y presupuesto:** catálogo fijo de 11 categorías/3-6 subcategorías, presupuesto por subcategoría, gastos recurrentes y compras a meses (con o sin tarjeta, vinculadas a una deuda virtual que se va reduciendo sola conforme se "cumplen" los pagos). Borrado con **"Deshacer"** (toast estilo Gmail/Mail, `mostrarAvisoDeshacer()` — el DELETE real en Supabase se difiere 5s, reemplaza el viejo modal de confirmación bloqueante) en vez de confirmación bloqueante. Swipe-to-delete en móvil.
 
-**Tarjetas de crédito:** análisis de ROI de cashback (ganancia neta anual, punto de equilibrio), uso del límite, cobertura del próximo pago vs. activos líquidos + compromisos existentes.
+**Salud financiera y Score:** cobertura de liquidez a 30 días + tasa de endeudamiento + motor de recomendación en texto (severidad tipográfica). **Score Money Freak** (`vista-score`, fusionada con Salud financiera en la parte 74 del log): 5 señales — liquidez, endeudamiento, presupuesto, tendencia, y **constancia** (qué tan seguido el usuario alimenta la app con datos reales, no solo qué tan sana está su situación). Motor de insights sin IA en el Panel (`calcularInsightsPanel()`): ritmo de gasto vs. presupuesto, gasto por categoría vs. promedio histórico (alerta ≥20% arriba), variación de patrimonio.
 
-**Simulador de capacidad de crédito:** amortización francesa estándar, tasas de referencia por tipo (Hipotecario 11.5%/Automotriz 15%/Personal 32%), seguro y comisión de apertura estimados automáticamente (no son inputs), ingreso mínimo requerido, capacidad máxima, 3 preconfiguraciones (Hipoteca típica/Auto nuevo/Personal de nómina). **Descartado a propósito**: 2FA y tasa TIIE/CETES en vivo vía Banxico.
+**Simulador de crédito:** amortización francesa, tasas de referencia por tipo (Hipotecario/Automotriz/Personal), seguro y comisión estimados automáticamente, 3 preconfiguraciones. Sin TIIE/CETES en vivo (descartado a propósito).
 
-**Buscador inteligente de acciones:** autocompletado contra Twelve Data `symbol_search`, con toggle de precio manual para símbolos no soportados (BMV).
+**Freaky (asistente con IA):** mentor financiero conversacional, 6 avatares seleccionables (3 base + 3 desbloqueables por referidos), personaje animado en pantalla (GSAP, "vuela" a una percha en cada cambio real de vista, desactivable). Con contexto financiero completo (`construirSnapshotFinanciero()`) puede:
+- Conversar sobre "¿me alcanza?", "¿voy mejor o peor?".
+- Categorizar un gasto descrito en texto/voz y proponerlo con botón de confirmar (nunca guarda sin confirmación).
+- Leer una foto de ticket (cámara o galería) y llenar los campos del gasto — queda en `solicitudes_gasto_pendientes` hasta que el usuario lo aprueba desde "Aprobaciones".
+- Generar una **radiografía financiera mensual** con IA (interpretación/redacción solamente — ninguna cifra crítica depende del LLM, todo viene ya calculado del cliente).
+- Acceso hoy **abierto a todos** (gate por código desactivado, ver Pendientes).
 
-**Balance general:** patrimonio neto, cambio desde última revisión, desglose líquido/no líquido, gráficas de composición y evolución (con rango 1M/3M/6M/1A/Todo), indicadores de salud financiera integrados.
+**Sistema de referidos:** código propio de 6 caracteres por usuario (`codigo_referido`, asignado por trigger de Postgres). Un referido cuenta como "activado" al registrar su primera cuenta o gasto (trigger `security definer`). Recompensas por conteo de activados: avatares 4/5/6 de Freaky (1/3/5 referidos), `sin_anuncios` a los 5 — calculadas al vuelo, nunca se guarda "desbloqueado" aparte. Página "Amigos de Money Freak" (`vista-amigos-app`).
 
-**Flujo de efectivo:** proyección de saldo líquido en el tiempo (línea que se pinta en el color de "riesgo" cuando cruza a negativo), junta pagos de deuda + aportaciones recurrentes + ingresos (con periodicidad mensual/semestral/anual). Click-to-edit en cada movimiento.
+**Panel de administración (`admin.html`):** página separada, acceso restringido a `CORREOS_ADMIN` (hoy solo el dueño). 8 pestañas: Crecimiento, Activación y retención (con embudo, retención D7/D30, riesgo de abandono), Salud, Audiencia y perfil (config. preferida, origen de registro), Uso y Freaky (uso por sección, costo real de IA), Usuarios (tabla con último login, detalle por usuario sin montos reales — decisión deliberada de privacidad), Negocio (estado de resultados consolidado en pesos), Logs (logs reales de Edge Functions/Postgres). Acciones de soporte sobre otro usuario: banear/desbanear, editar correo, eliminar cuenta por completo.
 
-**Ingresos:** sección CRUD independiente (reemplazó el viejo esquema de 1-2 fechas de sueldo fijo), soporta periodicidad mensual/semestral/anual (aguinaldo, bonos).
+**Soporte offline / PWA:** instalable (`manifest.json`) con Service Worker (`sw.js`, nivel "cascarón básico", no offline-first): cachea `index.html`/`manifest.json`/`config.js`/íconos + las 4 librerías CDN de las que depende para arrancar. **Nunca cachea Supabase** (`supabase.co`/`.com` excluidos a propósito) — sin conexión la app abre mostrando lo último cargado, pero no se ven datos nuevos ni se pueden guardar cambios. HTML siempre red-primero (para no bloquear el detector de "hay una versión nueva"); CDN/íconos, caché-con-revalidación.
 
-**Gastos y presupuesto:** catálogo fijo de 11 categorías, presupuesto por subcategoría (no solo por categoría), gastos recurrentes (checkbox + "cuántos meses"), gráfica de gasto vs. presupuesto en el tiempo, concepto personalizado ("Otro") en cualquier categoría.
+**Seguridad:** XSS almacenado real encontrado y corregido (`escapeHtml()` en ~13+ sitios de `innerHTML`). RLS aislado por usuario en todas las tablas de datos (ver Modelo de datos). Cierre de sesión por inactividad (15 min). Login: correo/contraseña, Google (PKCE + navegador del sistema + deep link en nativo), Sign in with Apple (con endpoint de notificaciones server-to-server, ver Pendientes), biometría (Face ID/huella, vía `@capgo/capacitor-native-biometric`).
 
-**PDF de balance general (`compartirBalance()`):** rediseñado a formato **horizontal (landscape), dos columnas tipo balance contable real** (Activos/Pasivos), folio único trazable, paginación real, gráficas embebidas como JPEG (nunca PNG — genera PDFs de MBs), misma paleta de colores que la app, resumen ejecutivo con alerta priorizada, controles de privacidad (ocultar institución/notas).
+**i18n (ES/EN):** app entera bilingüe — estática, dinámica, tours, PDF, alerts/confirms, aria-labels. Patrón fijo: el valor guardado en BD **siempre es español** (enums, categorías), solo el texto mostrado se traduce vía `t(clave)` / `tf(clave, ...valores)` / atributo `data-i18n` (588 usos en `index.html`).
 
-**Onboarding y confianza:** tour guiado de 8 pasos + 4 mini-tours automáticos por formulario (primera vez), registro público + recuperar contraseña + login con Google (pendiente que el usuario configure el proveedor en Supabase/Google Cloud), aviso de privacidad al iniciar sesión, disclaimer legal (app es herramienta de organización, no asesoría certificada), exportar/borrar todos mis datos, cierre de sesión por inactividad (15 min).
+**Onboarding:** tour guiado + mini-tours automáticos por formulario (primera vez), onboarding rápido de 5 preguntas (chips de rango, sin abrir teclado a menos que el usuario toque el campo), registro público + recuperar contraseña, aviso de privacidad y T&C (aceptación guardada en BD, no en `localStorage`, para sobrevivir cambio de navegador entre registro y confirmación de correo), disclaimer legal (herramienta de organización, no asesoría certificada), exportar/borrar todos mis datos, eliminar cuenta por completo (requisito de Apple).
 
-**Seguridad:** auditoría controlada encontró y corrigió un **XSS almacenado real** (campos de texto libre sin escapar en `innerHTML`) — corregido con `escapeHtml()` en ~13 sitios de render. RLS ya estaba bien aislado por usuario en todas las tablas.
+**Feedback táctil:** `haptic(tipo)` (`navigator.vibrate`, se degrada en silencio en iOS Safari/PWA) en acciones clave — guardar, borrar, error.
 
-**i18n (ES/EN):** completado en 4 fases — la app entera (estática + dinámica + tours + PDF + alerts/confirms + aria-labels) es bilingüe. Patrón fijo: el valor guardado en BD SIEMPRE es español (enums de tipo, categorías), solo el texto mostrado se traduce vía helpers `nombreTipoX()`.
+**Registro de negocio propio:** aparte de los datos de usuarios, `negocio_movimientos` lleva la contabilidad del propio Money Freak como negocio (inversión, gastos operativos, ingresos), consolidado en pesos, gestionado desde `admin.html`.
 
-**Escritorio:** rediseño real (no solo ensanchar) — secciones de Mis cuentas siempre abiertas en escritorio, grids de tarjetas con bordes redondeados en vez del efecto "hoja de cálculo" plano, sidebar fijo.
-
-**Animaciones:** auditoría con el playbook `improve-animations` — transición de 200ms entre pantallas, feedback táctil en botones, hover con transición, modal animado, tokens `--ease-out`/`--ease-in-out`. Contador animado en cifras clave (solo el 10% final del rango, para evitar el "brinco" de dígitos/comas). Swipe para regresar en móvil. Todo respeta `prefers-reduced-motion`.
-
-**Pausado/descartado explícitamente (no es deuda técnica, fue decisión consciente):**
-- Metas de patrimonio con barra de progreso — se implementó y se revirtió a petición del usuario.
-- Recordatorio de actualizar bienes/deudas sin cambios recientes — mismo caso.
-- Compartir balance en modo solo lectura con otra persona — "no le convence".
-- 2FA y tasa TIIE/CETES en vivo — descartado para el simulador.
-- Nombre/dominio nuevo (se evaluó Kinfolio/Solvento/Nortia/Ledgro/Vaultly — ocupados; Patrimo/Fintra como opciones débiles) — **pausado por el usuario**, sin decisión final.
-- Notificación push para recordar actualizar saldos — requeriría infraestructura de servidor nueva (Service Worker + VAPID + Edge Function), no construida.
-- App nativa (Capacitor para App Store/Google Play) — viable sobre el código actual, explicado pero **no iniciado**, va al final de la lista de prioridad del usuario.
-- Agente de IA que lea el balance y dé consejos — requeriría backend real (Supabase Edge Function) por primera vez en el proyecto, solo se explicó el approach.
+**Pausado/descartado explícitamente (decisión consciente, no deuda técnica):** metas de patrimonio con barra de progreso, recordatorio de "sin cambios recientes" en bienes/deudas, compartir balance solo-lectura con otra persona, 2FA y tasa TIIE/CETES en vivo, celebridades reales como mascota del sistema de referidos (riesgo legal/de imagen).
 
 ---
 
-## 8. Lecciones técnicas reutilizables (evitar repetir estos bugs)
+## 7. Lecciones técnicas reutilizables (evitar repetir estos bugs)
 
-- **`<select>` con fondo transparente:** el popup nativo de opciones no hereda "sin fondo" — siempre dar `background-color` explícito al `select` y estilizar `option` aparte, o el texto queda ilegible (claro sobre blanco).
-- **Elementos decorativos de baja opacidad sobre `--bg` (#000000):** hacer la cuenta real de contraste (color × opacidad) antes de asumir que "opacity baja" alcanza — con fondo tan oscuro, colores ya tenues necesitan opacidades más altas de lo que parece razonable.
-- **Chart.js responsive:** para controlar tamaño, limitar el **contenedor** (wrapper con `max-width`/`aspect-ratio`), nunca el atributo `height` del `<canvas>` — Chart.js lo ignora.
-- **Nunca crear una gráfica de Chart.js dentro de un contenedor `display:none`:** queda en 0×0 permanentemente aunque se llame `resize()` después. Diferir la creación hasta el primer `display:block` real.
-- **Gráficas embebidas en PDF (jsPDF):** siempre exportar como JPEG (nunca PNG sin comprimir — genera PDFs de varios MB) y pintar un fondo blanco antes de exportar (JPEG no soporta transparencia) vía plugin `beforeDraw` de Chart.js.
-- **Texto dentro de un `<button>` sin color explícito:** los botones no heredan `color` de forma confiable entre navegadores (cae a negro en Chrome, azul de sistema en iOS Safari). Siempre dar color explícito en la regla **base**, no solo dentro de un media query de escritorio.
-- **Meta `format-detection` + checkboxes custom:** en apps financieras, Safari/Chrome móvil auto-detectan montos/fechas como teléfonos (links azules) — agregar `<meta name="format-detection" content="telephone=no,...">`; y los checkboxes nativos pueden caer a azul de sistema si `accent-color` no se respeta — usar checkbox custom con `appearance:none`.
-- **`position:fixed` con z-index alto:** puede tapar contenido de listas largas que nunca se ven en la demo (2-3 ítems) — probar siempre con datos sintéticos realistas (10-20+ ítems) antes de dar por buena la posición de un elemento flotante.
-- **Fondos animados decorativos:** preferir capas dentro del `background` del propio elemento (nunca se pelean con z-index) sobre un hijo `position:fixed` aparte, salvo que se necesiten glifos de texto reales (ahí sí hace falta DOM + z-index correcto, dar `position:relative;z-index:1` a las pantallas).
-- **XSS almacenado:** cualquier campo de texto libre capturado del usuario que se inserte en `innerHTML` DEBE pasar por `escapeHtml()`.
-- **`VISTAS_SIN_SESION` y navegación "de vuelta":** el estado `body.con-sesion` post-navegación no sirve para recordar "de dónde vino el usuario" — usar una variable explícita seteada antes de navegar (patrón `origenAvisoLegal`).
-- **i18n:** cualquier texto nuevo visible debe usar `data-i18n`/`t()`/`tf()` desde que se escribe, no dejarlo para una limpieza posterior (ya van 4 rondas de "encontrar lo que se quedó atrás"). El valor guardado en BD siempre es español; solo el texto mostrado se traduce.
-- **Entorno de pruebas (Browser pane) — no es un bug del código:** `requestAnimationFrame` no corre en pestañas no enfocadas de este entorno — no asumir que "no se ve" es un bug sin descartar esto primero. `resize_window` con `preset` puede dejar el viewport en 0×0 — usar `width`/`height` explícitos.
-- **Twelve Data:** cada llamada de prueba/verificación consume cuota real de producción (800/día) — mockear `obtenerPreciosAcciones()` en sesiones con mucha verificación automatizada.
-- **Supabase SQL Editor:** si un bloque con varias sentencias falla a la mitad, se revierte TODO el bloque incluyendo los `create table` anteriores — hay que volver a correr el script completo.
-- **Llaves foráneas hacia `auth.users(id)`:** no asumir que existen ni que tienen `ON DELETE CASCADE` solo porque la tabla tiene RLS `auth.uid() = user_id` — RLS y llave foránea son cosas independientes. Verificar con `pg_constraint`/`pg_get_constraintdef()` (no `information_schema` con varios JOINs, que puede perder filas) antes de asumir que "Failed to delete users" en el Dashboard es un bug de la app — casi siempre es una llave faltante o sin cascada en Supabase, no algo que se arregle en `index.html`. Ver detalle completo en "Avances recientes" 2026-08-11.
+- **`<select>` con fondo transparente:** el popup nativo de opciones no hereda "sin fondo" — dar `background-color` explícito al `select` y estilizar `option` aparte.
+- **Elementos decorativos de baja opacidad sobre un fondo muy oscuro:** hacer la cuenta real de contraste (color × opacidad) antes de asumir que "opacity baja" alcanza.
+- **Chart.js responsive:** limitar el **contenedor** (`max-width`/`aspect-ratio`), nunca el atributo `height` del `<canvas>` — Chart.js lo ignora.
+- **Nunca crear una gráfica de Chart.js dentro de un contenedor `display:none`:** queda en 0×0 permanentemente. Diferir la creación hasta el primer `display:block` real.
+- **Gráficas embebidas en PDF (jsPDF):** exportar como JPEG (nunca PNG sin comprimir) y pintar fondo blanco antes de exportar (JPEG no soporta transparencia).
+- **Texto dentro de un `<button>` sin color explícito:** no se hereda de forma confiable entre navegadores — dar color explícito en la regla base, no solo en un media query de escritorio.
+- **Meta `format-detection` + checkboxes custom:** Safari/Chrome móvil auto-detectan montos/fechas como teléfonos — agregar `<meta name="format-detection" content="telephone=no,...">`; checkboxes nativos pueden caer a azul de sistema — usar `appearance:none` custom.
+- **`position:fixed` con z-index alto:** probar siempre con datos sintéticos realistas (10-20+ ítems), no solo los 2-3 de la demo.
+- **XSS almacenado:** cualquier campo de texto libre del usuario insertado en `innerHTML` DEBE pasar por `escapeHtml()`.
+- **`VISTAS_SIN_SESION` y "de dónde vino el usuario":** no usar el estado post-navegación para eso — usar una variable explícita seteada antes de navegar.
+- **i18n:** todo texto nuevo visible usa `data-i18n`/`t()`/`tf()` desde que se escribe, no dejarlo para después. El valor en BD siempre es español.
+- **Banderas de "ya vio/aceptó/eligió X" que definen el flujo (onboarding, términos, avatar):** si viven solo en `localStorage`, se pierden o se heredan mal entre cuentas/navegadores/dispositivos (3 bugs reales de este tipo, ver log). Cuando definen el flujo de la app, deben vivir en la base de datos.
+- **Twelve Data:** cada llamada de prueba consume cuota real de producción (800/día) — mockear `obtenerPreciosAcciones()` en sesiones con mucha verificación.
+- **Supabase SQL Editor:** un bloque con varias sentencias que falla a la mitad revierte TODO el bloque, incluyendo los `create table` anteriores.
+- **Llaves foráneas hacia `auth.users(id)`:** RLS y llave foránea son cosas independientes, no asumir `ON DELETE CASCADE`. Verificar con `pg_constraint`/`pg_get_constraintdef()`, no `information_schema` (puede perder filas).
+- **Edge Functions que llaman a un LLM para categorizar/decidir algo con dinero real:** que el LLM interprete/redacte, nunca que calcule cifras críticas — el cálculo siempre en código determinista, validado con Zod si el LLM devuelve estructura.
+
+---
+
+## 8. Cómo replicar esta app para un tema/negocio distinto
+
+El usuario ya tiene una idea concreta de app hermana en mente: **"Girly Finances"** (idea de su novia) — mismo motor financiero, identidad visual tipo tamagotchi, mascota/planta animada cuyo estado depende del comportamiento financiero real. Es el caso de uso real de esta sección.
+
+**Qué cambiar (checklist concreto):**
+1. **Nombre y textos**: `<title>`, `manifest.json` (`name`/`short_name`/`description`/`theme_color`/`background_color`), el `MONEY FREAK` hardcodeado en el sidebar/login, textos de `data-i18n` que mencionen el nombre.
+2. **`config.js`**: decidir si el nuevo producto usa el **mismo proyecto de Supabase** (recomendado si se quiere compartir login/cuentas, como se decidió para Girly Finances) o uno nuevo (aislamiento total, más trabajo). Si es el mismo proyecto: mismas `SUPABASE_URL`/`SUPABASE_ANON_KEY`, nuevas API keys propias del resto (Twelve Data si aplica, Turnstile, redes sociales).
+3. **Paleta de colores**: solo los tokens de `:root` en `index.html` (ver sección 5) — cambiar los valores hex ahí re-tematiza toda la app, no hay colores hardcodeados fuera de esos tokens (fue una decisión deliberada del diseño monocromático).
+4. **Catálogo de categorías** (`CATALOGO_GASTOS` + su traducción en inglés): reemplazar si el negocio no es de gastos personales, o dejar igual si sí lo es.
+5. **Ícono/manifest**: `app-icon/`, `manifest.json`, favicon, `apple-touch-icon`.
+6. **Dominio**: comprar/conectar como dominio externo de Cloudflare Pages (mismo proceso que `moneyfreak.app`, sin mover nameservers).
+7. **Proyecto de Cloudflare Pages**: uno nuevo (`--project-name` propio en el comando de `wrangler pages deploy`) — carpeta/deploy propios, como se decidió para Girly Finances.
+
+**Qué es 100% reutilizable tal cual (la parte que ahorra los ~2 meses):**
+- **Autenticación completa**: correo/contraseña, Google, Apple, biometría, recuperar contraseña, confirmación por correo, cierre por inactividad.
+- **Patrón RLS**: `auth.uid() = user_id` en cada tabla + policy espejo `to anon` para una cuenta de muestra — se copia igual para tablas nuevas.
+- **Patrón de panel de administración**: `CORREOS_ADMIN` hardcodeado + verificación de JWT en cada Edge Function admin — se replica agregando el correo del nuevo dueño.
+- **i18n**: el sistema `t()`/`tf()`/`data-i18n` es agnóstico al contenido, solo hay que traducir las claves nuevas.
+- **Sistema de diseño con tokens CSS**: la disciplina de variables + un acento mínimo es lo que más ayudó a que no se sintiera "genérico de IA" — aplica a cualquier tema visual, no solo al monocromático actual.
+- **Edge Functions con Deno + service role**: el patrón de verificar JWT → comparar correo/user_id → usar service role solo después de pasar el candado, se replica para cualquier acción sensible nueva.
+- **Motor de insights sin IA** (`calcularInsightsPanel()`): aritmética pura sobre datos ya existentes — el usuario mismo lo señaló como diseñado para reusarse "con un tono distinto" en un producto hermano.
+- **Patrón `abrirX()`/`cargarX()`/`renderListaX()`** y el toast de "Deshacer": aplican a cualquier CRUD, no son específicos de finanzas.
+
+**Qué es específico de "finanzas personales" y hay que adaptar o quitar:**
+- El catálogo de categorías de gastos.
+- Los cálculos de salud financiera/Score (cobertura de liquidez, tasa de endeudamiento, umbrales) — la lógica de "un score 0-100 con sub-señales y motor de insights" es reutilizable como *patrón*, pero las fórmulas son de finanzas.
+- El simulador de capacidad de crédito (amortización francesa, tasas por tipo de crédito).
+- El modelo de datos de cuentas/bienes/deudas/acciones — un negocio distinto necesitará sus propias entidades (para Girly Finances se planteó reusar ~90% del código igual, solo cambiando el "tema" encima del mismo motor financiero).
+- Freaky tal como está habla de finanzas — el patrón (asistente con snapshot de contexto + Edge Function con OpenAI + confirmación explícita antes de escribir) es reutilizable, pero el prompt/personalidad no.
 
 ---
 
 ## 9. Cómo seguir trabajando en este proyecto
 
-1. El código vive en `Desktop/abuelo-inversiones-pro/index.html` (todo en un archivo) + `config.js`.
-2. Verificar cambios en preview local (puerto 5502) antes de desplegar.
-3. Deploy: `npx wrangler pages deploy . --project-name=abuelo-inversiones-pro --branch=main` desde esta carpeta.
-4. Cambios de esquema en Supabase: si la sesión tiene `SUPABASE_ACCESS_TOKEN` en el entorno (revisar con `env | grep -i token`), se puede correr el SQL directo vía `POST https://api.supabase.com/v1/projects/vtjljpwcyiaaaqbqstvj/database/query` (confirmado funcionando 2026-08-27) — dejar migración en `supabase/migrations/` igual, pero ya no hace falta esperar a que el usuario la corra a mano. Si esa variable no está disponible en la sesión, entonces sí: dar el SQL y que el usuario lo corra.
-5. **Actualizar este archivo (`CONTEXTO_PROYECTO.md`) después de cada avance real** — así el contexto sobrevive a fallas de la app, cambios de sesión o de herramienta, sin tener que reconstruirlo ni gastar tokens releyendo todo el historial.
+1. El código vive en `app-web/index.html` (todo en un archivo) + `config.js`. Verificar cambios en preview local antes de desplegar.
+2. Deploy del frontend: `npx wrangler pages deploy . --project-name=abuelo-inversiones-pro --branch=main` desde `app-web/`.
+3. Deploy de Edge Functions: `supabase functions deploy <nombre>` desde `app-web/supabase/` (requiere estar logueado con `supabase login` o tener el token en el entorno).
+4. Cambios de esquema en Supabase: si la sesión tiene `SUPABASE_ACCESS_TOKEN` en el entorno (`env | grep -i token`), se puede correr el SQL directo vía `POST https://api.supabase.com/v1/projects/vtjljpwcyiaaaqbqstvj/database/query` — dejar la migración en `supabase/migrations/` igual, pero no hace falta esperar a que el usuario la corra a mano. Si esa variable no está disponible, dar el SQL y que el usuario lo corra.
+5. **Actualizar este archivo después de cada avance real**: agregar una entrada nueva en "0. Avances recientes" (nunca reemplazar el historial) y, si el avance cambia algo que ya describen las secciones 1-9, actualizar esa sección también — así no vuelve a pasar lo que motivó esta reescritura completa.
