@@ -358,38 +358,49 @@
   .panel-icono-svg{width:13px;height:13px;}
   .panel-tarjeta:hover .panel-icono{color:var(--texto);border-color:var(--texto-tenue);}
 
-  /* Barra de "Mis cuentas" -- hace doble función a propósito: es el menú
-     fijo que salta directo a una sección al tocarla (se marca sola
+  /* Cuadrícula de "Mis cuentas" -- hace doble función a propósito: es el
+     menú fijo que salta directo a una sección al tocarla (se marca sola
      conforme se baja con el dedo, scrollspy, ver actualizarScrollspyCuentas)
-     Y el resumen de montos por sección -- antes eran 2 elementos separados
-     (una fila de 6 tarjetas grandes arriba + esta barra debajo) repitiendo
-     los mismos 6 nombres uno tras otro; el usuario lo vio "redundante", así
-     que se fusionaron en uno solo. top:64px deja espacio de sobra para los
-     botones flotantes de inicio/Freaky (~60px) que si no, quedarían tapando
-     la barra al pegarse arriba del todo. */
+     Y el resumen de montos por sección. Pasó por 2 versiones antes de esta:
+     una fila de tarjetas grandes + una barra de pestañas aparte (el usuario
+     la vio "redundante", los mismos 6 nombres 2 veces), y luego una sola
+     barra de pestañas angostas con scroll horizontal (el usuario tampoco
+     la quiso: "no me gusta que se muevan, deben estar fijas... me gustaban
+     más las tarjetas"). Esta versión es esa combinación: tarjetas (sin
+     ícono, la versión compacta ya probada) en cuadrícula fija de 2 columnas
+     -- las 6 caben siempre sin necesitar deslizar hacia los lados -- y todo
+     el bloque es sticky, así que se queda visible mientras se baja por las
+     secciones. Los nombres de clase (tab-cuentas*) quedaron del diseño
+     anterior a propósito, para no tener que tocar también el JS que ya
+     funciona (mostrarSeccionCuentas, actualizarScrollspyCuentas) por un
+     cambio que es solo de layout/estilo. top:64px deja espacio de sobra
+     para los botones flotantes de inicio/Freaky (~60px) que si no,
+     quedarían tapando la cuadrícula al pegarse arriba del todo. */
   .tabs-cuentas{
-    display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    display:grid;grid-template-columns:repeat(2, 1fr);gap:6px;
     position:sticky;top:calc(64px + env(safe-area-inset-top, 0px));z-index:4;
     background:var(--bg);padding:10px 0;margin:10px 0 4px;border-bottom:1px solid var(--borde);
-    scrollbar-width:none;
   }
-  .tabs-cuentas::-webkit-scrollbar{display:none;}
+  @media(min-width:900px){
+    .tabs-cuentas{grid-template-columns:repeat(3, 1fr);}
+  }
   .tab-cuentas{
-    flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+    display:flex;flex-direction:column;gap:1px;min-width:0;
     background:var(--superficie);border:1px solid var(--borde);
-    border-radius:9px;padding:6px 10px;cursor:pointer;text-align:left;
+    border-radius:9px;padding:8px 10px;cursor:pointer;text-align:left;
     transition:background-color 150ms ease, border-color 150ms ease;
   }
   .tab-cuentas:hover{border-color:var(--borde-fuerte);}
-  /* Ni el título ni el monto se recortan -- la barra ya es horizontal con
-     scroll propio, así que cada pestaña simplemente crece al ancho de su
-     contenido (una cifra grande hace una pestaña más ancha) en vez de
-     truncar texto o partir un número a la mitad en 2 líneas. */
+  /* El título se recorta con "…" si no cabe (el ancho aquí sí es fijo, a
+     diferencia del diseño de barra horizontal); min-width:0 es necesario
+     para que ese recorte funcione en vez de desbordar la tarjeta -- ver la
+     nota de la parte 84 sobre por qué. El monto nunca se trunca. */
   .tab-cuentas-titulo{
-    font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.06em;
-    font-weight:600;color:var(--texto-tenue);white-space:nowrap;
+    font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    font-weight:600;color:var(--texto-tenue);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;min-width:0;
   }
-  .tab-cuentas-dato{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--texto);white-space:nowrap;}
+  .tab-cuentas-dato{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--texto);overflow-wrap:break-word;}
   .tab-cuentas-dato.negativo{color:var(--neg);}
   .tab-cuentas.activo{background:var(--acento);border-color:var(--acento);}
   .tab-cuentas.activo .tab-cuentas-titulo,
@@ -14989,8 +15000,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 66;
+const VERSION_APP_ACTUAL = 67;
 const CHANGELOG_APP = [
+  {
+    version: 67,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'El menú de "Mis cuentas" vuelve a verse como tarjetas, pero ahora fijas: se quedan visibles arriba mientras haces scroll, sin necesitar deslizar hacia los lados para ver las 6.'
+    ],
+    cambios_en: [
+      'The "My accounts" menu looks like cards again, but now fixed: they stay visible at the top as you scroll, no need to swipe sideways to see all 6.'
+    ]
+  },
   {
     version: 66,
     fecha: '2026-08-30',
