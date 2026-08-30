@@ -1,0 +1,15 @@
+{
+  "name": "Money Freak",
+  "short_name": "Money Freak",
+  "description": "Controla tus cuentas, bienes, deudas y salud financiera en un solo lugar, con Freaky, tu mentor financiero con IA.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "es",
+  "icons": [
+    { "src": "app-icon/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "app-icon/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

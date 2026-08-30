@@ -18,6 +18,8 @@
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <link rel="icon" type="image/svg+xml" href="app-icon/icon-1024.svg">
 <link rel="apple-touch-icon" href="app-icon/icon-1024.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
 <script>
   (function(){
     var tema = localStorage.getItem('pro_tema');
@@ -802,6 +804,15 @@
     margin:0;padding:4px 6px;background:none;border:none;color:var(--texto-tenue);
     font-size:17px;line-height:1;cursor:pointer;flex:none;
   }
+
+  .aviso-sin-conexion{
+    position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 10px);transform:translateX(-50%);
+    display:flex;align-items:center;gap:8px;max-width:92vw;
+    background:var(--superficie);border:1px solid var(--borde-fuerte);border-radius:6px;
+    padding:8px 14px;box-shadow:0 12px 32px rgba(0,0,0,0.55);
+    z-index:900;font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue);
+  }
+  .aviso-sin-conexion::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--color-riesgo);flex:none;}
 
   .btn-fab-agregar{
     display:none;align-items:center;justify-content:center;
@@ -4579,6 +4590,7 @@ const TRADUCCIONES = {
     'version.actualizar': 'Actualizar',
     'novedades.titulo': 'Qué hay de nuevo',
     'version.cerrar_aria': 'Cerrar',
+    'version.sin_conexion': 'Sin conexión — viendo lo último guardado',
     'comun.ver': 'Ver',
     'comun.ocultar': 'Ocultar',
     'comun.ocultar_password': 'Ocultar contraseña',
@@ -5535,6 +5547,7 @@ const TRADUCCIONES = {
     'version.actualizar': 'Update',
     'novedades.titulo': "What's new",
     'version.cerrar_aria': 'Close',
+    'version.sin_conexion': 'Offline — showing what was last saved',
     'comun.ver': 'Show',
     'comun.ocultar': 'Hide',
     'comun.ocultar_password': 'Hide password',
@@ -14669,8 +14682,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 54;
+const VERSION_APP_ACTUAL = 55;
 const CHANGELOG_APP = [
+  {
+    version: 55,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'La app ahora abre aunque no tengas internet (muestra lo último que se cargó, con un aviso de "Sin conexión") -- antes se quedaba en blanco.',
+      'Se puede instalar como app desde el navegador (ícono en la pantalla de inicio, sin pasar por una tienda de apps).'
+    ],
+    cambios_en: [
+      'The app now opens even without internet (shows what was last loaded, with an "Offline" notice) -- before it just showed a blank screen.',
+      'It can now be installed as an app straight from the browser (home screen icon, no app store needed).'
+    ]
+  },
   {
     version: 54,
     fecha: '2026-08-30',
@@ -15360,12 +15385,42 @@ function inicializarChequeoVersion(){
   });
 }
 
+// Soporte offline básico (Service Worker, ver sw.js): guarda el cascarón de
+// la app (HTML/CSS/JS/librerías/ícono) en caché para que abra sin internet
+// y muestre lo último que se cargó, en vez de pantalla en blanco. No guarda
+// datos del usuario ni respuestas de Supabase -- eso nunca se cachea.
+function registrarServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').catch(() => {}); // si falla (ej. entorno sin HTTPS), la app sigue funcionando normal, solo sin soporte offline
+}
+
+function mostrarAvisoSinConexion(){
+  if(document.getElementById('aviso-sin-conexion')) return;
+  const div = document.createElement('div');
+  div.id = 'aviso-sin-conexion';
+  div.className = 'aviso-sin-conexion';
+  div.innerHTML = `<span>${t('version.sin_conexion')}</span>`;
+  document.body.appendChild(div);
+}
+
+function ocultarAvisoSinConexion(){
+  document.getElementById('aviso-sin-conexion')?.remove();
+}
+
+function inicializarAvisoConexion(){
+  if(!navigator.onLine) mostrarAvisoSinConexion();
+  window.addEventListener('offline', mostrarAvisoSinConexion);
+  window.addEventListener('online', ocultarAvisoSinConexion);
+}
+
 inicializarTema();
 inicializarIdioma();
 inicializarRedesSociales();
 init();
 inicializarGestosSwipe();
 inicializarChequeoVersion();
+inicializarAvisoConexion();
+registrarServiceWorker();
 
 // Bug real reportado por el usuario ("loop en el onboarding... cuando le
 // das volver te regresa al formulario de crear cuenta"): el navegador
