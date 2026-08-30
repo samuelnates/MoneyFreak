@@ -84,7 +84,15 @@
     }
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;overflow-x:hidden;}
+  /* overflow-x:hidden va SOLO en body, nunca junto con html: si ambos lo
+     tienen, el navegador promueve overflow-y a "auto" en los dos (regla del
+     eje único) y eso convierte a html Y a body en contenedores de scroll al
+     mismo tiempo -- en ese estado, position:sticky deja de pegarse (se
+     confirmó quitando/separando la regla y remidiendo con Playwright: con
+     ambos, el div sticky de .tabs-cuentas nunca se pegaba; con overflow-x
+     solo en body, se pega perfecto y el scroll horizontal sigue bloqueado). */
+  html{margin:0;padding:0;}
+  body{margin:0;padding:0;overflow-x:hidden;}
   a{color:inherit;text-decoration-color:var(--texto-tenue-2);}
   button,input,select,a{touch-action:manipulation;}
   button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{
@@ -349,6 +357,30 @@
   }
   .panel-icono-svg{width:13px;height:13px;}
   .panel-tarjeta:hover .panel-icono{color:var(--texto);border-color:var(--texto-tenue);}
+
+  /* Barra de pestañas fija de "Mis cuentas" -- salta directo a la sección
+     al tocarla, y se marca sola conforme se baja con el dedo (scrollspy,
+     ver actualizarScrollspyCuentas). top:64px deja espacio de sobra para
+     los botones flotantes de inicio/Freaky (~60px) que si no, quedarían
+     tapando la barra al pegarse arriba del todo. */
+  .tabs-cuentas{
+    display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    position:sticky;top:calc(64px + env(safe-area-inset-top, 0px));z-index:4;
+    background:var(--bg);padding:10px 0;margin:10px 0 4px;border-bottom:1px solid var(--borde);
+    scrollbar-width:none;
+  }
+  .tabs-cuentas::-webkit-scrollbar{display:none;}
+  .tab-cuentas{
+    flex:none;background:none;border:none;border-radius:20px;padding:7px 13px;
+    font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--texto-tenue);
+    white-space:nowrap;cursor:pointer;transition:background-color 150ms ease, color 150ms ease;
+  }
+  .tab-cuentas:hover{color:var(--texto);}
+  .tab-cuentas.activo{background:var(--acento);color:var(--acento-texto);}
+
+  .seccion-cuentas{margin-top:28px;scroll-margin-top:8px;}
+  .seccion-cuentas:first-of-type{margin-top:18px;}
+  .seccion-cuentas h2{font-family:var(--sans);font-size:15px;font-weight:700;color:var(--texto);margin:0 0 12px;}
 
   .referido-codigo-caja{
     background:var(--superficie);border:1px solid var(--borde-fuerte);border-radius:10px;
@@ -1241,16 +1273,16 @@
     .sidebar-desktop .sidebar-salir{border-top:1px solid var(--borde);padding-top:14px;margin-top:14px;color:var(--texto-tenue-2);}
 
     #vista-cuentas .encabezado .btn-salir{display:none;}
-    .cuentas-sub .lista, #vista-flujo .lista{
+    #vista-cuentas .lista, #vista-flujo .lista{
       display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;
       background:none;border:none;margin-bottom:6px;
     }
-    .cuentas-sub .lista .tarjeta, #vista-flujo .lista .tarjeta{
+    #vista-cuentas .lista .tarjeta, #vista-flujo .lista .tarjeta{
       background:var(--superficie);border:1px solid var(--borde);border-radius:8px;
       padding:16px 18px;margin:0;
     }
-    .cuentas-sub .lista .tarjeta:hover, #vista-flujo .lista .tarjeta:hover{border-color:var(--borde-fuerte);}
-    .cuentas-sub .lista .mensaje, .cuentas-sub .lista .aviso,
+    #vista-cuentas .lista .tarjeta:hover, #vista-flujo .lista .tarjeta:hover{border-color:var(--borde-fuerte);}
+    #vista-cuentas .lista .mensaje, #vista-cuentas .lista .aviso,
     #vista-flujo .lista .mensaje, #vista-flujo .lista .aviso{grid-column:1 / -1;background:var(--bg);}
 
     /* Pantallas de contenido (dashboards): más anchas que un formulario, no una columna angosta perdida en medio de la pantalla */
@@ -1290,17 +1322,13 @@
   }
 
   @media (min-width: 1280px){
-    .cuentas-sub{max-width:1320px;}
-    .cuentas-sub .lista{grid-template-columns:repeat(3, 1fr);}
+    #vista-cuentas .lista{grid-template-columns:repeat(3, 1fr);}
     #vista-inicio, #vista-balance, #vista-salud, #vista-flujo, #vista-simulador, #vista-cuentas, #vista-score{max-width:1040px;}
     .panel-grid{grid-template-columns:repeat(3, 1fr);}
     .panel-grid > *:last-child:nth-child(odd){grid-column:auto;}
     .panel-grid > *:last-child:nth-child(3n+1){grid-column: 1 / -1;}
   }
 
-  @media (min-width: 1920px){
-    .cuentas-sub{max-width:1600px;}
-  }
   @media (max-width: 899px){
     input[type=text],input[type=number],input[type=email],input[type=password],select{font-size:16px;}
     body.con-sesion .pantalla{padding-bottom:calc(150px + env(safe-area-inset-bottom));padding-top:calc(60px + env(safe-area-inset-top));}
@@ -1727,116 +1755,107 @@
   <div id="aviso-demo" class="aviso" style="display:none;" data-i18n="cuentas.aviso_demo">Estás viendo una cuenta de muestra con datos ficticios (solo lectura).</div>
 
   <div class="panel-grid" id="cuentas-accesos">
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-ingresos')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('ingresos')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</div>
       <div class="panel-tarjeta-dato"><span id="acordeon-total-ingresos"></span></div>
     </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-inversion')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('cuentas')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/><path d="M3 9h18"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.cuentas_inversion">Cuentas de inversión</div>
       <div class="panel-tarjeta-dato"><span id="acordeon-total-cuentas"></span></div>
     </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-bienes')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('bienes')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.bienes">Bienes</div>
       <div class="panel-tarjeta-dato"><span id="acordeon-total-bienes"></span></div>
     </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-acciones')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('acciones')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="balance.acciones">Acciones</div>
       <div class="panel-tarjeta-dato"><span id="acordeon-total-acciones"></span></div>
     </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-deudas')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('deudas')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="cuentas.deudas_titulo">Deudas</div>
       <div class="panel-tarjeta-dato negativo"><span id="acordeon-total-deudas"></span></div>
     </button>
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-cuentas-transferencias')">
+    <button type="button" class="panel-tarjeta" onclick="mostrarSeccionCuentas('transferencias')">
       <div class="panel-icono"><svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13l-3.5-3.5"/><path d="M20 7l-3.5 3.5"/><path d="M17 17H4l3.5-3.5"/><path d="M4 17l3.5 3.5"/></svg></div>
       <div class="panel-tarjeta-titulo" data-i18n="cuentas.transferencias_titulo">Transferencias</div>
       <div class="panel-tarjeta-sub"><span id="acordeon-total-transferencias"></span></div>
     </button>
   </div>
-</div>
 
-<div id="vista-cuentas-ingresos" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="sidebar.ingresos_titulo">Ingresos</h1>
+  <div class="tabs-cuentas" id="tabs-cuentas">
+    <button type="button" class="tab-cuentas" data-seccion="ingresos" onclick="mostrarSeccionCuentas('ingresos')" data-i18n="sidebar.ingresos_titulo">Ingresos</button>
+    <button type="button" class="tab-cuentas" data-seccion="cuentas" onclick="mostrarSeccionCuentas('cuentas')" data-i18n="balance.cuentas_inversion">Cuentas de inversión</button>
+    <button type="button" class="tab-cuentas" data-seccion="bienes" onclick="mostrarSeccionCuentas('bienes')" data-i18n="balance.bienes">Bienes</button>
+    <button type="button" class="tab-cuentas" data-seccion="acciones" onclick="mostrarSeccionCuentas('acciones')" data-i18n="balance.acciones">Acciones</button>
+    <button type="button" class="tab-cuentas" data-seccion="deudas" onclick="mostrarSeccionCuentas('deudas')" data-i18n="cuentas.deudas_titulo">Deudas</button>
+    <button type="button" class="tab-cuentas" data-seccion="transferencias" onclick="mostrarSeccionCuentas('transferencias')" data-i18n="cuentas.transferencias_titulo">Transferencias</button>
   </div>
-  <div id="lista-ingresos" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-ingreso" onclick="mostrar('vista-agregar-ingreso')" data-i18n="cuentas.agregar_ingreso">+ Agregar ingreso</button>
-</div>
 
-<div id="vista-cuentas-inversion" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="balance.cuentas_inversion">Cuentas de inversión</h1>
-  </div>
-  <div class="toolbar-cuentas">
-    <input type="text" id="buscar-cuentas" aria-label="Buscar cuentas" data-i18n-aria-label="cuentas.buscar_aria" placeholder="Buscar por nombre, institución o categoría..." data-i18n-placeholder="cuentas.buscar_placeholder" oninput="renderListaCuentas()">
-  </div>
-  <div class="fila-filtros">
-    <select id="orden-cuentas" aria-label="Ordenar cuentas" data-i18n-aria-label="cuentas.ordenar_aria" onchange="renderListaCuentas()">
+  <section class="seccion-cuentas" id="seccion-cuentas-ingresos">
+    <h2 data-i18n="sidebar.ingresos_titulo">Ingresos</h2>
+    <div id="lista-ingresos" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-ingreso" onclick="mostrar('vista-agregar-ingreso')" data-i18n="cuentas.agregar_ingreso">+ Agregar ingreso</button>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-cuentas-cuentas">
+    <h2 data-i18n="balance.cuentas_inversion">Cuentas de inversión</h2>
+    <div class="toolbar-cuentas">
+      <input type="text" id="buscar-cuentas" aria-label="Buscar cuentas" data-i18n-aria-label="cuentas.buscar_aria" placeholder="Buscar por nombre, institución o categoría..." data-i18n-placeholder="cuentas.buscar_placeholder" oninput="renderListaCuentas()">
+    </div>
+    <div class="fila-filtros">
+      <select id="orden-cuentas" aria-label="Ordenar cuentas" data-i18n-aria-label="cuentas.ordenar_aria" onchange="renderListaCuentas()">
+        <option value="creacion" data-i18n="cuentas.orden_creacion">Orden: como las agregué</option>
+        <option value="saldo-desc" data-i18n="cuentas.orden_saldo_desc">Orden: mayor saldo</option>
+        <option value="saldo-asc" data-i18n="cuentas.orden_saldo_asc">Orden: menor saldo</option>
+        <option value="participacion-desc" data-i18n="cuentas.orden_participacion">Orden: mayor participación</option>
+        <option value="alfabetico" data-i18n="cuentas.orden_alfabetico">Orden: alfabético</option>
+        <option value="tipo" data-i18n="cuentas.orden_tipo">Orden: tipo de cuenta</option>
+        <option value="liquidez" data-i18n="cuentas.orden_liquidez">Orden: liquidez primero</option>
+      </select>
+    </div>
+    <div id="lista-cuentas-inversion" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-cuenta" onclick="mostrar('vista-agregar-cuenta')" data-i18n="cuentas.agregar_cuenta">+ Agregar cuenta</button>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-cuentas-bienes">
+    <h2 data-i18n="balance.bienes">Bienes</h2>
+    <div id="lista-bienes" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-bien" onclick="mostrar('vista-agregar-bien')" data-i18n="cuentas.agregar_bien">+ Agregar bien</button>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-cuentas-acciones">
+    <h2 data-i18n="balance.acciones">Acciones</h2>
+    <select id="orden-acciones" aria-label="Ordenar acciones" data-i18n-aria-label="cuentas.ordenar_acciones_aria" onchange="renderListaAcciones()">
       <option value="creacion" data-i18n="cuentas.orden_creacion">Orden: como las agregué</option>
-      <option value="saldo-desc" data-i18n="cuentas.orden_saldo_desc">Orden: mayor saldo</option>
-      <option value="saldo-asc" data-i18n="cuentas.orden_saldo_asc">Orden: menor saldo</option>
-      <option value="participacion-desc" data-i18n="cuentas.orden_participacion">Orden: mayor participación</option>
+      <option value="monto-desc" data-i18n="cuentas.orden_monto_desc">Orden: mayor monto</option>
+      <option value="monto-asc" data-i18n="cuentas.orden_monto_asc">Orden: menor monto</option>
       <option value="alfabetico" data-i18n="cuentas.orden_alfabetico">Orden: alfabético</option>
-      <option value="tipo" data-i18n="cuentas.orden_tipo">Orden: tipo de cuenta</option>
-      <option value="liquidez" data-i18n="cuentas.orden_liquidez">Orden: liquidez primero</option>
     </select>
-  </div>
-  <div id="lista-cuentas-inversion" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-cuenta" onclick="mostrar('vista-agregar-cuenta')" data-i18n="cuentas.agregar_cuenta">+ Agregar cuenta</button>
-</div>
+    <div id="lista-acciones" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-accion" onclick="mostrar('vista-agregar-accion')" data-i18n="cuentas.agregar_accion">+ Agregar acción</button>
+  </section>
 
-<div id="vista-cuentas-bienes" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="balance.bienes">Bienes</h1>
-  </div>
-  <div id="lista-bienes" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-bien" onclick="mostrar('vista-agregar-bien')" data-i18n="cuentas.agregar_bien">+ Agregar bien</button>
-</div>
+  <section class="seccion-cuentas" id="seccion-cuentas-deudas">
+    <h2 data-i18n="cuentas.deudas_titulo">Deudas</h2>
+    <div id="lista-deudas" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-deuda" onclick="mostrar('vista-agregar-deuda')" data-i18n="cuentas.agregar_deuda">+ Agregar deuda</button>
+  </section>
 
-<div id="vista-cuentas-acciones" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="balance.acciones">Acciones</h1>
-  </div>
-  <select id="orden-acciones" aria-label="Ordenar acciones" data-i18n-aria-label="cuentas.ordenar_acciones_aria" onchange="renderListaAcciones()">
-    <option value="creacion" data-i18n="cuentas.orden_creacion">Orden: como las agregué</option>
-    <option value="monto-desc" data-i18n="cuentas.orden_monto_desc">Orden: mayor monto</option>
-    <option value="monto-asc" data-i18n="cuentas.orden_monto_asc">Orden: menor monto</option>
-    <option value="alfabetico" data-i18n="cuentas.orden_alfabetico">Orden: alfabético</option>
-  </select>
-  <div id="lista-acciones" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-accion" onclick="mostrar('vista-agregar-accion')" data-i18n="cuentas.agregar_accion">+ Agregar acción</button>
-</div>
-
-<div id="vista-cuentas-deudas" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="cuentas.deudas_titulo">Deudas</h1>
-  </div>
-  <div id="lista-deudas" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-deuda" onclick="mostrar('vista-agregar-deuda')" data-i18n="cuentas.agregar_deuda">+ Agregar deuda</button>
-</div>
-
-<div id="vista-cuentas-transferencias" class="pantalla cuentas-sub">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas')">‹</button>
-    <h1 data-i18n="cuentas.transferencias_titulo">Transferencias</h1>
-  </div>
-  <div id="lista-transferencias" class="lista"></div>
-  <button class="btn-grande" id="btn-agregar-transferencia" onclick="abrirAgregarTransferencia()" data-i18n="cuentas.agregar_transferencia">+ Agregar transferencia</button>
+  <section class="seccion-cuentas" id="seccion-cuentas-transferencias">
+    <h2 data-i18n="cuentas.transferencias_titulo">Transferencias</h2>
+    <div id="lista-transferencias" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-transferencia" onclick="abrirAgregarTransferencia()" data-i18n="cuentas.agregar_transferencia">+ Agregar transferencia</button>
+  </section>
 </div>
 
 <div id="vista-agregar-transferencia" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-transferencias')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('transferencias')">‹</button>
     <h1 data-i18n="transferencia.nueva_titulo">Nueva transferencia</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -1877,12 +1896,12 @@
     <label for="input-nota-transferencia" data-i18n="campo.notas_opcional">Notas (opcional)</label>
     <input type="text" id="input-nota-transferencia" placeholder="Cualquier detalle que quieras recordar" data-i18n-placeholder="gastos.nota_placeholder">
   </div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-transferencias')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('transferencias')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-transferencia" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-transferencias')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('transferencias')">‹</button>
     <h1 data-i18n="transferencia.editar_titulo">Editar transferencia</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2539,7 +2558,7 @@
 
 <div id="vista-agregar-cuenta" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-cuenta')" onchange="programarGuardadoBorradorGenerico('vista-agregar-cuenta')">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-inversion')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('cuentas')">‹</button>
     <h1 data-i18n="cuenta.nueva_titulo">Nueva cuenta</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2598,12 +2617,12 @@
     </div>
   </div>
 
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-inversion')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('cuentas')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-cuenta" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-inversion')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('cuentas')">‹</button>
     <h1 id="editar-cuenta-nombre">Cuenta</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2669,7 +2688,7 @@
 
 <div id="vista-agregar-accion" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-accion')" onchange="programarGuardadoBorradorGenerico('vista-agregar-accion')">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-acciones')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('acciones')">‹</button>
     <h1 data-i18n="accion.nueva_titulo">Nueva acción</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2707,12 +2726,12 @@
     </div>
     <div class="aviso" data-i18n="accion.aviso_manual">Este precio NO se actualiza solo. Tú tienes que entrar a editarla y ponerlo al día cuando cambie el valor de mercado.</div>
   </div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-acciones')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('acciones')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-accion" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-acciones')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('acciones')">‹</button>
     <h1 data-i18n="accion.editar_titulo">Editar acción</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2789,7 +2808,7 @@
 
 <div id="vista-agregar-bien" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-bien')" onchange="programarGuardadoBorradorGenerico('vista-agregar-bien')">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-bienes')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('bienes')">‹</button>
     <h1 data-i18n="bien.nuevo_titulo">Nuevo bien</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2821,12 +2840,12 @@
       <option value="EUR" data-i18n="moneda.eur">Euros (EUR)</option>
     </select>
   </div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-bienes')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('bienes')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-bien" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-bienes')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('bienes')">‹</button>
     <h1 data-i18n="bien.editar_titulo">Editar bien</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2863,7 +2882,7 @@
 
 <div id="vista-agregar-ingreso" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-ingresos')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('ingresos')">‹</button>
     <h1 data-i18n="ingreso.nuevo_titulo">Nuevo ingreso</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2910,12 +2929,12 @@
     <div class="aviso" data-i18n="ingreso.aviso_semestral">Si es semestral, también se repite 6 meses después de este mes.</div>
   </div>
   <div class="aviso" data-i18n="ingreso.aviso_multiple">Si tu ingreso llega más de una vez al mes (ej. sueldo quincenal), agrégalo como dos ingresos separados, uno por cada fecha. El día alimenta tu Flujo de efectivo.</div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-ingresos')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('ingresos')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-ingreso" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-ingresos')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('ingresos')">‹</button>
     <h1 data-i18n="ingreso.editar_titulo">Editar ingreso</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2966,7 +2985,7 @@
 
 <div id="vista-agregar-deuda" class="pantalla" oninput="programarGuardadoBorradorGenerico('vista-agregar-deuda')" onchange="programarGuardadoBorradorGenerico('vista-agregar-deuda')">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-deudas')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('deudas')">‹</button>
     <h1 data-i18n="deuda.nueva_titulo">Nueva deuda</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -3038,12 +3057,12 @@
     </div>
     <div class="aviso" data-i18n="deuda.aviso_tarjeta">Con esto calculamos qué tan cerca estás de tu límite y si el cashback te compensa la anualidad.</div>
   </div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-cuentas-deudas')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionCuentas('deudas')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-editar-deuda" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-cuentas-deudas')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionCuentas('deudas')">‹</button>
     <h1 data-i18n="deuda.editar_titulo">Editar deuda</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -3339,9 +3358,7 @@ const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta
 // "Mis cuentas" tenía esto, generalizado a un mapa por vista en vez de una
 // sola variable.
 const VISTAS_CON_SCROLL_GUARDADO = [
-  'vista-cuentas', 'vista-gastos-movimientos', 'vista-cuentas-deudas',
-  'vista-cuentas-inversion', 'vista-cuentas-bienes', 'vista-cuentas-acciones',
-  'vista-cuentas-ingresos', 'vista-solicitudes-gasto'
+  'vista-cuentas', 'vista-gastos-movimientos', 'vista-solicitudes-gasto'
 ];
 let scrollGuardadoPorVista = {};
 
@@ -3393,13 +3410,11 @@ function mostrar(idVista){
     window.scrollTo(0, 0);
   }
 
-  if(idVista === 'vista-cuentas') cargarTodo();
-  if(idVista === 'vista-cuentas-ingresos') cargarIngresos();
-  if(idVista === 'vista-cuentas-inversion') cargarCuentasInversion();
-  if(idVista === 'vista-cuentas-bienes') cargarBienes();
-  if(idVista === 'vista-cuentas-acciones') cargarAcciones();
-  if(idVista === 'vista-cuentas-deudas') cargarDeudas();
-  if(idVista === 'vista-cuentas-transferencias') cargarTransferencias();
+  // Las 6 secciones (Ingresos/Cuentas de inversión/Bienes/Acciones/Deudas/
+  // Transferencias) viven todas juntas dentro de esta misma vista ahora --
+  // cargarTodo() ya trae y pinta las 6 en paralelo, no hace falta un hook
+  // por sección.
+  if(idVista === 'vista-cuentas'){ cargarTodo(); requestAnimationFrame(actualizarScrollspyCuentas); }
   if(idVista === 'vista-login'){ actualizarVisibilidadBotonBiometrico(); posicionarAvatarLogin(); }
   if(idVista === 'vista-seguridad-privacidad'){
     const btnDesactivar = document.getElementById('btn-desactivar-biometria');
@@ -6233,7 +6248,7 @@ async function manejarNotificacionTocada(extra){
   if(destino === 'gastos'){
     abrirAgregarGasto();
   } else if(destino === 'saldos'){
-    mostrar('vista-cuentas-inversion');
+    mostrarSeccionCuentas('cuentas');
   } else if(destino === 'reporte'){
     mostrar('vista-reportes');
   } else if(destino === 'gasto_recurrente'){
@@ -7449,16 +7464,75 @@ async function cargarTodo(){
   await Promise.all([cargarCuentasInversion(), cargarBienes(), cargarDeudas(), cargarAcciones(), cargarIngresos(), cargarTransferencias()]);
 }
 
-const VISTA_CUENTAS_POR_SECCION = {
-  ingresos: 'vista-cuentas-ingresos',
-  cuentas: 'vista-cuentas-inversion',
-  bienes: 'vista-cuentas-bienes',
-  acciones: 'vista-cuentas-acciones',
-  deudas: 'vista-cuentas-deudas',
-  transferencias: 'vista-cuentas-transferencias'
-};
+// Las 6 secciones de "Mis cuentas" (Ingresos/Cuentas de inversión/Bienes/
+// Acciones/Deudas/Transferencias) viven juntas en una sola pantalla
+// scrolleable -- antes eran 6 pantallas separadas y para ver una distinta
+// había que volver al hub y entrar de nuevo cada vez (pedido del usuario:
+// un clic o scrollear, sin ir y venir). Las pestañas fijas de arriba saltan
+// directo a la sección; al bajar con el dedo, la pestaña de la sección
+// visible se marca sola (ver actualizarScrollspyCuentas).
+function mostrarSeccionCuentas(idSeccion){
+  if(!document.getElementById('vista-cuentas').classList.contains('activa')) mostrar('vista-cuentas');
+  document.querySelectorAll('#tabs-cuentas .tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === idSeccion));
+  requestAnimationFrame(() => desplazarASeccionCuentas(idSeccion));
+}
+
+const HOLGURA_SCROLLSPY_CUENTAS = 14;
+// Mientras el salto a una sección está en curso (animación de scroll suave),
+// el scrollspy se pausa -- si no, pelea con la pestaña que ya se marcó
+// activa al tocarla, mostrando de forma intermitente la pestaña anterior
+// hasta que el scroll termina de asentarse.
+let saltoCuentasEnCurso = false;
+let tokenSaltoCuentas = 0;
+
+function desplazarASeccionCuentas(idSeccion){
+  const el = document.getElementById('seccion-cuentas-' + idSeccion);
+  const barra = document.getElementById('tabs-cuentas');
+  if(!el || !barra) return;
+  // La barra es sticky con su propio "top" (no arranca en el borde superior
+  // del viewport), así que el destino debe sumar ese offset y no solo la
+  // altura de la barra -- si no, la sección cae parcialmente tapada debajo
+  // de la barra pegada y el scrollspy no la reconoce como activa recién
+  // saltada.
+  const offsetSuperiorBarra = parseFloat(getComputedStyle(barra).top) || 0;
+  const y = el.getBoundingClientRect().top + window.scrollY - (offsetSuperiorBarra + barra.offsetHeight + 10);
+  const miToken = ++tokenSaltoCuentas;
+  saltoCuentasEnCurso = true;
+  const terminarSalto = () => { if(tokenSaltoCuentas === miToken) saltoCuentasEnCurso = false; };
+  window.addEventListener('scrollend', terminarSalto, { once: true });
+  setTimeout(terminarSalto, 700); // respaldo si el navegador no soporta 'scrollend'
+  window.scrollTo({ top: Math.max(0, y), behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth' });
+}
+
 function volverACuentas(idSeccion){
-  mostrar(VISTA_CUENTAS_POR_SECCION[idSeccion] || 'vista-cuentas');
+  mostrarSeccionCuentas(idSeccion);
+}
+
+function actualizarScrollspyCuentas(){
+  if(saltoCuentasEnCurso) return;
+  const barra = document.getElementById('tabs-cuentas');
+  if(!barra || !document.getElementById('vista-cuentas').classList.contains('activa')) return;
+  const limite = barra.getBoundingClientRect().bottom + HOLGURA_SCROLLSPY_CUENTAS;
+  let actual = null;
+  document.querySelectorAll('.seccion-cuentas').forEach(sec => {
+    if(sec.getBoundingClientRect().top <= limite) actual = sec;
+  });
+  if(!actual) actual = document.querySelector('.seccion-cuentas');
+  if(!actual) return;
+  const clave = actual.id.replace('seccion-cuentas-', '');
+  barra.querySelectorAll('.tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === clave));
+}
+
+let scrollspyCuentasListo = false;
+function inicializarScrollspyCuentas(){
+  if(scrollspyCuentasListo) return;
+  scrollspyCuentasListo = true;
+  let pendiente = false;
+  window.addEventListener('scroll', () => {
+    if(pendiente) return;
+    pendiente = true;
+    requestAnimationFrame(() => { pendiente = false; actualizarScrollspyCuentas(); });
+  }, { passive: true });
 }
 
 function toggleAcordeon(id){
@@ -7590,7 +7664,7 @@ function cerrarMenuAgregarGastoCentral(){
 }
 
 function estaEnAreaDeCuentas(){
-  return document.getElementById('vista-cuentas').classList.contains('activa') || !!document.querySelector('.cuentas-sub.activa');
+  return document.getElementById('vista-cuentas').classList.contains('activa');
 }
 
 // Este botón (esquina inferior derecha) solo se ve en escritorio -- en
@@ -12162,7 +12236,7 @@ async function guardarTransferencia(){
     return;
   }
   aplicarAjusteTransferencia(fila, 1); // se resuelve en segundo plano
-  mostrar('vista-cuentas-transferencias');
+  mostrarSeccionCuentas('transferencias');
 }
 
 let transferenciaActual = null;
@@ -12215,7 +12289,7 @@ async function actualizarTransferencia(){
     return;
   }
   aplicarAjusteTransferencia(fila, 1); // se resuelve en segundo plano
-  mostrar('vista-cuentas-transferencias');
+  mostrarSeccionCuentas('transferencias');
 }
 
 async function eliminarTransferencia(){
@@ -12228,7 +12302,7 @@ async function eliminarTransferencia(){
     return;
   }
   aplicarAjusteTransferencia(transferenciaActual, -1); // se resuelve en segundo plano
-  mostrar('vista-cuentas-transferencias');
+  mostrarSeccionCuentas('transferencias');
 }
 
 const NOMBRES_MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -13553,7 +13627,7 @@ async function abrirFlujoEfectivo(){
 
   if(f.items.length === 0){
     cont.innerHTML = `
-      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-inversion')">
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('cuentas')">
         <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
         <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
       </button>
@@ -13563,7 +13637,7 @@ async function abrirFlujoEfectivo(){
   }
 
   const ingresosHtml = f.totalIngresos > 0 ? `
-    <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-ingresos')">
+    <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('ingresos')">
       <div class="etiqueta">${t('flujo.ingresos_esperados')}<span class="flecha-fila">›</span></div>
       <div class="monto">+${formatoMonto(f.totalIngresos, 'MXN')}</div>
     </button>
@@ -13587,12 +13661,12 @@ async function abrirFlujoEfectivo(){
 
   cont.innerHTML = `
     <div class="totales-grid">
-      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-inversion')">
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('cuentas')">
         <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
         <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
       </button>
       ${ingresosHtml}
-      <button type="button" class="total-caja total-caja-clic" onclick="mostrar('vista-cuentas-deudas')">
+      <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('deudas')">
         <div class="etiqueta">${t('flujo.total_pagar')}<span class="flecha-fila">›</span></div>
         <div class="monto">-${formatoMonto(f.total, 'MXN')}</div>
       </button>
@@ -13745,15 +13819,15 @@ async function abrirSaludDetalle(){
     <div class="grid-2col">
       <div>
         <h2>${t('salud.cobertura_liquidez')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-inversion')">${t('salud.activos_liquidos')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(s.activosLiquidos, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('salud.activos_liquidos')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(s.activosLiquidos, 'MXN')}</span></div>
         <div class="fila-balance"><span>${t('salud.compromisos_mensuales')}</span><span class="valor negativo">${formatoMonto(s.compromisosMensuales, 'MXN')}</span></div>
         ${s.aportacionesRecurrentes > 0 ? `<div class="detalle-explica">${tf('salud.desglose_compromisos', formatoMonto(s.compromisosDeuda, 'MXN'), formatoMonto(s.aportacionesRecurrentes, 'MXN'))}</div>` : ''}
         <div class="aviso">${t('salud.aviso_cobertura')}</div>
       </div>
       <div>
         <h2>${t('salud.tasa_endeudamiento')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-deudas')">${t('salud.pagos_mensuales_deuda')}<span class="flecha-fila">›</span></button><span class="valor negativo">${formatoMonto(s.compromisosDeuda, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-ingresos')">${t('salud.ingreso_mensual')}<span class="flecha-fila">›</span></button><span class="valor positivo">${s.ingreso ? formatoMonto(s.ingreso, 'MXN') : t('comun.sin_definir')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('salud.pagos_mensuales_deuda')}<span class="flecha-fila">›</span></button><span class="valor negativo">${formatoMonto(s.compromisosDeuda, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('ingresos')">${t('salud.ingreso_mensual')}<span class="flecha-fila">›</span></button><span class="valor positivo">${s.ingreso ? formatoMonto(s.ingreso, 'MXN') : t('comun.sin_definir')}</span></div>
         <div class="aviso">${t('salud.aviso_endeudamiento')}</div>
       </div>
     </div>
@@ -14025,15 +14099,15 @@ async function abrirBalance(){
     <div class="grid-2col">
       <div>
         <h2>${t('balance.activos')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-inversion')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-bienes')">${t('balance.bienes')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalBienes, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-acciones')">${t('balance.acciones')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalAcciones, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('bienes')">${t('balance.bienes')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalBienes, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('acciones')">${t('balance.acciones')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalAcciones, 'MXN')}</span></div>
         ${b.accionesSinPrecio.length > 0 ? `<div class="aviso estado-atencion">${tf('balance.acciones_sin_precio', b.accionesSinPrecio.join(', '))}</div>` : ''}
         <div class="fila-balance subtotal"><span>${t('balance.total_activos')}</span><span class="valor positivo">${formatoMonto(b.totalActivos, 'MXN')}</span></div>
       </div>
       <div>
         <h2>${t('balance.pasivos')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrar('vista-cuentas-deudas')">${t('balance.deudas')}<span class="flecha-fila">›</span></button><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('balance.deudas')}<span class="flecha-fila">›</span></button><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
         <div class="fila-balance subtotal"><span>${t('balance.total_pasivos')}</span><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
       </div>
     </div>
@@ -14908,8 +14982,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 62;
+const VERSION_APP_ACTUAL = 63;
 const CHANGELOG_APP = [
+  {
+    version: 63,
+    fecha: '2026-08-30',
+    cambios_es: [
+      '"Mis cuentas" ahora es una sola pantalla: las 6 secciones (Ingresos, Cuentas de inversión, Bienes, Acciones, Deudas, Transferencias) están una debajo de otra, con una barra de pestañas fija arriba que salta a cualquiera con un toque y se marca sola conforme bajas con el dedo.'
+    ],
+    cambios_en: [
+      '"My accounts" is now one continuous screen: all 6 sections (Income, Investment accounts, Assets, Stocks, Debts, Transfers) sit one after another, with a fixed tab bar on top that jumps to any of them with one tap and highlights itself as you scroll.'
+    ]
+  },
   {
     version: 62,
     fecha: '2026-08-30',
@@ -15725,6 +15809,7 @@ inicializarAvisoConexion();
 registrarServiceWorker();
 inicializarSwipeSheet('menu-agregar', cerrarMenuAgregar);
 inicializarSwipeSheet('menu-agregar-gasto-central', cerrarMenuAgregarGastoCentral);
+inicializarScrollspyCuentas();
 
 // Bug real reportado por el usuario ("loop en el onboarding... cuando le
 // das volver te regresa al formulario de crear cuenta"): el navegador
