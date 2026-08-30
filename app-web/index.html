@@ -5751,6 +5751,11 @@ function inicializarGestosSwipe(){
     if(window.innerWidth >= 900) return;
     if(document.getElementById('tour-overlay').style.display === 'block') return;
     if(e.touches.length !== 1) return;
+    // Estas franjas tienen su propio scroll horizontal (arrastran hacia los
+    // lados con el dedo) -- si no se excluyen aquí, un arrastre que no
+    // "agarra" perfecto la franja compite con este gesto de "volver" y
+    // termina regresando a Inicio en vez de solo desplazar la franja.
+    if(e.target.closest('.tabs-cuentas, .panel-acciones-rapidas, .panel-freaky-chips')) return;
     const t = e.touches[0];
     inicio = { x: t.clientX, y: t.clientY, time: Date.now() };
     elementoActivo = document.querySelector('.pantalla.activa');
@@ -14998,8 +15003,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 64;
+const VERSION_APP_ACTUAL = 65;
 const CHANGELOG_APP = [
+  {
+    version: 65,
+    fecha: '2026-08-30',
+    cambios_es: [
+      'Arreglado: si el dedo no agarraba bien la barra de pestañas de "Mis cuentas" al intentar deslizarla, a veces te regresaba a Inicio -- ya no compite con ese gesto.'
+    ],
+    cambios_en: [
+      'Fixed: an imprecise swipe on the "My accounts" tab bar could sometimes send you back to Home -- it no longer fights with that gesture.'
+    ]
+  },
   {
     version: 64,
     fecha: '2026-08-30',
