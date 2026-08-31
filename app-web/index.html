@@ -628,10 +628,24 @@
   .flujo-item-cumplido{opacity:.55;}
   .flujo-item-cumplido .monto{text-decoration:line-through;}
   .chip-flujo-cumplido{
-    display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;
-    font-family:var(--sans);font-size:12px;color:var(--texto-tenue);
+    display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;
+    font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue);
   }
-  .chip-flujo-cumplido input{margin:0;width:15px;height:15px;flex:none;cursor:pointer;}
+  /* Mismo checkbox grande y personalizado que .check-fila (24px, con su
+     propia palomita) -- pedido del usuario, el nativo de 15px se sentía
+     chico y además desentonaba con el resto de la app. */
+  .chip-flujo-cumplido input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;
+    width:22px;height:22px;min-width:22px;flex:none;margin:0;padding:0;
+    border:1.5px solid var(--borde-fuerte);border-radius:5px;background:none;
+    cursor:pointer;position:relative;transition:background-color 150ms ease, border-color 150ms ease;
+  }
+  .chip-flujo-cumplido input[type=checkbox]:checked{background:var(--acento);border-color:var(--acento);}
+  .chip-flujo-cumplido input[type=checkbox]:checked::after{
+    content:'';position:absolute;left:7px;top:3px;width:6px;height:11px;
+    border:solid var(--acento-texto);border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  .chip-flujo-cumplido input[type=checkbox]:focus-visible{outline:2px solid var(--texto-tenue);outline-offset:2px;}
   /* Pedido del usuario: deslizar un movimiento de gasto hacia la izquierda
      revela "Eliminar" en rojo detrás — el borde que separaba renglones vive
      ahora en .swipe-fila (fijo) en vez de en .tarjeta (que se desliza), para
@@ -15272,8 +15286,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 84;
+const VERSION_APP_ACTUAL = 85;
 const CHANGELOG_APP = [
+  {
+    version: 85,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se agrandó el check de "Ya se cumplió este mes" en Flujo de efectivo -- se sentía chico para tocarlo.'
+    ],
+    cambios_en: [
+      'Made the "Already happened this month" checkbox bigger in Cash flow -- it felt too small to tap.'
+    ]
+  },
   {
     version: 84,
     fecha: '2026-08-31',
