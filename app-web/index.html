@@ -425,6 +425,9 @@
      del usuario) en vez de envolverse a 2-3 líneas como antes. */
   .tab-cuentas-dato{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--texto);white-space:nowrap;overflow:hidden;}
   .tab-cuentas-dato.negativo{color:var(--neg);}
+  .tab-cuentas-dato.estado-saludable{color:var(--color-saludable);}
+  .tab-cuentas-dato.estado-atencion{color:var(--color-atencion);font-weight:700;}
+  .tab-cuentas-dato.estado-riesgo{color:var(--color-riesgo);font-weight:700;}
   .tab-cuentas.activo{background:var(--acento);border-color:var(--acento);}
   .tab-cuentas.activo .tab-cuentas-titulo,
   .tab-cuentas.activo .tab-cuentas-dato{color:var(--acento-texto);}
@@ -2030,17 +2033,39 @@
   <div id="balance-contenido">
     <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
   </div>
-  <div class="panel-grid" id="balance-accesos"></div>
-</div>
 
-<div id="vista-balance-graficas" class="pantalla">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-balance')">‹</button>
-    <h1 data-i18n="balance.graficas_titulo">Gráficas y liquidez</h1>
+  <!-- Barra de accesos fija -- misma lógica de "Mis cuentas"/"Gastos y
+       presupuesto" (partes 83 y 92), pedida explícitamente por el usuario
+       ("aplica la misma lógica para balance"). Salta directo a la sección
+       al tocarla y se marca sola con el dedo (scrollspy, ver
+       controladorSeccionesBalance). -->
+  <div class="tabs-cuentas" id="tabs-balance">
+    <button type="button" class="tab-cuentas" data-seccion="salud" onclick="mostrarSeccionBalance('salud')">
+      <span class="tab-cuentas-titulo" data-i18n="panel.salud.titulo">Salud financiera</span>
+      <span class="tab-cuentas-dato" id="tab-balance-salud-estado"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="graficas" onclick="mostrarSeccionBalance('graficas')">
+      <span class="tab-cuentas-titulo" data-i18n="balance.graficas_titulo">Gráficas y liquidez</span>
+    </button>
   </div>
-  <div id="balance-graficas-contenido">
-    <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
-  </div>
+
+  <section class="seccion-cuentas" id="seccion-balance-salud">
+    <h2 data-i18n="panel.salud.titulo">Salud financiera</h2>
+    <button type="button" class="btn-instructivo" id="btn-instructivo-salud" onclick="toggleInstructivo('salud')"><span data-i18n="comun.como_usar">¿Cómo usar esto?</span> <span class="flecha-instructivo">▾</span></button>
+    <div class="instructivo" id="instructivo-salud" style="display:none;">
+      <p><b>Cobertura de liquidez</b> = cuántos meses podrías cubrir tus pagos fijos (deudas + aportaciones) usando solo tu efectivo disponible, si dejaras de recibir ingresos hoy. Mientras más meses, mejor colchón tienes.</p>
+      <p><b>Tasa de endeudamiento</b> = qué porcentaje de tu ingreso mensual ya se va en pagar deudas. Para verla necesitas agregar tus ingresos en "Ingresos" (dentro de Mis cuentas).</p>
+      <p>Ambos indicadores se usan también en el Simulador de crédito, para saber si te conviene tomar deuda nueva.</p>
+    </div>
+    <div id="salud-contenido"></div>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-balance-graficas">
+    <h2 data-i18n="balance.graficas_titulo">Gráficas y liquidez</h2>
+    <div id="balance-graficas-contenido"></div>
+  </section>
+
+  <button type="button" class="btn-link-tenue btn-escritura" onclick="mostrar('vista-balance-pdf')" data-i18n="balance.pdf_titulo" style="display:block;">Exportar PDF</button>
 </div>
 
 <div id="vista-balance-pdf" class="pantalla">
@@ -2076,26 +2101,9 @@
   <button class="btn-grande" onclick="compartirBalance()" data-i18n="balance.compartir_pdf">Compartir balance en PDF</button>
 </div>
 
-<div id="vista-salud" class="pantalla">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-inicio')">‹</button>
-    <h1 data-i18n="panel.salud.titulo">Salud financiera</h1>
-  </div>
-  <button type="button" class="btn-instructivo" id="btn-instructivo-salud" onclick="toggleInstructivo('salud')"><span data-i18n="comun.como_usar">¿Cómo usar esto?</span> <span class="flecha-instructivo">▾</span></button>
-  <div class="instructivo" id="instructivo-salud" style="display:none;">
-    <p><b>Cobertura de liquidez</b> = cuántos meses podrías cubrir tus pagos fijos (deudas + aportaciones) usando solo tu efectivo disponible, si dejaras de recibir ingresos hoy. Mientras más meses, mejor colchón tienes.</p>
-    <p><b>Tasa de endeudamiento</b> = qué porcentaje de tu ingreso mensual ya se va en pagar deudas. Para verla necesitas agregar tus ingresos en "Ingresos" (dentro de Mis cuentas).</p>
-    <p>Ambos indicadores se usan también en el Simulador de crédito, para saber si te conviene tomar deuda nueva.</p>
-  </div>
-  <div id="salud-contenido">
-    <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
-  </div>
-  <div class="panel-grid" id="salud-accesos"></div>
-</div>
-
 <div id="vista-salud-detalle" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-salud')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionBalance('salud')">‹</button>
     <h1 data-i18n="salud.detalle_titulo">Desglose y umbrales</h1>
   </div>
   <div id="salud-detalle-contenido">
@@ -2121,7 +2129,7 @@
 
 <div id="vista-editar-perfil" class="pantalla">
   <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-salud')">‹</button>
+    <button class="btn-volver" onclick="mostrarSeccionBalance('salud')">‹</button>
     <h1 data-i18n="salud.umbrales_titulo">Umbrales de salud financiera</h1>
   </div>
   <div class="barra-guardar-superior">
@@ -2142,7 +2150,7 @@
     <input type="number" id="input-meses-objetivo" min="0" inputmode="decimal" step="0.1" placeholder="6">
   </div>
   <div class="aviso" data-i18n="salud.meses_objetivo_recomendado">Recomendado: 6 meses. Tú decides si prefieres guardar más o menos colchón.</div>
-  <button class="btn-grande secundario" onclick="mostrar('vista-salud')" data-i18n="comun.cancelar">Cancelar</button>
+  <button class="btn-grande secundario" onclick="mostrarSeccionBalance('salud')" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-score" class="pantalla">
@@ -3418,7 +3426,7 @@ const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta
 // "Mis cuentas" tenía esto, generalizado a un mapa por vista en vez de una
 // sola variable.
 const VISTAS_CON_SCROLL_GUARDADO = [
-  'vista-cuentas', 'vista-gastos', 'vista-solicitudes-gasto'
+  'vista-cuentas', 'vista-gastos', 'vista-balance', 'vista-solicitudes-gasto'
 ];
 let scrollGuardadoPorVista = {};
 
@@ -7672,6 +7680,14 @@ const controladorSeccionesGastos = crearControladorSeccionesConPestanas({
 function mostrarSeccionGastos(idSeccion){ controladorSeccionesGastos.mostrarSeccion(idSeccion); }
 function actualizarScrollspyGastos(){ controladorSeccionesGastos.actualizarScrollspy(); }
 function inicializarScrollspyGastos(){ controladorSeccionesGastos.inicializarScrollspy(); }
+
+const controladorSeccionesBalance = crearControladorSeccionesConPestanas({
+  idPantalla: 'vista-balance', idBarra: 'tabs-balance', prefijoSeccion: 'seccion-balance-',
+  mostrarPantalla: () => abrirBalance(),
+});
+function mostrarSeccionBalance(idSeccion){ controladorSeccionesBalance.mostrarSeccion(idSeccion); }
+function actualizarScrollspyBalance(){ controladorSeccionesBalance.actualizarScrollspy(); }
+function inicializarScrollspyBalance(){ controladorSeccionesBalance.inicializarScrollspy(); }
 
 function toggleAcordeon(id){
   const cont = document.getElementById('acordeon-contenido-' + id);
@@ -13863,23 +13879,18 @@ function renderProyeccionLiquidez(items, activosLiquidos){
   });
 }
 
-const ICONOS_SALUD_HUB = {
-  desglose: '<path d="M4 20V11"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/>'
-};
-function iconoSaludHub(nombre){
-  return `<svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS_SALUD_HUB[nombre]}</svg>`;
-}
-
 let saludDetalleData = null;
 
-async function abrirSaludFinanciera(){
-  mostrar('vista-salud');
-  const cont = document.getElementById('salud-contenido');
-  const accesos = document.getElementById('salud-accesos');
-  cont.innerHTML = `<div class="mensaje"><span class="spinner"></span>${t('comun.cargando')}</div>`;
-  accesos.innerHTML = '';
-
-  const s = await calcularSaludFinanciera();
+// "Salud financiera" dejó de ser una pantalla aparte (parte 93, misma
+// lógica de barra de acceso que "Mis cuentas"/"Gastos") -- ahora es una
+// sección dentro de "Balance general", pintada con el mismo `s` que
+// abrirBalance() ya calculó (sin repetir la consulta de
+// calcularSaludFinanciera). abrirSaludFinanciera() se conserva como alias
+// -- lo siguen llamando la pantalla de Score, el enrutador de acciones de
+// Freaky y guardarPerfil() -- pero ahora solo salta a la sección (y si el
+// usuario no estaba en Balance, mostrarPantalla() vuelve a calcular todo
+// desde cero, así que los datos siempre llegan frescos).
+function renderSaludFinancieraInline(s){
   saludDetalleData = s;
   const etiquetas = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
   const claseEstado = estado => estado === 'riesgo' ? 'estado-riesgo' : (estado === 'atencion' ? 'estado-atencion' : 'estado-saludable');
@@ -13890,7 +13901,10 @@ async function abrirSaludFinanciera(){
 
   const endeudamientoTxt = s.tasaEndeudamiento === null ? t('comun.sin_definir') : `${s.tasaEndeudamiento.toFixed(1)}%`;
 
-  cont.innerHTML = `
+  document.getElementById('tab-balance-salud-estado').className = `tab-cuentas-dato ${claseEstado(s.estadoGeneral)}`;
+  document.getElementById('tab-balance-salud-estado').textContent = etiquetas[s.estadoGeneral];
+
+  document.getElementById('salud-contenido').innerHTML = `
     <div class="totales-grid">
       <div class="total-caja">
         <div class="etiqueta">${t('balance.estado_general')}</div>
@@ -13910,24 +13924,22 @@ async function abrirSaludFinanciera(){
 
     <h2>${t('salud.recomendacion')}</h2>
     <div class="aviso">${s.recomendacion}</div>
+    <button type="button" class="btn-link-tenue" onclick="abrirSaludDetalle()">${t('salud.ver_desglose')}</button>
   `;
+}
 
-  accesos.innerHTML = `
-    <button type="button" class="panel-tarjeta" onclick="abrirSaludDetalle()">
-      <div class="panel-icono">${iconoSaludHub('desglose')}</div>
-      <div class="panel-tarjeta-titulo">${t('salud.ver_desglose')}</div>
-      <div class="panel-tarjeta-sub">${t('salud.detalle_sub')}</div>
-    </button>
-  `;
-  actualizarUIDemo();
-  ajustarTamanoDatosTarjetas();
+function abrirSaludFinanciera(){
+  mostrarSeccionBalance('salud');
 }
 
 async function abrirSaludDetalle(){
   mostrar('vista-salud-detalle');
   const cont = document.getElementById('salud-detalle-contenido');
   cont.innerHTML = skeletonCards(2);
-  if(!saludDetalleData) await abrirSaludFinanciera();
+  // abrirSaludFinanciera() ahora solo navega/salta a la sección (no es
+  // async) -- si de verdad hace falta esperar a que los datos existan, hay
+  // que llamar directo a abrirBalance() (lo que realmente los calcula).
+  if(!saludDetalleData) await abrirBalance();
   const s = saludDetalleData;
   if(!s) return;
 
@@ -14162,23 +14174,13 @@ async function calcularSimulador(){
   `;
 }
 
-const ICONOS_BALANCE_HUB = {
-  salud: '<path d="M3 12h4l2-6 4 12 2-6h6"/>',
-  graficas: '<path d="M4 20V11"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/>',
-  pdf: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/>'
-};
-function iconoBalanceHub(nombre){
-  return `<svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS_BALANCE_HUB[nombre]}</svg>`;
-}
-
 let balanceDetalleData = null;
 
 async function abrirBalance(){
   mostrar('vista-balance');
+  inicializarScrollspyBalance();
   const cont = document.getElementById('balance-contenido');
-  const accesos = document.getElementById('balance-accesos');
   cont.innerHTML = `<div class="mensaje"><span class="spinner"></span>${t('comun.cargando')}</div>`;
-  accesos.innerHTML = '';
 
   const [b, s] = await Promise.all([calcularBalance(), calcularSaludFinanciera()]);
 
@@ -14229,37 +14231,23 @@ async function abrirBalance(){
     </div>
   `;
 
-  const etiquetasSalud = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
-  const claseEstadoSalud = estado => estado === 'riesgo' ? 'estado-riesgo' : (estado === 'atencion' ? 'estado-atencion' : 'estado-saludable');
-
-  accesos.innerHTML = `
-    <button type="button" class="panel-tarjeta" onclick="abrirSaludFinanciera()">
-      <div class="panel-icono">${iconoBalanceHub('salud')}</div>
-      <div class="panel-tarjeta-titulo">${t('panel.salud.titulo')}</div>
-      <div class="panel-tarjeta-dato ${claseEstadoSalud(s.estadoGeneral)}">${etiquetasSalud[s.estadoGeneral]}</div>
-    </button>
-    <button type="button" class="panel-tarjeta" onclick="abrirBalanceGraficas()">
-      <div class="panel-icono">${iconoBalanceHub('graficas')}</div>
-      <div class="panel-tarjeta-titulo">${t('balance.graficas_titulo')}</div>
-      <div class="panel-tarjeta-sub">${t('balance.graficas_sub')}</div>
-    </button>
-    ${!modoDemo ? `
-    <button type="button" class="panel-tarjeta" onclick="mostrar('vista-balance-pdf')">
-      <div class="panel-icono">${iconoBalanceHub('pdf')}</div>
-      <div class="panel-tarjeta-titulo">${t('balance.pdf_titulo')}</div>
-      <div class="panel-tarjeta-sub">${t('balance.pdf_sub')}</div>
-    </button>` : ''}
-  `;
-
   animarNumero(document.getElementById('patrimonio-neto-monto'), b.patrimonioNeto, 'MXN', 1000);
+  renderSaludFinancieraInline(s);
+  renderBalanceGraficasInline();
   ajustarTamanoDatosTarjetas();
 }
 
-async function abrirBalanceGraficas(foco){
-  mostrar('vista-balance-graficas');
+// "Gráficas y liquidez" dejó de ser una pantalla aparte (parte 93) -- se
+// pinta en línea con balanceDetalleData, que abrirBalance() ya calculó (sin
+// repetir el Promise.all ni la consulta de patrimonio_historico).
+// abrirBalanceGraficas(foco) se conserva como alias -- lo sigue llamando la
+// pantalla de Score con foco='evolucion' para llevar directo a esa gráfica
+// -- pero ahora solo salta a la sección; el scroll extra hasta la gráfica
+// de evolución se hace con un pequeño respiro después, para no pelear con
+// la animación del salto (mismo motivo que el scrollspy se pausa mientras
+// el salto está en curso, ver crearControladorSeccionesConPestanas).
+function renderBalanceGraficasInline(){
   const cont = document.getElementById('balance-graficas-contenido');
-  cont.innerHTML = skeletonCards(2);
-  if(!balanceDetalleData) await abrirBalance();
   if(!balanceDetalleData) return;
 
   const { b, s } = balanceDetalleData;
@@ -14295,8 +14283,18 @@ async function abrirBalanceGraficas(foco){
   `;
 
   renderizarDetalleBalance();
+}
+
+function abrirBalanceGraficas(foco){
+  mostrarSeccionBalance('graficas');
   if(foco === 'evolucion'){
-    document.getElementById('evolucion-patrimonio-caja')?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
+    // Respiro después del salto animado de mostrarSeccionBalance -- si se
+    // hiciera de inmediato, este scroll adicional pelearía con el que ya
+    // está en curso (mismo motivo que el scrollspy se pausa mientras el
+    // salto anima, ver crearControladorSeccionesConPestanas).
+    setTimeout(() => {
+      document.getElementById('evolucion-patrimonio-caja')?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
+    }, REDUCIR_MOVIMIENTO ? 0 : 750);
   }
 }
 
@@ -15099,8 +15097,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 72;
+const VERSION_APP_ACTUAL = 73;
 const CHANGELOG_APP = [
+  {
+    version: 73,
+    fecha: '2026-08-30',
+    cambios_es: [
+      '"Balance general" ya no manda a Salud financiera ni a Gráficas a pantallas aparte -- ahora es una barra de accesos fija (como en "Mis cuentas" y "Gastos") que salta a cualquiera sin salir de la pantalla.'
+    ],
+    cambios_en: [
+      '"Balance sheet" no longer sends Financial health or Charts to separate screens -- it now has a fixed access bar (like "My accounts" and "Expenses") that jumps to either without leaving the screen.'
+    ]
+  },
   {
     version: 72,
     fecha: '2026-08-30',
