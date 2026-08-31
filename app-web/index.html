@@ -403,6 +403,13 @@
      Freaky-vuelo desactivado -- para ese caso, la cuadrícula necesita
      pegarse más abajo para no taparlo, igual que .pantalla arriba. */
   body.con-sesion.freaky-vuelo-desactivado .tabs-cuentas{top:calc(64px + env(safe-area-inset-top, 0px));}
+  /* Balance general solo tiene 2 pestañas (Salud financiera / Gráficas) --
+     con la cuadrícula de 3 columnas compartida quedaba una columna vacía y,
+     peor, cada pestaña tenía la mitad del ancho que necesitaba, así que
+     títulos como "Salud financiera" se recortaban con "…" incluso en el
+     caso normal (parte 94). Con 2 columnas cada pestaña usa el doble de
+     ancho disponible. */
+  #tabs-balance{grid-template-columns:repeat(2, 1fr);}
   .tab-cuentas{
     display:flex;flex-direction:column;gap:1px;min-width:0;
     background:var(--superficie);border:1px solid var(--borde);
@@ -1820,7 +1827,7 @@
       <span class="tab-cuentas-dato" id="acordeon-total-ingresos"></span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="cuentas" onclick="mostrarSeccionCuentas('cuentas')">
-      <span class="tab-cuentas-titulo" data-i18n="balance.cuentas_inversion">Cuentas de inversión</span>
+      <span class="tab-cuentas-titulo" data-i18n="cuentas.inversion_tab_titulo">Inversión</span>
       <span class="tab-cuentas-dato" id="acordeon-total-cuentas"></span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="bienes" onclick="mostrarSeccionCuentas('bienes')">
@@ -1836,7 +1843,7 @@
       <span class="tab-cuentas-dato negativo" id="acordeon-total-deudas"></span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="transferencias" onclick="mostrarSeccionCuentas('transferencias')">
-      <span class="tab-cuentas-titulo" data-i18n="cuentas.transferencias_titulo">Transferencias</span>
+      <span class="tab-cuentas-titulo" data-i18n="cuentas.transferencias_tab_titulo">Traspasos</span>
       <span class="tab-cuentas-dato" id="acordeon-total-transferencias"></span>
     </button>
   </div>
@@ -2250,7 +2257,7 @@
       <span class="tab-cuentas-titulo" data-i18n="gastos.graficas_titulo">Gráficas</span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="categorias" onclick="mostrarSeccionGastos('categorias')">
-      <span class="tab-cuentas-titulo" data-i18n="gastos.categorias_titulo">Gasto por categoría</span>
+      <span class="tab-cuentas-titulo" data-i18n="gastos.categorias_tab_titulo">Categorías</span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="movimientos" onclick="mostrarSeccionGastos('movimientos')">
       <span class="tab-cuentas-titulo" data-i18n="gastos.movimientos_titulo">Movimientos</span>
@@ -3940,6 +3947,7 @@ const TRADUCCIONES = {
     'balance.activos': 'Activos',
     'balance.pasivos': 'Pasivos',
     'balance.cuentas_inversion': 'Cuentas de inversión',
+    'cuentas.inversion_tab_titulo': 'Inversión',
     'balance.bienes': 'Bienes',
     'balance.acciones': 'Acciones',
     'balance.acciones_sin_precio': 'No se pudo obtener el precio de {0} — no está incluida en tu patrimonio. Se usará el último precio disponible en cuanto vuelva a estar accesible.',
@@ -4036,6 +4044,7 @@ const TRADUCCIONES = {
     'gastos.graficas_titulo': 'Gráficas',
     'gastos.graficas_sub': 'Tendencia y composición',
     'gastos.categorias_titulo': 'Gasto por categoría',
+    'gastos.categorias_tab_titulo': 'Categorías',
     'gastos.categorias_sub': 'Desglose y subcategorías',
     'gastos.movimientos_titulo': 'Movimientos',
     'gastos.movimientos_sub': '{0} este mes',
@@ -4399,6 +4408,7 @@ const TRADUCCIONES = {
     'cuentas.deudas_titulo': 'Deudas',
     'cuentas.agregar_deuda': '+ Agregar deuda',
     'cuentas.transferencias_titulo': 'Transferencias y pagos de deuda',
+    'cuentas.transferencias_tab_titulo': 'Traspasos',
     'cuentas.agregar_transferencia': '+ Agregar transferencia',
     'cuentas.agregar_fab_aria': 'Agregar',
     'cuentas.menu_ingreso': 'Ingreso',
@@ -4894,6 +4904,7 @@ const TRADUCCIONES = {
     'balance.activos': 'Assets',
     'balance.pasivos': 'Liabilities',
     'balance.cuentas_inversion': 'Investment accounts',
+    'cuentas.inversion_tab_titulo': 'Investments',
     'balance.bienes': 'Property',
     'balance.acciones': 'Stocks',
     'balance.acciones_sin_precio': "Couldn't get the price for {0} — it's not included in your net worth. It'll use the last available price once it's reachable again.",
@@ -4990,6 +5001,7 @@ const TRADUCCIONES = {
     'gastos.graficas_titulo': 'Charts',
     'gastos.graficas_sub': 'Trend and breakdown',
     'gastos.categorias_titulo': 'Spending by category',
+    'gastos.categorias_tab_titulo': 'Categories',
     'gastos.categorias_sub': 'Breakdown and subcategories',
     'gastos.movimientos_titulo': 'Activity',
     'gastos.movimientos_sub': '{0} this month',
@@ -5353,6 +5365,7 @@ const TRADUCCIONES = {
     'cuentas.deudas_titulo': 'Debts',
     'cuentas.agregar_deuda': '+ Add debt',
     'cuentas.transferencias_titulo': 'Transfers & debt payments',
+    'cuentas.transferencias_tab_titulo': 'Transfers',
     'cuentas.agregar_transferencia': '+ Add transfer',
     'cuentas.agregar_fab_aria': 'Add',
     'cuentas.menu_ingreso': 'Income',
@@ -7556,7 +7569,7 @@ async function cargarTodo(){
 // Cuentas) y se llama también desde Inicio, Balance general, Gastos, Flujo
 // de efectivo y Salud financiera, dondequiera que haya un monto dentro de
 // una tarjeta angosta (.panel-tarjeta-dato o .totales-grid .monto).
-function ajustarTextoUnaLinea(el, tamanoMinimo = 9){
+function ajustarTextoUnaLinea(el, tamanoMinimo = 9, permitirEnvolver = true){
   let tam = parseFloat(getComputedStyle(el).fontSize);
   el.style.whiteSpace = '';
   el.style.overflowWrap = '';
@@ -7572,7 +7585,12 @@ function ajustarTextoUnaLinea(el, tamanoMinimo = 9){
   // overflow-wrap:break-word es necesario además de white-space:normal --
   // un monto es un solo token sin espacios ("$4,720,000.00"), así que sin
   // esto no habría ningún punto donde el texto pudiera cortar de todos modos.
-  if(el.scrollWidth > el.clientWidth){
+  // El título de una pestaña (permitirEnvolver=false) es distinto: envolverlo
+  // rompería el alto fijo de "2 renglones por tarjeta" (título + monto), así
+  // que si ni el tamaño mínimo alcanza, se deja el "…" de .tab-cuentas-titulo
+  // (definido en CSS) como último recurso -- perder texto de una etiqueta no
+  // es grave como perder dígitos de un monto.
+  if(el.scrollWidth > el.clientWidth && permitirEnvolver){
     el.style.whiteSpace = 'normal';
     el.style.overflowWrap = 'break-word';
   }
@@ -7582,6 +7600,7 @@ function ajustarTamanoDatosTarjetas(){
   document.querySelectorAll(
     '.tab-cuentas-dato, .panel-grid .panel-tarjeta-dato, .totales-grid .total-caja .monto'
   ).forEach(el => ajustarTextoUnaLinea(el));
+  document.querySelectorAll('.tab-cuentas-titulo').forEach(el => ajustarTextoUnaLinea(el, 8, false));
 }
 
 let reajusteDatosTarjetasPendiente = false;
@@ -15097,8 +15116,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 73;
+const VERSION_APP_ACTUAL = 74;
 const CHANGELOG_APP = [
+  {
+    version: 74,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se revisaron las tarjetas de las barras de accesos de "Mis cuentas", "Gastos" y "Balance general" para que el texto siempre quepa: "Balance general" pasó a 2 columnas (antes dejaba una columna vacía) y algunas etiquetas se acortaron para no recortarse con "…".'
+    ],
+    cambios_en: [
+      'Reviewed the access-bar cards in "My accounts", "Expenses" and "Balance sheet" so the text always fits: "Balance sheet" now uses 2 columns (it used to leave an empty one) and a few labels were shortened so they no longer get cut off with "…".'
+    ]
+  },
   {
     version: 73,
     fecha: '2026-08-30',
