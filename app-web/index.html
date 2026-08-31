@@ -759,7 +759,7 @@
     background:var(--acento);color:var(--acento-texto);border:none;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.4);
     font-family:var(--sans);font-size:13px;font-weight:700;white-space:nowrap;
   }
-  body.con-sesion.freaky-vuelo-desactivado .btn-asistente-flotante{display:flex;}
+  body.con-sesion.freaky-vuelo-desactivado:not(.freaky-en-chat) .btn-asistente-flotante{display:flex;}
   .btn-asistente-flotante-avatar{
     width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none;
     display:flex;background:var(--bg);
@@ -789,7 +789,7 @@
        (causa raíz del parpadeo). No afecta nada visual: no hay rotación 3D. */
     -webkit-backface-visibility:hidden;backface-visibility:hidden;
   }
-  body.con-sesion:not(.freaky-vuelo-desactivado) .freaky-personaje{display:flex;}
+  body.con-sesion:not(.freaky-vuelo-desactivado):not(.freaky-en-chat) .freaky-personaje{display:flex;}
   /* El contenedor de arriba (.freaky-personaje) es el que GSAP mueve de un
      lado a otro de la pantalla (x/y) durante los vuelos, y el que usan los
      gestos de un solo disparo (freakyTrigger). Aquí adentro vivía además un
@@ -3521,10 +3521,17 @@ function mostrar(idVista){
   document.querySelectorAll('.sidebar-desktop [data-vista], .nav-inferior-movil [data-vista]').forEach(btn => {
     btn.classList.toggle('activo', btn.dataset.vista === idVista);
   });
+  // Pedido real del usuario: dentro del propio chat de Freaky es redundante
+  // que su avatar siga volando por ahí -- ya estás hablando con él, y
+  // tocarlo desde cualquier otra pantalla te trae aquí mismo. Se oculta por
+  // completo mientras dura la sesión en el chat (misma clase/patrón que
+  // "vuelo desactivado", pero acotada a esta pantalla) y reaparece solo al
+  // salir, con el próximo cambio de pantalla real de abajo.
+  document.body.classList.toggle('freaky-en-chat', idVista === 'vista-ayuda-ia');
   // Freaky ya no vuela solo por un temporizador (ver freakyIrAPerchaDePantalla) —
   // el único momento en que debe buscar dónde sentarse es un cambio real de
   // pantalla, así que se dispara aquí y en ningún otro lado.
-  if(idVista !== vistaAnterior && freakyVueloIniciado && document.body.classList.contains('con-sesion') && !document.body.classList.contains('freaky-vuelo-desactivado')){
+  if(idVista !== vistaAnterior && idVista !== 'vista-ayuda-ia' && freakyVueloIniciado && document.body.classList.contains('con-sesion') && !document.body.classList.contains('freaky-vuelo-desactivado')){
     freakyIrAPerchaDePantalla();
   }
   reiniciarTemporizadorInactividad();
@@ -15198,8 +15205,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 82;
+const VERSION_APP_ACTUAL = 83;
 const CHANGELOG_APP = [
+  {
+    version: 83,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Freaky ya no vuela ni aparece flotando mientras estás dentro de su propio chat -- ahí sería redundante (ya estás hablando con él). Vuelve a aparecer en cuanto sales del chat.'
+    ],
+    cambios_en: [
+      "Freaky no longer flies around or floats on screen while you're inside his own chat -- that would be redundant since you're already talking to him. He reappears as soon as you leave the chat."
+    ]
+  },
   {
     version: 82,
     fecha: '2026-08-31',
