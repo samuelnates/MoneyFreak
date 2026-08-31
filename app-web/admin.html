@@ -519,8 +519,8 @@
       <div class="tarjeta-etiqueta" style="margin-bottom:10px;" id="titulo-form-prospecto">Agregar prospecto</div>
       <div class="form-negocio">
         <div class="campo-negocio">
-          <label for="pros-nombre">Nombre</label>
-          <input type="text" id="pros-nombre" placeholder="Ej. Pedro Pérez">
+          <label for="pros-nombre">Nombre (opcional)</label>
+          <input type="text" id="pros-nombre" placeholder="Si no lo sabes, agrégalo después con Editar">
         </div>
         <div class="campo-negocio">
           <label for="pros-handle">Cuenta</label>
@@ -1603,11 +1603,6 @@ async function agregarProspecto(){
     errorEl.classList.remove('oculto');
     return;
   }
-  if(!nombre){
-    errorEl.textContent = ERRORES_PROSPECTO.nombre_requerido;
-    errorEl.classList.remove('oculto');
-    return;
-  }
 
   const editando = prospectoEditandoId;
   const btn = document.getElementById('btn-agregar-prospecto');
@@ -1615,7 +1610,7 @@ async function agregarProspecto(){
   const datos = await llamarInfluencers({
     accion: editando ? 'editar_prospecto' : 'crear_prospecto',
     id: editando || undefined,
-    prospecto: { nombre, handle, plataforma: plataforma || null, nota: nota || null },
+    prospecto: { nombre: nombre || null, handle, plataforma: plataforma || null, nota: nota || null },
   });
   btn.disabled = false;
 

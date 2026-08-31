@@ -46,6 +46,11 @@ Todo pendiente real disperso en el historial, en un solo lugar. Verificado contr
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-08-31 (parte 100) — Ajuste inmediato a la parte 99: "quiero que te permita guardar cuando no tienes su nombre aún y luego agregarlos".** El nombre se había vuelto requerido en el formulario -- se relajó a opcional en los 3 lugares donde se validaba (`admin-influencers` en `crear_prospecto` y `editar_prospecto`, y la validación del lado del cliente en `admin.html`). No hizo falta construir nada nuevo: el mecanismo para completar el nombre después (botón "Editar", el aviso de "Sin nombre todavía", y el mensaje cayendo a @handle si falta) ya se había armado en la parte 99 pensando justo en los 9 prospectos reales que ya existían sin nombre -- este cambio solo deja entrar por la puerta de enfrente lo que antes solo se podía corregir después.
+  - `admin-influencers` redesplegada (v4). Probado con Playwright: guardar un prospecto sin nombre ya no muestra error y manda `nombre: null` al servidor; la cuenta (handle) se sigue exigiendo. Se re-corrieron todas las pruebas de las partes 98/99 -- siguen pasando.
+  - Sin cambio visible para el usuario final -- no se subió `VERSION_APP_ACTUAL`.
+  - Desplegado (frontend vía `wrangler pages deploy`, backend ya en producción desde antes de este paso).
+
 - **2026-08-31 (parte 99) — Bug reportado por el usuario: "el mensaje es muy genérico... cuando taggeamos la cuenta quiero que ponga el nombre del influencer, pídemelo en el formulario de entrada".** El mensaje generado (parte 98) solo saludaba con el @handle -- se agregó nombre real como campo propio.
   - **Migración `20260831020000_nombre_prospecto.sql`**: `prospectos_influencer.nombre`, nullable a propósito -- el usuario ya había cargado **9 prospectos reales antes de este cambio** (confirmado consultando la tabla en vivo), así que no se les podía forzar un nombre inventado ni perderlos.
   - **`admin-influencers`**: `nombre` ahora requerido en `crear_prospecto` (igual que `handle`) y editable vía `editar_prospecto`.

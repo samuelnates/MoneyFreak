@@ -208,11 +208,13 @@ Deno.serve(async (req) => {
     if (body.accion === "crear_prospecto") {
       const p = body.prospecto || {};
       const handle = String(p.handle || "").trim().replace(/^@/, "");
-      const nombre = String(p.nombre || "").trim();
+      // El nombre es opcional a propósito: a veces se encuentra la cuenta
+      // antes de saber quién está detrás -- se guarda con solo el handle y
+      // se completa después con "Editar" (ver editar_prospecto).
+      const nombre = p.nombre ? String(p.nombre).trim() : null;
       const plataforma = p.plataforma ? String(p.plataforma) : null;
       const nota = p.nota ? String(p.nota).trim().slice(0, 500) : null;
       if (!handle) return jsonResponse({ error: "handle_requerido" }, 400);
-      if (!nombre) return jsonResponse({ error: "nombre_requerido" }, 400);
       if (plataforma && !PLATAFORMAS_VALIDAS.has(plataforma)) return jsonResponse({ error: "plataforma_invalida" }, 400);
 
       const { error } = await admin.from("prospectos_influencer").insert({ handle, nombre, plataforma, nota });
@@ -242,9 +244,7 @@ Deno.serve(async (req) => {
         cambios.handle = handle;
       }
       if (p.nombre !== undefined) {
-        const nombre = String(p.nombre).trim();
-        if (!nombre) return jsonResponse({ error: "nombre_requerido" }, 400);
-        cambios.nombre = nombre;
+        cambios.nombre = p.nombre ? String(p.nombre).trim() : null;
       }
       if (p.plataforma !== undefined) {
         const plataforma = p.plataforma ? String(p.plataforma) : null;
