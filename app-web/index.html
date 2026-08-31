@@ -10747,10 +10747,18 @@ function freakyEncontrarPerchas(){
       const r = cand.getBoundingClientRect();
       if(r.width < 18 || r.height < 18) return;
       if(r.bottom > window.innerHeight - 4 || r.left < 0 || r.right > window.innerWidth) return;
+      // Bug real reportado por el usuario con capturas reales (La Catrina,
+      // parte 102): con Freaky "sentado" encima del botón (0.72 de solape,
+      // pensado para una tarjeta rectangular grande, no para un botón
+      // redondo de 46px), el círculo del botón asomaba por los huecos de la
+      // silueta del personaje -- distinto según cada disfraz, pero un
+      // riesgo real en los 6. Nada de solape ahora: Freaky flota justo
+      // encima del botón, sin tocarlo nunca, así el botón nunca puede
+      // asomarse detrás de ningún personaje sin importar su forma.
       const x = r.left + r.width / 2 - tam / 2;
-      const y = r.top - tam * 0.72; // sentado encima, apoyado en el borde superior
+      const y = r.top - tam - 8;
       perchas.push({
-        tipo: 'sentar',
+        tipo: 'flotar_cerca',
         x: Math.max(8, Math.min(window.innerWidth - tam - 8, x)),
         y: Math.max(40, Math.min(window.innerHeight - tam - 8, y))
       });
@@ -10825,13 +10833,14 @@ function freakyIrAPerchaDePantalla(){
   const tl = gsap.timeline({
     onUpdate: () => freakyDejarEstela(el),
     onComplete: () => {
-      // 'sentar' → pose sentado, quieto encima. Sin percha (punto libre) →
-      // pose flotando, en el aire — en ningún caso parado sobre nada que no
-      // sea real.
-      const sentado = percha ? percha.tipo === 'sentar' : false;
-      freakyEstaSentado = sentado;
-      freakyIniciarReposo(sentado);
-      if(!freakyHablandoActivo) freakyMostrarPose(sentado ? 'sentado' : 'flotando');
+      // Ya no existe ninguna percha de tipo "sentar" (parte 102: el solape
+      // con el botón de configuración dejaba asomar el círculo del botón
+      // entre los huecos de la silueta del personaje). Toda percha es ahora
+      // "flotar_cerca" -- Freaky nunca se sienta encima de nada, siempre
+      // queda flotando, con o sin percha cercana.
+      freakyEstaSentado = false;
+      freakyIniciarReposo(false);
+      if(!freakyHablandoActivo) freakyMostrarPose('flotando');
       // Sin reprogramar el siguiente vuelo: se queda aquí hasta el próximo
       // cambio de pantalla real.
     }
@@ -15128,8 +15137,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 76;
+const VERSION_APP_ACTUAL = 77;
 const CHANGELOG_APP = [
+  {
+    version: 77,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se corrigió a Freaky "sentándose" encima del botón de configuración -- el botón redondo asomaba entre los huecos de cada disfraz (muy visible con La Catrina) y parecía una imagen mal recortada. Ahora flota junto al botón sin tocarlo nunca.'
+    ],
+    cambios_en: [
+      'Fixed Freaky "sitting" on top of the settings button -- the round button used to peek through the gaps in each costume\'s silhouette (very visible with La Catrina) and looked like a badly cut image. It now floats next to the button without ever touching it.'
+    ]
+  },
   {
     version: 76,
     fecha: '2026-08-31',
