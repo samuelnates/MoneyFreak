@@ -623,6 +623,15 @@
   .tarjeta.deuda .monto{color:var(--neg);}
   .tarjeta.cuenta-inversion{cursor:default;}
   .tarjeta .equivalente{font-family:var(--mono);font-size:12px;color:var(--texto-tenue-2);margin-top:3px;}
+  /* Flujo de efectivo: "ya se cumplió este mes" -- ítem sigue en la lista
+     (para poder desmarcarlo) pero ya no cuenta en los totales proyectados. */
+  .flujo-item-cumplido{opacity:.55;}
+  .flujo-item-cumplido .monto{text-decoration:line-through;}
+  .chip-flujo-cumplido{
+    display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;
+    font-family:var(--sans);font-size:12px;color:var(--texto-tenue);
+  }
+  .chip-flujo-cumplido input{margin:0;width:15px;height:15px;flex:none;cursor:pointer;}
   /* Pedido del usuario: deslizar un movimiento de gasto hacia la izquierda
      revela "Eliminar" en rojo detrás — el borde que separaba renglones vive
      ahora en .swipe-fila (fijo) en vez de en .tarjeta (que se desliza), para
@@ -4057,6 +4066,8 @@ const TRADUCCIONES = {
     'flujo.dia': 'día',
     'flujo.dias': 'días',
     'flujo.estimado_pago_mensual': ' · estimado con pago mensual',
+    'flujo.ya_se_cumplio': 'Ya se cumplió este mes',
+    'flujo.cumplido_este_mes': 'Cumplido este mes -- no cuenta en el saldo proyectado',
     'flujo.ingresos_esperados': 'Ingresos esperados este ciclo',
     'flujo.total_pagar': 'Total a pagar/aportar este ciclo',
     'flujo.saldo_proyectado': 'Saldo proyectado después de cubrir todo',
@@ -5015,6 +5026,8 @@ const TRADUCCIONES = {
     'flujo.dia': 'day',
     'flujo.dias': 'days',
     'flujo.estimado_pago_mensual': ' · estimated from monthly payment',
+    'flujo.ya_se_cumplio': 'Already happened this month',
+    'flujo.cumplido_este_mes': "Already happened this month -- not counted in the projected balance",
     'flujo.ingresos_esperados': 'Expected income this cycle',
     'flujo.total_pagar': 'Total to pay/contribute this cycle',
     'flujo.saldo_proyectado': 'Projected balance after covering everything',
@@ -7158,10 +7171,14 @@ function simularEscenarioFlujo(items, activosLiquidos){
 
 // Escenarios de flujo YA CALCULADOS por código (no por la IA) — la IA solo los explica.
 function calcularEscenariosFlujo(flujo){
-  const base = simularEscenarioFlujo(flujo.items, flujo.activosLiquidos);
-  const conRecorte = (pct) => flujo.items.map(it => it.tipo === 'ingreso' ? it : { ...it, monto: it.monto * (1 - pct) });
-  const proximoIngresoDias = flujo.items.filter(it => it.tipo === 'ingreso' && it.dia != null).reduce((min, it) => Math.min(min, it.diasFaltan), Infinity);
-  const sinProximoIngreso = flujo.items.filter(it => !(it.tipo === 'ingreso' && it.diasFaltan === proximoIngresoDias));
+  // Igual que en calcularFlujoEfectivo(): un ítem ya marcado "cumplido este
+  // mes" ya se movió de verdad (ya está en activosLiquidos) -- si se dejara
+  // aquí se contaría dos veces en cada escenario simulado.
+  const itemsPendientes = flujo.items.filter(it => !it.cumplidoEsteMes);
+  const base = simularEscenarioFlujo(itemsPendientes, flujo.activosLiquidos);
+  const conRecorte = (pct) => itemsPendientes.map(it => it.tipo === 'ingreso' ? it : { ...it, monto: it.monto * (1 - pct) });
+  const proximoIngresoDias = itemsPendientes.filter(it => it.tipo === 'ingreso' && it.dia != null).reduce((min, it) => Math.min(min, it.diasFaltan), Infinity);
+  const sinProximoIngreso = itemsPendientes.filter(it => !(it.tipo === 'ingreso' && it.diasFaltan === proximoIngresoDias));
 
   const armar = (nombre, resultado, supuestos) => ({
     name: nombre,
@@ -13786,15 +13803,30 @@ function mesesDePagoIngreso(ing){
   return [ing.mes_pago, ((ing.mes_pago - 1 + 6) % 12) + 1];
 }
 
+function flujoCicloActual(){
+  const hoy = new Date();
+  return { anio: hoy.getFullYear(), mes: hoy.getMonth() + 1 };
+}
+
 async function calcularFlujoEfectivo(){
   if(tasasCambioPromesa) await tasasCambioPromesa;
   const s = await calcularSaludFinanciera();
+  const { anio: anioActual, mes: mesActual } = flujoCicloActual();
 
-  const [{ data: cuentas }, { data: deudas }, { data: ingresos }] = await Promise.all([
+  const [{ data: cuentas }, { data: deudas }, { data: ingresos }, { data: cumplidos }] = await Promise.all([
     sb.from('cuentas').select('*'),
     sb.from('deudas').select('*'),
-    sb.from('ingresos').select('*')
+    sb.from('ingresos').select('*'),
+    sb.from('flujo_cumplido').select('tipo, ref_id').eq('anio', anioActual).eq('mes', mesActual)
   ]);
+  // "A veces te pagan/pagas antes de la fecha esperada" (reportado por el
+  // usuario): un ítem recurrente marcado "ya se cumplió este mes" se sigue
+  // mostrando en la lista (para poder desmarcarlo si fue un error), pero se
+  // excluye de los totales -- ese dinero ya se movió de verdad y ya está
+  // reflejado en el saldo real de la cuenta; sumarlo aquí también sería
+  // contarlo dos veces. Se resetea solo cada mes: solo se consulta por el
+  // mes/año actual, un ítem marcado en agosto no sigue marcado en septiembre.
+  const cumplidoSet = new Set((cumplidos || []).map(c => `${c.tipo}:${c.ref_id}`));
 
   const items = [];
   (deudas || []).forEach(d => {
@@ -13807,6 +13839,7 @@ async function calcularFlujoEfectivo(){
       monto: convertirAMXN(monto, d.moneda || 'MXN'),
       dia: d.dia_limite_pago != null ? Number(d.dia_limite_pago) : null,
       esEstimado: !tieneMontoProximo,
+      cumplidoEsteMes: cumplidoSet.has(`deuda:${d.id}`),
       ref: d
     });
   });
@@ -13818,11 +13851,11 @@ async function calcularFlujoEfectivo(){
       monto: convertirAMXN(Number(c.aportacion_mensual), c.moneda || 'MXN'),
       dia: c.dia_aportacion != null ? Number(c.dia_aportacion) : null,
       esEstimado: false,
+      cumplidoEsteMes: cumplidoSet.has(`aportacion:${c.id}`),
       ref: c
     });
   });
 
-  const mesActual = new Date().getMonth() + 1;
   (ingresos || []).forEach(ing => {
     const meses = mesesDePagoIngreso(ing);
     if(meses !== null && !meses.includes(mesActual)) return;
@@ -13832,6 +13865,7 @@ async function calcularFlujoEfectivo(){
       monto: convertirAMXN(Number(ing.monto), ing.moneda || 'MXN'),
       dia: ing.dia_del_mes != null ? Number(ing.dia_del_mes) : null,
       esEstimado: false,
+      cumplidoEsteMes: cumplidoSet.has(`ingreso:${ing.id}`),
       ref: ing
     });
   });
@@ -13844,11 +13878,28 @@ async function calcularFlujoEfectivo(){
     return a.diasFaltan - b.diasFaltan;
   });
 
-  const totalEgresos = items.filter(it => it.tipo !== 'ingreso').reduce((sum, it) => sum + it.monto, 0);
-  const totalIngresos = items.filter(it => it.tipo === 'ingreso').reduce((sum, it) => sum + it.monto, 0);
+  const pendientes = items.filter(it => !it.cumplidoEsteMes);
+  const totalEgresos = pendientes.filter(it => it.tipo !== 'ingreso').reduce((sum, it) => sum + it.monto, 0);
+  const totalIngresos = pendientes.filter(it => it.tipo === 'ingreso').reduce((sum, it) => sum + it.monto, 0);
   const saldoProyectado = s.activosLiquidos + totalIngresos - totalEgresos;
 
   return { items, total: totalEgresos, totalIngresos, activosLiquidos: s.activosLiquidos, saldoProyectado };
+}
+
+// Marca/desmarca un ítem recurrente del flujo como "ya se cumplió este mes"
+// -- ver el comentario en calcularFlujoEfectivo() sobre por qué existe esto.
+async function toggleFlujoCumplido(it, marcado){
+  const { anio, mes } = flujoCicloActual();
+  if(marcado){
+    await sb.from('flujo_cumplido').upsert(
+      { tipo: it.tipo, ref_id: it.ref.id, anio, mes },
+      { onConflict: 'user_id,tipo,ref_id,anio,mes' }
+    );
+  } else {
+    await sb.from('flujo_cumplido').delete()
+      .eq('tipo', it.tipo).eq('ref_id', it.ref.id).eq('anio', anio).eq('mes', mes);
+  }
+  await abrirFlujoEfectivo();
 }
 
 let flujoDetalleData = null;
@@ -13883,14 +13934,26 @@ async function abrirFlujoEfectivo(){
 
   const filasHtml = f.items.map((it, i) => {
     const diaTxt = it.dia == null ? t('flujo.sin_fecha') : (it.diasFaltan <= 0 ? t('flujo.hoy_vencido') : `${t('flujo.en')} ${it.diasFaltan} ${it.diasFaltan === 1 ? t('flujo.dia') : t('flujo.dias')} (${t('flujo.dia')} ${it.dia})`);
-    const urgente = it.tipo !== 'ingreso' && it.dia != null && it.diasFaltan <= 3;
+    const urgente = !it.cumplidoEsteMes && it.tipo !== 'ingreso' && it.dia != null && it.diasFaltan <= 3;
     const estimadoTxt = it.esEstimado ? t('flujo.estimado_pago_mensual') : '';
     const signo = it.tipo === 'ingreso' ? '+' : '-';
+    // "A veces te pagan/pagas antes de la fecha esperada" (pedido real del
+    // usuario): un check por ítem para marcarlo "ya se cumplió este mes" y
+    // que el flujo deje de proyectarlo (ver calcularFlujoEfectivo). Solo
+    // tiene sentido para ítems con día del mes -- sin fecha no hay ciclo
+    // que rastrear.
+    const checkCumplidoHtml = it.dia != null ? `
+      <label class="chip-flujo-cumplido" onclick="event.stopPropagation();">
+        <input type="checkbox" data-cumplido-idx="${i}" ${it.cumplidoEsteMes ? 'checked' : ''}>
+        ${t('flujo.ya_se_cumplio')}
+      </label>
+    ` : '';
     return `
-      <button type="button" class="tarjeta ${it.tipo}" data-movimiento-idx="${i}">
+      <button type="button" class="tarjeta ${it.tipo}${it.cumplidoEsteMes ? ' flujo-item-cumplido' : ''}" data-movimiento-idx="${i}">
         <div>
           <div class="nombre">${escapeHtml(it.nombre)}</div>
-          <div class="detalle ${urgente ? 'estado-riesgo' : ''}">${diaTxt}${estimadoTxt}</div>
+          <div class="detalle ${urgente ? 'estado-riesgo' : ''}">${it.cumplidoEsteMes ? t('flujo.cumplido_este_mes') : diaTxt}${estimadoTxt}</div>
+          ${checkCumplidoHtml}
         </div>
         <div class="monto">${signo}${formatoMonto(it.monto, 'MXN')}</div>
       </button>
@@ -13923,7 +13986,7 @@ async function abrirFlujoEfectivo(){
     <h2>${t('flujo.proximos_movimientos')}</h2>
     ${filasHtml}
   `;
-  renderProyeccionLiquidez(f.items, f.activosLiquidos);
+  renderProyeccionLiquidez(f.items.filter(it => !it.cumplidoEsteMes), f.activosLiquidos);
   ajustarTamanoDatosTarjetas();
 
   cont.querySelectorAll('[data-movimiento-idx]').forEach(btn => {
@@ -13933,6 +13996,10 @@ async function abrirFlujoEfectivo(){
       else if(it.tipo === 'aportacion') abrirEditarCuenta(it.ref);
       else if(it.tipo === 'ingreso') abrirEditarIngreso(it.ref);
     };
+  });
+  cont.querySelectorAll('[data-cumplido-idx]').forEach(chk => {
+    const it = f.items[Number(chk.dataset.cumplidoIdx)];
+    chk.onchange = () => toggleFlujoCumplido(it, chk.checked);
   });
 }
 
@@ -15205,8 +15272,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 83;
+const VERSION_APP_ACTUAL = 84;
 const CHANGELOG_APP = [
+  {
+    version: 84,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Nuevo en Flujo de efectivo: si te pagan o pagas algo antes de la fecha esperada, ya puedes marcarlo como "Ya se cumplió este mes" para que no se cuente dos veces en tu saldo proyectado. Se resetea solo cada mes.'
+    ],
+    cambios_en: [
+      'New in Cash flow: if you get paid or pay something ahead of its expected date, you can now mark it "Already happened this month" so it doesn\'t get counted twice in your projected balance. Resets on its own every month.'
+    ]
+  },
   {
     version: 83,
     fecha: '2026-08-31',
