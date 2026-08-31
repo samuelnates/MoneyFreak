@@ -776,24 +776,20 @@
   body.con-sesion:not(.freaky-vuelo-desactivado) .freaky-personaje{display:flex;}
   /* El contenedor de arriba (.freaky-personaje) es el que GSAP mueve de un
      lado a otro de la pantalla (x/y) durante los vuelos, y el que usan los
-     gestos de un solo disparo (freakyTrigger). La respiración/balanceo en
-     reposo vivía en el MISMO elemento como un tween de GSAP en loop infinito
-     (repeat:-1, nunca paraba) — desde que Freaky dejó de volar sin parar
-     (ver freakyIrAPerchaDePantalla) pasa casi todo el tiempo en reposo, así
-     que ese tween corría de forma continua durante sesiones enteras, y el
-     usuario lo reportó como parpadeo persistente. Se separa en un
-     contenedor propio (.freaky-cuerpo) que anima con @keyframes de CSS en
-     vez de JS — el navegador compone esto de forma mucho más estable que un
-     tween que reescribe el transform en cada frame para siempre — sin tocar
-     el transform del contenedor externo, que sigue siendo 100% de GSAP.
+     gestos de un solo disparo (freakyTrigger). Aquí adentro vivía además un
+     efecto de "respiración/balanceo" en reposo (contenedor .freaky-cuerpo,
+     @keyframes de CSS) para que no se viera muerto mientras está quieto —
+     primero reportado como parpadeo (con GSAP en loop, arreglado moviéndolo
+     a @keyframes), y de nuevo reportado después como "parece un error, un
+     flashazo" (con @keyframes ya no parpadeaba, pero seguía sin leerse como
+     respiración real en la práctica). A petición del usuario, se quitó del
+     todo: las clases .freaky-reposo-flotando/-sentado se siguen agregando
+     igual (las usa freakyProgramarBlinkEspontaneo para saber si Freaky está
+     quieto), pero ya no disparan ninguna animación -- se queda
+     completamente inmóvil mientras descansa, sin ningún riesgo de que un
+     efecto sutil se vea raro en algún teléfono.
   */
   .freaky-cuerpo{position:relative;width:100%;height:100%;}
-  @media (prefers-reduced-motion: no-preference){
-    .freaky-cuerpo.freaky-reposo-flotando{animation:freaky-respirar 1.4s ease-in-out infinite;}
-    .freaky-cuerpo.freaky-reposo-sentado{animation:freaky-balanceo 3.6s ease-in-out infinite;}
-  }
-  @keyframes freaky-respirar{0%,100%{transform:scale(1,1) translateY(0);}50%{transform:scale(1.01,0.99) translateY(-5px);}}
-  @keyframes freaky-balanceo{0%,100%{transform:rotate(0deg) translateY(0);}50%{transform:rotate(-3deg) translateY(2px);}}
   .freaky-img{
     position:absolute;top:0;left:0;width:100%;height:100%;
     object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;
@@ -15169,8 +15165,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 79;
+const VERSION_APP_ACTUAL = 80;
 const CHANGELOG_APP = [
+  {
+    version: 80,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se quitó el efecto de "respiración" de Freaky mientras descansa -- en varios teléfonos se veía como un destello/error en vez de un movimiento sutil. Ahora se queda completamente quieto.'
+    ],
+    cambios_en: [
+      'Removed Freaky\'s "breathing" effect while resting -- on some phones it looked like a flash/glitch instead of a subtle movement. It now stays completely still.'
+    ]
+  },
   {
     version: 79,
     fecha: '2026-08-31',
