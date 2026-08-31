@@ -1461,7 +1461,13 @@ const ERRORES_PROSPECTO = {
 function cargarPlantillaProspecto(){
   let guardada = null;
   try{ guardada = localStorage.getItem('admin_plantilla_prospecto'); }catch(e){}
-  document.getElementById('prospecto-plantilla').value = guardada || PLANTILLA_PROSPECTO_DEFAULT;
+  // Si lo guardado es de antes de que existiera el saludo por nombre (parte
+  // 99 -- antes solo tenía {handle}), se ignora y se usa el default actual.
+  // Si no, se quedaría saludando por @cuenta para siempre aunque el
+  // prospecto ya tenga nombre guardado, porque el token {nombre} ni
+  // siquiera existiría en el texto que quedó cacheado en este navegador.
+  const plantilla = (guardada && guardada.includes('{nombre}')) ? guardada : PLANTILLA_PROSPECTO_DEFAULT;
+  document.getElementById('prospecto-plantilla').value = plantilla;
 }
 function restablecerPlantillaProspecto(){
   document.getElementById('prospecto-plantilla').value = PLANTILLA_PROSPECTO_DEFAULT;
