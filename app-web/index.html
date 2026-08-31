@@ -2312,7 +2312,7 @@
   </div>
   <div id="aviso-borrador-gasto"></div>
   <div class="campo requerido">
-    <label for="input-monto-gasto" data-i18n="gastos.monto_label">Monto</label>
+    <label for="input-monto-gasto" id="label-monto-gasto" data-i18n="gastos.monto_label">Monto</label>
     <input type="text" id="input-monto-gasto" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00" autofocus>
   </div>
 
@@ -3949,7 +3949,8 @@ const TRADUCCIONES = {
     'gastos.aviso_recurrente': 'Se registrará este gasto una vez por mes, en el mismo día, durante los meses que indiques.',
     'gastos.es_compra_meses': 'Es una compra a meses (crea una deuda por el total)',
     'gastos.cuantos_meses_compra': '¿En cuántos meses la vas a pagar?',
-    'gastos.aviso_compra_meses': 'Se programa un gasto por mes. Si pagas con tarjeta, se carga el total a la tarjeta de una vez (como un MSI real) y no se crea ninguna deuda aparte. Si pagas en efectivo o débito, se crea una deuda por el total que baja sola conforme se cumple cada pago.',
+    'gastos.monto_total_compra_label': 'Monto total de la compra',
+    'gastos.aviso_compra_meses': 'El monto de arriba es el TOTAL de la compra -- se reparte entre los meses para saber cuánto es cada cuota. Se programa un gasto por mes con ese monto repartido. Si pagas con tarjeta, se carga el total a la tarjeta de una vez (como un MSI real) y no se crea ninguna deuda aparte. Si pagas en efectivo o débito, se crea una deuda por el total que baja sola conforme se cumple cada pago.',
     'panel.consejo_etiqueta': 'Hábito que aumenta tu patrimonio',
     'comun.saludable': 'Saludable',
     'comun.atencion': 'Atención',
@@ -4906,7 +4907,8 @@ const TRADUCCIONES = {
     'gastos.aviso_recurrente': "This expense will be logged once a month, on the same day, for the months you choose.",
     'gastos.es_compra_meses': 'It\'s an installment purchase (creates a debt for the total)',
     'gastos.cuantos_meses_compra': 'How many months will you pay it over?',
-    'gastos.aviso_compra_meses': "One expense is scheduled per month. If you pay with a card, the full total is charged to it at once (like a real installment plan) and no separate debt is created. If you pay cash or debit, a debt is created for the total and goes down on its own as each payment date arrives.",
+    'gastos.monto_total_compra_label': 'Total purchase amount',
+    'gastos.aviso_compra_meses': "The amount above is the TOTAL of the purchase -- it gets split across the months to figure out each installment. One expense is scheduled per month with that split amount. If you pay with a card, the full total is charged to it at once (like a real installment plan) and no separate debt is created. If you pay cash or debit, a debt is created for the total and goes down on its own as each payment date arrives.",
     'panel.consejo_etiqueta': 'Habit that grows your net worth',
     'comun.saludable': 'Healthy',
     'comun.atencion': 'Attention',
@@ -12024,6 +12026,12 @@ function toggleCamposRecurrente(origen){
   document.getElementById('campo-gasto-recurrente').style.display = activo ? 'block' : 'none';
   document.getElementById('label-meses-recurrente').textContent = t(chkCompraMeses.checked ? 'gastos.cuantos_meses_compra' : 'gastos.cuantos_meses');
   document.getElementById('aviso-meses-recurrente').textContent = t(chkCompraMeses.checked ? 'gastos.aviso_compra_meses' : 'gastos.aviso_recurrente');
+  // Compra a meses: lo que se captura arriba es el TOTAL de la compra (la
+  // app lo reparte entre los meses), no lo que se repite cada mes -- el
+  // rótulo del campo Monto lo deja claro desde el primer vistazo, no solo
+  // en el aviso de más abajo que es fácil saltarse.
+  const labelMonto = document.getElementById('label-monto-gasto');
+  if(labelMonto) labelMonto.textContent = t(chkCompraMeses.checked ? 'gastos.monto_total_compra_label' : 'gastos.monto_label');
 }
 
 function sumarMesesFecha(fechaISO, n){
@@ -12046,13 +12054,22 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
   const meses = (esRecurrente || esCompraMeses) ? Math.min(12, Math.max(2, Number(mesesSolicitados) || 12)) : 1;
   const esCompraMesesConTarjeta = esCompraMeses && !!deuda_pago_id;
 
+  // Bug real reportado por el usuario: en una compra a meses, lo que captura
+  // en "Monto" es el TOTAL real de la compra (lo que dice el ticket) -- la
+  // app tiene que repartirlo entre los meses, no multiplicarlo. Antes hacía
+  // justo lo contrario (monto × meses), así que un total de $6,000 a 6 meses
+  // se registraba como una deuda de $36,000. Un gasto recurrente normal (NO
+  // compra a meses) no se toca: "monto" ahí ya es lo que se repite cada mes
+  // tal cual, no hay ningún total que repartir.
+  const montoTotal = Number(monto);
+  const montoPorCuota = esCompraMeses ? Math.round((montoTotal / meses) * 100) / 100 : montoTotal;
+
   let compraMesesDeudaId = null;
 
   if(esCompraMeses && !esCompraMesesConTarjeta){
     // Sin tarjeta de por medio (efectivo o cuenta de débito): no hay ningún otro
     // lugar donde quede registrada esta obligación, así que creamos una deuda
     // dedicada por el total y la vamos bajando conforme se cumplen los pagos.
-    const montoTotal = Number(monto) * meses;
     const nombreDeuda = nota || `${nombreGasto(categoria)}${subcategoria ? ' · ' + nombreGasto(subcategoria) : ''}`;
     const { data: deudaCreada, error: errorDeuda } = await sb.from('deudas')
       .insert({ nombre: nombreDeuda, tipo: 'Otro', saldo: montoTotal, moneda, tasa_interes: 0 })
@@ -12067,7 +12084,6 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
     // Con tarjeta: la deuda ya vive en la tarjeta. Se carga el total completo
     // de una vez (así funciona un MSI real) y NO se crea ninguna deuda aparte
     // — si no, quedaría contada dos veces y se desincroniza cuando pagues la tarjeta.
-    const montoTotal = Number(monto) * meses;
     await ajustarSaldoDeudaPorGasto(deuda_pago_id, montoTotal);
   }
 
@@ -12076,13 +12092,14 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
   // importar el corte/fecha de pago de la tarjeta: el usuario decidió que el
   // presupuesto ya debe sentirse comprometido desde hoy, no hasta que el
   // banco cobre de verdad cada cuota (eso ya lo refleja el saldo de la
-  // tarjeta/deuda por separado, ver arriba).
+  // tarjeta/deuda por separado, ver arriba). Cada fila guarda el monto de
+  // SU cuota (el total repartido), no el total completo.
   const hoyISO = new Date().toISOString().slice(0, 10);
   const filas = [];
   for(let i = 0; i < meses; i++){
     const fechaFila = sumarMesesFecha(fecha, i);
     filas.push({
-      fecha: fechaFila, categoria, subcategoria, monto: Number(monto), moneda, nota, cuenta_pago_id, deuda_pago_id,
+      fecha: fechaFila, categoria, subcategoria, monto: montoPorCuota, moneda, nota, cuenta_pago_id, deuda_pago_id,
       compra_meses_deuda_id: compraMesesDeudaId,
       compra_meses_aplicado: compraMesesDeudaId ? fechaFila <= hoyISO : false,
       compra_meses_tarjeta: esCompraMesesConTarjeta
@@ -12098,10 +12115,10 @@ async function guardarGastoDesdeObjeto({ fecha, categoria, subcategoria, monto, 
     return { ok: false, error: 'error_guardar_gasto', detalle: error.message };
   }
   if(!esCompraMesesConTarjeta){
-    aplicarAjusteGasto({ monto: Number(monto), moneda, fecha, cuenta_pago_id, deuda_pago_id }, 1); // se resuelve en segundo plano, no bloquea la vuelta a Gastos
+    aplicarAjusteGasto({ monto: montoPorCuota, moneda, fecha, cuenta_pago_id, deuda_pago_id }, 1); // se resuelve en segundo plano, no bloquea la vuelta a Gastos
   }
   if(compraMesesDeudaId){
-    ajustarSaldoDeudaPorGasto(compraMesesDeudaId, -Number(monto)); // el pago de este mes ya se cumplió, baja la deuda de inmediato
+    ajustarSaldoDeudaPorGasto(compraMesesDeudaId, -montoPorCuota); // el pago de este mes ya se cumplió, baja la deuda de inmediato
   }
   return { ok: true, filas };
 }
@@ -15165,8 +15182,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 80;
+const VERSION_APP_ACTUAL = 81;
 const CHANGELOG_APP = [
+  {
+    version: 81,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se corrigió un error real en "Compra a meses": el monto que capturas ahora sí es el TOTAL de la compra -- antes se multiplicaba por los meses en vez de repartirse entre ellos, así que una compra de $6,000 a 6 meses se registraba como una deuda de $36,000. El campo ahora dice "Monto total de la compra" cuando activas esta opción, para que quede claro.'
+    ],
+    cambios_en: [
+      'Fixed a real bug in "Installment purchase": the amount you enter is now correctly the TOTAL of the purchase -- it used to get multiplied by the number of months instead of split across them, so a $6,000 purchase over 6 months registered as a $36,000 debt. The field now says "Total purchase amount" when this option is on, to make it clear.'
+    ]
+  },
   {
     version: 80,
     fecha: '2026-08-31',
