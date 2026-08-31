@@ -154,6 +154,22 @@
     border-radius:22px;box-shadow:0 4px 16px rgba(0,0,0,0.5);white-space:nowrap;
   }
 
+  /* Bug real reportado por el usuario: el avatar de Freaky se estacionaba
+     encima de los botones de enviar/nota de voz del chat y no dejaba
+     tocarlos. No era un tema de posición (Freaky sí encontraba dónde
+     posarse sin taparlos visualmente en la mayoría de los casos) sino de
+     APILAMIENTO: .pantalla tiene su propio z-index:1, así que TODO lo de
+     adentro -- incluido #chat-input-fija con su z-index:9 -- queda atrapado
+     compitiendo dentro de ese contexto de apilamiento de nivel 1, sin poder
+     ganarle nunca a #freaky-personaje (z-index:8), que vive fuera de
+     cualquier .pantalla, directo al nivel raíz. Confirmado con
+     elementsFromPoint(): el cuerpo de Freaky aparecía ARRIBA del botón de
+     enviar en la pila, aunque visualmente el botón se viera "encima". Subir
+     el z-index de esta pantalla en particular por encima del de Freaky
+     resuelve el apilamiento real -- las demás pantallas (z-index:1) no se
+     tocan, y esto sigue muy por debajo de overlays de verdad (alertas,
+     confirmaciones, el tour) que ya usan valores de cientos/miles. */
+  .pantalla.pantalla-chat{z-index:9;}
   .pantalla-chat{padding-bottom:96px;}
   @media (max-width: 899px){
     body.con-sesion .pantalla.pantalla-chat{padding-bottom:calc(240px + env(safe-area-inset-bottom));}
@@ -15182,8 +15198,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 81;
+const VERSION_APP_ACTUAL = 82;
 const CHANGELOG_APP = [
+  {
+    version: 82,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se corrigió que Freaky bloqueara los botones de enviar y nota de voz en el chat de ayuda -- se posaba encima y no dejaba tocarlos. Ahora esos botones siempre quedan por encima de Freaky.'
+    ],
+    cambios_en: [
+      "Fixed Freaky blocking the send and voice note buttons in the help chat -- it would park on top of them and you couldn't tap them. Those buttons now always stay above Freaky."
+    ]
+  },
   {
     version: 81,
     fecha: '2026-08-31',
