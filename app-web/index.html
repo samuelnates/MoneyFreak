@@ -10706,24 +10706,32 @@ function freakyProgramarBlinkEspontaneo(){
 }
 
 // Busca "muebles" reales donde Freaky se pueda quedar, restringido a
-// elementos genuinamente position:fixed — el botón de configuración y el
-// FAB de "+" de la barra inferior (el logo flotante de Inicio, marca-flotante,
-// se quitó para recuperar espacio arriba de cada pantalla; Freaky se quedó
-// sin ese lugar para colgarse, ahora solo se sienta en los otros 2). ANTES
-// también entraban .panel-tarjeta y .btn-volver, pero esos viven en el flujo
-// normal de la pantalla (se mueven con el scroll) mientras que Freaky es
-// position:fixed (nunca se mueve con el scroll) — si aterrizaba sobre una
-// tarjeta y el usuario después hacía scroll, Freaky se quedaba flotando en
-// el aire, en el punto de la pantalla donde ESA TARJETA ESTUVO, no donde
-// está ahora: por eso terminaba "en lugares donde ni siquiera está" y el
-// rastro de vuelo llevaba a un punto sin sentido (bug real reportado por el
-// usuario). Con solo chrome fijo, la posición medida con
-// getBoundingClientRect() sigue siendo válida sin importar cuánto scrollee
-// el usuario en esa pantalla — nunca se desincroniza.
+// elementos genuinamente position:fixed (el logo flotante de Inicio,
+// marca-flotante, se quitó para recuperar espacio arriba de cada pantalla;
+// Freaky se quedó sin ese lugar para colgarse). ANTES también entraban
+// .panel-tarjeta y .btn-volver, pero esos viven en el flujo normal de la
+// pantalla (se mueven con el scroll) mientras que Freaky es position:fixed
+// (nunca se mueve con el scroll) — si aterrizaba sobre una tarjeta y el
+// usuario después hacía scroll, Freaky se quedaba flotando en el aire, en
+// el punto de la pantalla donde ESA TARJETA ESTUVO, no donde está ahora:
+// por eso terminaba "en lugares donde ni siquiera está" y el rastro de
+// vuelo llevaba a un punto sin sentido (bug real reportado por el usuario).
+// Con solo chrome fijo, la posición medida con getBoundingClientRect()
+// sigue siendo válida sin importar cuánto scrollee el usuario en esa
+// pantalla — nunca se desincroniza.
+// El FAB de "+" de la barra inferior (.nav-inferior-fab) salió de la lista
+// de perchas -- pedido explícito del usuario ("ya ni quiero que Freaky se
+// pare en el +, estorba mucho"): es el botón de acción MÁS usado de toda
+// la app (agregar gasto/ingreso), así que Freaky sentado encima de él
+// tapándolo era justo el peor lugar posible para dejarlo quieto. Ahora solo
+// se sienta en el botón de configuración (.btn-config-flotante, uso mucho
+// más esporádico) y, si por lo que sea no hay ninguna percha real
+// disponible en la pantalla actual, cae al punto libre de la zona segura
+// de siempre (ver freakyZonaSegura más abajo).
 function freakyEncontrarPerchas(){
   const el = document.getElementById('freaky-personaje');
   const tam = el ? (el.offsetWidth || 74) : 74;
-  const candidatosSel = ['.btn-config-flotante', '.nav-inferior-fab'];
+  const candidatosSel = ['.btn-config-flotante'];
 
   const perchas = [];
   candidatosSel.forEach(sel => {
@@ -15116,8 +15124,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 74;
+const VERSION_APP_ACTUAL = 75;
 const CHANGELOG_APP = [
+  {
+    version: 75,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Freaky ya no se posa sobre el botón de "+" para agregar -- ahora solo descansa junto al botón de configuración, sin taparte el botón que más usas.'
+    ],
+    cambios_en: [
+      'Freaky no longer perches on the "+" add button -- it now only rests by the settings button, so it never blocks the button you use the most.'
+    ]
+  },
   {
     version: 74,
     fecha: '2026-08-31',
