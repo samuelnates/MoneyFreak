@@ -1779,7 +1779,7 @@
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
   <div id="onb-chat-input-area" class="onb-chat-input" style="display:none;">
-    <input type="text" id="input-onb-chat-respuesta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00" onkeydown="if(event.key==='Enter') avanzarOnboardingChat()">
+    <input type="text" id="input-onb-chat-respuesta" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00" onkeydown="if(event.key==='Enter') avanzarOnboardingChat()">
     <button type="button" class="chat-btn-enviar" onclick="avanzarOnboardingChat()" aria-label="Siguiente" data-i18n-aria-label="onboarding_rapido.chat_siguiente">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
     </button>
@@ -1790,11 +1790,11 @@
   </div>
 
   <div style="display:none;">
-    <input type="text" id="input-onb-ingreso" inputmode="decimal" oninput="manejarInputMonto(this)">
-    <input type="text" id="input-onb-liquido" inputmode="decimal" oninput="manejarInputMonto(this)">
-    <input type="text" id="input-onb-deuda" inputmode="decimal" oninput="manejarInputMonto(this)">
-    <input type="text" id="input-onb-gastos" inputmode="decimal" oninput="manejarInputMonto(this)">
-    <input type="text" id="input-onb-ahorro" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-onb-ingreso" inputmode="decimal" oninput="manejarInputMonto(this, event)">
+    <input type="text" id="input-onb-liquido" inputmode="decimal" oninput="manejarInputMonto(this, event)">
+    <input type="text" id="input-onb-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)">
+    <input type="text" id="input-onb-gastos" inputmode="decimal" oninput="manejarInputMonto(this, event)">
+    <input type="text" id="input-onb-ahorro" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
 
   <button type="button" class="btn-grande" id="btn-onb-evaluar" onclick="verEvaluacionRapida()" style="display:none;" data-i18n="onboarding_rapido.ver_evaluacion">Ver mi primera evaluación</button>
@@ -1934,7 +1934,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-transferencia" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-transferencia" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+    <input type="text" id="input-monto-transferencia" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-transferencia" data-i18n="campo.moneda">Moneda</label>
@@ -1980,7 +1980,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-transferencia-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-transferencia-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-monto-transferencia-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="select-moneda-transferencia-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2207,11 +2207,11 @@
     </div>
     <div class="campo">
       <label for="input-monto-simulador" data-i18n="simulador.monto_label">Monto del crédito que quieres pedir</label>
-      <input type="text" id="input-monto-simulador" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 1500000">
+      <input type="text" id="input-monto-simulador" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 1500000">
     </div>
     <div class="campo">
       <label for="input-enganche-simulador" data-i18n="simulador.enganche_label">Enganche o pago inicial (opcional)</label>
-      <input type="text" id="input-enganche-simulador" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 300000">
+      <input type="text" id="input-enganche-simulador" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 300000">
     </div>
     <div class="campo">
       <label for="input-tasa-simulador" data-i18n="simulador.tasa_label">Tasa de interés anual %</label>
@@ -2317,7 +2317,7 @@
   <div id="aviso-borrador-gasto"></div>
   <div class="campo requerido">
     <label for="input-monto-gasto" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-gasto" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00" autofocus>
+    <input type="text" id="input-monto-gasto" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00" autofocus>
   </div>
 
   <label data-i18n="gastos.categoria_label">Categoría</label>
@@ -2387,7 +2387,7 @@
   </div>
   <div class="campo requerido">
     <label for="input-monto-gasto-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-gasto-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-monto-gasto-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="select-categoria-gasto-editar" data-i18n="gastos.categoria_label">Categoría</label>
@@ -2679,7 +2679,7 @@
     </div>
     <div class="campo">
       <label for="input-aportacion-cuenta" data-i18n="campo.aportacion_opcional">Aportación mensual comprometida (opcional)</label>
-      <input type="text" id="input-aportacion-cuenta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 5000">
+      <input type="text" id="input-aportacion-cuenta" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 5000">
     </div>
     <div class="campo">
       <label for="input-diaaportacion-cuenta" data-i18n="campo.dia_descuento_opcional">Día del mes en que se descuenta (opcional)</label>
@@ -2710,7 +2710,7 @@
   <div id="editar-cuenta-referencia" class="aviso" style="display:none;"></div>
   <div class="campo requerido">
     <label for="input-saldo-cuenta" data-i18n="cuenta.saldo_hoy_label">Saldo de hoy</label>
-    <input type="text" id="input-saldo-cuenta" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+    <input type="text" id="input-saldo-cuenta" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00">
   </div>
 
   <div class="campo">
@@ -2744,7 +2744,7 @@
     </div>
     <div class="campo">
       <label for="input-aportacion-cuenta-editar" data-i18n="campo.aportacion_opcional">Aportación mensual comprometida (opcional)</label>
-      <input type="text" id="input-aportacion-cuenta-editar" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 5000">
+      <input type="text" id="input-aportacion-cuenta-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 5000">
     </div>
     <div class="campo">
       <label for="input-diaaportacion-cuenta-editar" data-i18n="campo.dia_descuento_opcional">Día del mes en que se descuenta (opcional)</label>
@@ -2793,7 +2793,7 @@
   <div id="campos-precio-manual" style="display:none;">
     <div class="campo">
       <label for="input-precio-manual" data-i18n="accion.precio_label">Precio por acción</label>
-      <input type="text" id="input-precio-manual" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 68.50">
+      <input type="text" id="input-precio-manual" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 68.50">
     </div>
     <div class="campo">
       <label for="select-moneda-manual" data-i18n="campo.moneda">Moneda</label>
@@ -2831,7 +2831,7 @@
   <div id="campos-precio-manual-editar" style="display:none;">
     <div class="campo">
       <label for="input-precio-manual-editar" data-i18n="accion.precio_label">Precio por acción</label>
-      <input type="text" id="input-precio-manual-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+      <input type="text" id="input-precio-manual-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
     </div>
     <div class="campo">
       <label for="select-moneda-manual-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2909,7 +2909,7 @@
   </div>
   <div class="campo">
     <label for="input-valor-bien" data-i18n="bien.valor_label">Valor estimado</label>
-    <input type="text" id="input-valor-bien" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+    <input type="text" id="input-valor-bien" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-bien" data-i18n="campo.moneda">Moneda</label>
@@ -2945,7 +2945,7 @@
   </div>
   <div class="campo">
     <label for="input-valor-bien-editar" data-i18n="bien.valor_label">Valor estimado</label>
-    <input type="text" id="input-valor-bien-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-valor-bien-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="select-moneda-bien-editar" data-i18n="campo.moneda">Moneda</label>
@@ -2973,7 +2973,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-ingreso" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-ingreso" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+    <input type="text" id="input-monto-ingreso" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-ingreso" data-i18n="campo.moneda">Moneda</label>
@@ -3025,7 +3025,7 @@
   </div>
   <div class="campo">
     <label for="input-monto-ingreso-editar" data-i18n="gastos.monto_label">Monto</label>
-    <input type="text" id="input-monto-ingreso-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-monto-ingreso-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="select-moneda-ingreso-editar" data-i18n="campo.moneda">Moneda</label>
@@ -3085,7 +3085,7 @@
   </div>
   <div class="campo">
     <label for="input-saldo-deuda" data-i18n="deuda.saldo_label">Saldo actual (lo que debes)</label>
-    <input type="text" id="input-saldo-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="0.00">
+    <input type="text" id="input-saldo-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00">
   </div>
   <div class="campo">
     <label for="select-moneda-deuda" data-i18n="campo.moneda">Moneda</label>
@@ -3101,7 +3101,7 @@
   </div>
   <div class="campo">
     <label for="input-pago-mensual-deuda" data-i18n="deuda.pago_mensual_label">Pago mensual (opcional)</label>
-    <input type="text" id="input-pago-mensual-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 2500">
+    <input type="text" id="input-pago-mensual-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 2500">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_cobertura">Se usa para calcular tu cobertura de liquidez y tu tasa de endeudamiento.</div>
   <div class="campo">
@@ -3110,17 +3110,17 @@
   </div>
   <div class="campo">
     <label for="input-proximopago-deuda" data-i18n="deuda.proximo_pago_label">Monto a pagar en tu próxima fecha de pago (opcional)</label>
-    <input type="text" id="input-proximopago-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 4500">
+    <input type="text" id="input-proximopago-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 4500">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_proximo_pago">El día y el monto de tu próximo pago alimentan tu flujo de efectivo del mes. Si no capturas el monto, usamos tu pago mensual.</div>
   <div id="campos-tarjeta" style="display:block;">
     <div class="campo">
       <label for="input-limite-deuda" data-i18n="deuda.limite_credito_label">Límite de crédito (opcional)</label>
-      <input type="text" id="input-limite-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 50000">
+      <input type="text" id="input-limite-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 50000">
     </div>
     <div class="campo">
       <label for="input-anualidad-deuda" data-i18n="deuda.anualidad_label">Anualidad / cuota anual (opcional)</label>
-      <input type="text" id="input-anualidad-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 1200">
+      <input type="text" id="input-anualidad-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 1200">
     </div>
     <div class="campo">
       <label for="input-cashback-deuda" data-i18n="deuda.cashback_label">% de cashback o recompensas (opcional)</label>
@@ -3128,7 +3128,7 @@
     </div>
     <div class="campo">
       <label for="input-gasto-deuda" data-i18n="deuda.gasto_promedio_label">Gasto mensual promedio en esta tarjeta (opcional)</label>
-      <input type="text" id="input-gasto-deuda" inputmode="decimal" oninput="manejarInputMonto(this)" placeholder="Ej. 8000">
+      <input type="text" id="input-gasto-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 8000">
     </div>
     <div class="campo">
       <label for="input-diacorte-deuda" data-i18n="deuda.dia_corte_label">Día de corte del mes (opcional)</label>
@@ -3161,7 +3161,7 @@
   </div>
   <div class="campo">
     <label for="input-saldo-deuda-editar" data-i18n="deuda.saldo_label">Saldo actual (lo que debes)</label>
-    <input type="text" id="input-saldo-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-saldo-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="select-moneda-deuda-editar" data-i18n="campo.moneda">Moneda</label>
@@ -3177,7 +3177,7 @@
   </div>
   <div class="campo">
     <label for="input-pago-mensual-deuda-editar" data-i18n="deuda.pago_mensual_label">Pago mensual (opcional)</label>
-    <input type="text" id="input-pago-mensual-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-pago-mensual-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="campo">
     <label for="input-diapago-deuda-editar" data-i18n="deuda.dia_limite_label">Día límite de pago del mes (opcional)</label>
@@ -3185,17 +3185,17 @@
   </div>
   <div class="campo">
     <label for="input-proximopago-deuda-editar" data-i18n="deuda.proximo_pago_label">Monto a pagar en tu próxima fecha de pago (opcional)</label>
-    <input type="text" id="input-proximopago-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+    <input type="text" id="input-proximopago-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
   </div>
   <div class="aviso" data-i18n="deuda.aviso_proximo_pago_editar">El día y el monto de tu próximo pago alimentan tu flujo de efectivo del mes.</div>
   <div id="campos-tarjeta-editar" style="display:none;">
     <div class="campo">
       <label for="input-limite-deuda-editar" data-i18n="deuda.limite_credito_label">Límite de crédito (opcional)</label>
-      <input type="text" id="input-limite-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+      <input type="text" id="input-limite-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
     </div>
     <div class="campo">
       <label for="input-anualidad-deuda-editar" data-i18n="deuda.anualidad_label">Anualidad / cuota anual (opcional)</label>
-      <input type="text" id="input-anualidad-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+      <input type="text" id="input-anualidad-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
     </div>
     <div class="campo">
       <label for="input-cashback-deuda-editar" data-i18n="deuda.cashback_label">% de cashback o recompensas (opcional)</label>
@@ -3203,7 +3203,7 @@
     </div>
     <div class="campo">
       <label for="input-gasto-deuda-editar" data-i18n="deuda.gasto_promedio_label">Gasto mensual promedio en esta tarjeta (opcional)</label>
-      <input type="text" id="input-gasto-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this)">
+      <input type="text" id="input-gasto-deuda-editar" inputmode="decimal" oninput="manejarInputMonto(this, event)">
     </div>
     <div class="campo">
       <label for="input-diacorte-deuda-editar" data-i18n="deuda.dia_corte_label">Día de corte del mes (opcional)</label>
@@ -3636,7 +3636,22 @@ function establecerValorMonto(el, numero){
   el.value = formatearNumeroMonto(limpiarValorMonto(String(numero)));
 }
 
-function manejarInputMonto(el){
+function manejarInputMonto(el, ev){
+  // Bug real reportado por un usuario ("cambié el saldo a 30,00 y no se
+  // refleja" -- en realidad SÍ se guardaba, pero como 3,000): el teclado
+  // numérico de muchos teléfonos en español manda una "," como tecla de
+  // separador decimal, no un ".". El regex de abajo trata la coma como
+  // puramente cosmética (el formateo de miles) y la descarta en silencio,
+  // así que "30,00" se convertía en "3000" sin ningún aviso. Se convierte a
+  // punto justo lo que se acaba de insertar (tecleado o pegado) antes de
+  // limpiar -- así no se toca ninguna coma que ya trajera el campo por el
+  // formateo de miles, solo la recién escrita.
+  if(ev && ev.data && ev.data.includes(',')){
+    const fin = el.selectionStart;
+    const inicio = fin - ev.data.length;
+    el.value = el.value.slice(0, inicio) + ev.data.replace(/,/g, '.') + el.value.slice(fin);
+    el.setSelectionRange(fin, fin);
+  }
   // El cursor se reubica contando dígitos Y el punto decimal (no solo
   // dígitos) antes de la posición original -- las comas son puramente
   // cosméticas y se pueden mover libremente, pero el punto SÍ es parte del
@@ -15137,8 +15152,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 77;
+const VERSION_APP_ACTUAL = 78;
 const CHANGELOG_APP = [
+  {
+    version: 78,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se corrigió un error real: en los campos de monto (saldo, gastos, ingresos, deudas...), si tu teléfono usa coma como separador decimal (común en teclados numéricos en español), escribir "30,00" se guardaba como "3,000" sin ningún aviso. Ahora la coma se reconoce como punto decimal.'
+    ],
+    cambios_en: [
+      'Fixed a real bug: in amount fields (balance, expenses, income, debts...), if your phone uses a comma as the decimal separator (common on Spanish numeric keypads), typing "30,00" silently saved as "3,000". The comma is now recognized as a decimal point.'
+    ]
+  },
   {
     version: 77,
     fecha: '2026-08-31',
