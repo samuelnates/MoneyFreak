@@ -8531,7 +8531,15 @@ async function cargarCuentasInversion(){
     return;
   }
 
-  const { data: saldos } = await sb.from('saldos').select('*').order('fecha', {ascending:false});
+  // Bug real reportado por un usuario ("el saldo de mañana ya está puesto"):
+  // un gasto fechado a futuro (ej. una compra programada para el día
+  // siguiente) proyecta también un saldo a esa fecha futura -- útil para el
+  // historial/gráfica de la cuenta, pero si esta consulta no se limita a
+  // "hoy o antes", ese saldo futuro le gana SIEMPRE al saldo real de hoy en
+  // el ordenamiento por fecha descendente, y la tarjeta se queda pegada
+  // mostrando el número de mañana sin importar cuántas veces actualices hoy.
+  const hoyISO = new Date().toISOString().slice(0,10);
+  const { data: saldos } = await sb.from('saldos').select('*').lte('fecha', hoyISO).order('fecha', {ascending:false});
   const ultimoPorCuenta = {};
   const historicoPorCuenta = {};
   (saldos || []).forEach(s => {
@@ -13324,9 +13332,14 @@ async function eliminarDeuda(){
 async function calcularBalance(){
   if(tasasCambioPromesa) await tasasCambioPromesa;
 
+  // Igual que en cargarCuentasInversion(): un saldo fechado a futuro (por un
+  // gasto programado a futuro) no debe contar como "el saldo actual" de la
+  // cuenta para el patrimonio total, o gana siempre sobre el saldo real de
+  // hoy y el número de Inicio queda pegado en el de mañana.
+  const hoyISO = new Date().toISOString().slice(0,10);
   const [{ data: cuentas }, { data: saldos }, { data: bienes }, { data: acciones }, { data: deudas }] = await Promise.all([
     sb.from('cuentas').select('*'),
-    sb.from('saldos').select('*').order('fecha', { ascending: false }),
+    sb.from('saldos').select('*').lte('fecha', hoyISO).order('fecha', { ascending: false }),
     sb.from('bienes').select('*'),
     sb.from('acciones').select('*'),
     sb.from('deudas').select('*')
@@ -13407,9 +13420,13 @@ async function calcularSaludFinanciera(){
   if(tasasCambioPromesa) await tasasCambioPromesa;
   await cargarPerfilFinanciero();
 
+  // Mismo bug que en cargarCuentasInversion()/calcularBalance(): un saldo a
+  // futuro no cuenta como "activos líquidos de hoy" para el score de salud
+  // financiera.
+  const hoyISO = new Date().toISOString().slice(0,10);
   const [{ data: cuentas }, { data: saldos }, { data: deudas }, { data: ingresos }] = await Promise.all([
     sb.from('cuentas').select('*'),
-    sb.from('saldos').select('*').order('fecha', { ascending: false }),
+    sb.from('saldos').select('*').lte('fecha', hoyISO).order('fecha', { ascending: false }),
     sb.from('deudas').select('*'),
     sb.from('ingresos').select('*')
   ]);
@@ -15152,8 +15169,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 78;
+const VERSION_APP_ACTUAL = 79;
 const CHANGELOG_APP = [
+  {
+    version: 79,
+    fecha: '2026-08-31',
+    cambios_es: [
+      'Se corrigió que el saldo de una cuenta se quedara "pegado" en un número viejo: si tenías un gasto programado a futuro (ej. para mañana), su saldo proyectado le ganaba siempre al saldo real que registraras hoy. Ahora el saldo de hoy siempre manda.'
+    ],
+    cambios_en: [
+      'Fixed an account balance getting "stuck" on an old number: if you had an expense scheduled for a future date (e.g. tomorrow), its projected balance always won over the real balance you registered today. Today\'s balance now always takes priority.'
+    ]
+  },
   {
     version: 78,
     fecha: '2026-08-31',
