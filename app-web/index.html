@@ -93,6 +93,14 @@
      solo en body, se pega perfecto y el scroll horizontal sigue bloqueado). */
   html{margin:0;padding:0;}
   body{margin:0;padding:0;overflow-x:hidden;}
+  /* Red de seguridad encontrada probando "Gastos" sin el CDN de Chart.js
+     disponible (parte 92): a diferencia de una imagen, un <canvas> no se
+     encoge solo para caber en un contenedor angosto -- normalmente no se
+     nota porque Chart.js ya ajusta su tamaño al iniciar, pero si ese CDN
+     falla para un usuario real, un canvas sin ajustar puede desbordar la
+     pantalla horizontalmente. max-width:100% es puramente defensivo, nunca
+     fuerza un canvas a encogerse por debajo del tamaño que ya tenía. */
+  canvas{max-width:100%;}
   a{color:inherit;text-decoration-color:var(--texto-tenue-2);}
   button,input,select,a{touch-action:manipulation;}
   button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{
@@ -2223,13 +2231,46 @@
     <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
   </div>
 
-  <h2 data-i18n="gastos.graficas_titulo">Gráficas</h2>
-  <div id="gastos-graficas-contenido"></div>
+  <!-- Barra de accesos fija -- misma lógica que "Mis cuentas" (parte 83),
+       pedida explícitamente por el usuario para reemplazar las tarjetas que
+       llevaban a Movimientos/Gráficas ("ya me estoy arrepintiendo de las
+       tarjetas... me gustaría copiar la lógica de mis cuentas de la barra
+       de acceso"). Salta directo a la sección al tocarla y se marca sola
+       con el dedo (scrollspy, ver controladorSeccionesGastos). -->
+  <div class="tabs-cuentas" id="tabs-gastos">
+    <button type="button" class="tab-cuentas" data-seccion="graficas" onclick="mostrarSeccionGastos('graficas')">
+      <span class="tab-cuentas-titulo" data-i18n="gastos.graficas_titulo">Gráficas</span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="categorias" onclick="mostrarSeccionGastos('categorias')">
+      <span class="tab-cuentas-titulo" data-i18n="gastos.categorias_titulo">Gasto por categoría</span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="movimientos" onclick="mostrarSeccionGastos('movimientos')">
+      <span class="tab-cuentas-titulo" data-i18n="gastos.movimientos_titulo">Movimientos</span>
+      <span class="tab-cuentas-dato" id="tab-gastos-movimientos-conteo"></span>
+    </button>
+  </div>
 
-  <h2 data-i18n="gastos.categorias_titulo">Gasto por categoría</h2>
-  <div id="gastos-categorias-contenido"></div>
+  <section class="seccion-cuentas" id="seccion-gastos-graficas">
+    <h2 data-i18n="gastos.graficas_titulo">Gráficas</h2>
+    <div id="gastos-graficas-contenido"></div>
+  </section>
 
-  <div class="panel-grid" id="gastos-accesos"></div>
+  <section class="seccion-cuentas" id="seccion-gastos-categorias">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
+      <h2 style="margin:0;" data-i18n="gastos.categorias_titulo">Gasto por categoría</h2>
+      <button type="button" class="btn-link-tenue btn-escritura" id="btn-editar-presupuesto-inline" onclick="abrirPresupuesto()" data-i18n="gastos.editar_presupuesto_titulo" style="white-space:nowrap;display:block;">Editar presupuesto</button>
+    </div>
+    <div id="gastos-categorias-contenido"></div>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-gastos-movimientos">
+    <h2 data-i18n="gastos.movimientos_titulo">Movimientos</h2>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <select id="filtro-concepto-movimientos" style="flex:1;" onchange="renderizarMovimientosGastos()"></select>
+      <select id="filtro-pago-movimientos" style="flex:1;" onchange="renderizarMovimientosGastos()"></select>
+    </div>
+    <div id="gastos-movimientos-contenido"></div>
+  </section>
 
   <button class="btn-grande" id="btn-agregar-gasto" onclick="abrirAgregarGasto()" data-i18n="gastos.registrar_boton">+ Registrar gasto</button>
   <button type="button" class="btn-link-tenue" id="btn-ver-solicitudes-pendientes" onclick="abrirSolicitudesGasto()" style="display:none;margin-top:10px;"></button>
@@ -2242,21 +2283,6 @@
   </div>
   <p class="subtitulo" data-i18n="gastos.solicitudes_explica">Gastos detectados por voz o foto. Revísalos y confírmalos antes de que cuenten.</p>
   <div id="solicitudes-gasto-contenido">
-    <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
-  </div>
-</div>
-
-<div id="vista-gastos-movimientos" class="pantalla">
-  <div class="encabezado">
-    <button class="btn-volver" onclick="mostrar('vista-gastos')">‹</button>
-    <h1 data-i18n="gastos.movimientos_titulo">Movimientos</h1>
-  </div>
-  <p class="subtitulo" id="etiqueta-mes-gastos-movimientos"></p>
-  <div style="display:flex;gap:8px;margin-bottom:14px;">
-    <select id="filtro-concepto-movimientos" style="flex:1;" onchange="renderizarMovimientosGastos()"></select>
-    <select id="filtro-pago-movimientos" style="flex:1;" onchange="renderizarMovimientosGastos()"></select>
-  </div>
-  <div id="gastos-movimientos-contenido">
     <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
   </div>
 </div>
@@ -3392,7 +3418,7 @@ const VISTAS_SIN_SESION = ['vista-login', 'config-faltante', 'vista-crear-cuenta
 // "Mis cuentas" tenía esto, generalizado a un mapa por vista en vez de una
 // sola variable.
 const VISTAS_CON_SCROLL_GUARDADO = [
-  'vista-cuentas', 'vista-gastos-movimientos', 'vista-solicitudes-gasto'
+  'vista-cuentas', 'vista-gastos', 'vista-solicitudes-gasto'
 ];
 let scrollGuardadoPorVista = {};
 
@@ -7546,7 +7572,7 @@ function ajustarTextoUnaLinea(el, tamanoMinimo = 9){
 
 function ajustarTamanoDatosTarjetas(){
   document.querySelectorAll(
-    '#tabs-cuentas .tab-cuentas-dato, .panel-grid .panel-tarjeta-dato, .totales-grid .total-caja .monto'
+    '.tab-cuentas-dato, .panel-grid .panel-tarjeta-dato, .totales-grid .total-caja .monto'
   ).forEach(el => ajustarTextoUnaLinea(el));
 }
 
@@ -7557,69 +7583,95 @@ window.addEventListener('resize', () => {
   requestAnimationFrame(() => { reajusteDatosTarjetasPendiente = false; ajustarTamanoDatosTarjetas(); });
 }, { passive: true });
 
-function mostrarSeccionCuentas(idSeccion){
-  if(!document.getElementById('vista-cuentas').classList.contains('activa')) mostrar('vista-cuentas');
-  document.querySelectorAll('#tabs-cuentas .tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === idSeccion));
-  requestAnimationFrame(() => desplazarASeccionCuentas(idSeccion));
+// Motor compartido de "pantalla con barra de accesos fija + secciones
+// scrolleables" -- nació solo para "Mis cuentas" (parte 83) pero al usuario
+// le gustó tanto el resultado que pidió la misma lógica para "Gastos y
+// presupuesto" (Movimientos/Gráficas/Categorías, en vez de las tarjetas que
+// llevaban a pantallas separadas). En vez de copiar/pegar esta lógica (ya
+// tiene 3 bugs reales encontrados y corregidos: el offset de la barra
+// sticky, la pelea entre el scrollspy y el salto animado, y el cálculo del
+// destino del scroll), se generalizó en una fábrica -- una instancia por
+// pantalla, cada una con sus propios IDs.
+function crearControladorSeccionesConPestanas({ idPantalla, idBarra, prefijoSeccion, mostrarPantalla }){
+  const HOLGURA_SCROLLSPY = 14;
+  let saltoEnCurso = false;
+  let tokenSalto = 0;
+  let scrollspyListo = false;
+
+  function desplazarASeccion(idSeccion){
+    const el = document.getElementById(prefijoSeccion + idSeccion);
+    const barra = document.getElementById(idBarra);
+    if(!el || !barra) return;
+    // La barra es sticky con su propio "top" (no arranca en el borde
+    // superior del viewport), así que el destino debe sumar ese offset y no
+    // solo la altura de la barra -- si no, la sección cae parcialmente
+    // tapada debajo de la barra pegada y el scrollspy no la reconoce como
+    // activa recién saltada.
+    const offsetSuperiorBarra = parseFloat(getComputedStyle(barra).top) || 0;
+    const y = el.getBoundingClientRect().top + window.scrollY - (offsetSuperiorBarra + barra.offsetHeight + 10);
+    const miToken = ++tokenSalto;
+    saltoEnCurso = true;
+    const terminarSalto = () => { if(tokenSalto === miToken) saltoEnCurso = false; };
+    window.addEventListener('scrollend', terminarSalto, { once: true });
+    setTimeout(terminarSalto, 700); // respaldo si el navegador no soporta 'scrollend'
+    window.scrollTo({ top: Math.max(0, y), behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth' });
+  }
+
+  function mostrarSeccion(idSeccion){
+    if(!document.getElementById(idPantalla).classList.contains('activa')) mostrarPantalla();
+    document.querySelectorAll(`#${idBarra} .tab-cuentas`).forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === idSeccion));
+    requestAnimationFrame(() => desplazarASeccion(idSeccion));
+  }
+
+  // Mientras el salto a una sección está en curso (animación de scroll
+  // suave), el scrollspy se pausa -- si no, pelea con la pestaña que ya se
+  // marcó activa al tocarla, mostrando de forma intermitente la pestaña
+  // anterior hasta que el scroll termina de asentarse.
+  function actualizarScrollspy(){
+    if(saltoEnCurso) return;
+    const barra = document.getElementById(idBarra);
+    if(!barra || !document.getElementById(idPantalla).classList.contains('activa')) return;
+    const limite = barra.getBoundingClientRect().bottom + HOLGURA_SCROLLSPY;
+    let actual = null;
+    document.querySelectorAll(`#${idPantalla} [id^="${prefijoSeccion}"]`).forEach(sec => {
+      if(sec.getBoundingClientRect().top <= limite) actual = sec;
+    });
+    if(!actual) actual = document.querySelector(`#${idPantalla} [id^="${prefijoSeccion}"]`);
+    if(!actual) return;
+    const clave = actual.id.replace(prefijoSeccion, '');
+    barra.querySelectorAll('.tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === clave));
+  }
+
+  function inicializarScrollspy(){
+    if(scrollspyListo) return;
+    scrollspyListo = true;
+    let pendiente = false;
+    window.addEventListener('scroll', () => {
+      if(pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(() => { pendiente = false; actualizarScrollspy(); });
+    }, { passive: true });
+  }
+
+  return { mostrarSeccion, actualizarScrollspy, inicializarScrollspy };
 }
 
-const HOLGURA_SCROLLSPY_CUENTAS = 14;
-// Mientras el salto a una sección está en curso (animación de scroll suave),
-// el scrollspy se pausa -- si no, pelea con la pestaña que ya se marcó
-// activa al tocarla, mostrando de forma intermitente la pestaña anterior
-// hasta que el scroll termina de asentarse.
-let saltoCuentasEnCurso = false;
-let tokenSaltoCuentas = 0;
+const controladorSeccionesCuentas = crearControladorSeccionesConPestanas({
+  idPantalla: 'vista-cuentas', idBarra: 'tabs-cuentas', prefijoSeccion: 'seccion-cuentas-',
+  mostrarPantalla: () => mostrar('vista-cuentas'),
+});
+function mostrarSeccionCuentas(idSeccion){ controladorSeccionesCuentas.mostrarSeccion(idSeccion); }
+function actualizarScrollspyCuentas(){ controladorSeccionesCuentas.actualizarScrollspy(); }
+function inicializarScrollspyCuentas(){ controladorSeccionesCuentas.inicializarScrollspy(); }
+function volverACuentas(idSeccion){ mostrarSeccionCuentas(idSeccion); }
 
-function desplazarASeccionCuentas(idSeccion){
-  const el = document.getElementById('seccion-cuentas-' + idSeccion);
-  const barra = document.getElementById('tabs-cuentas');
-  if(!el || !barra) return;
-  // La barra es sticky con su propio "top" (no arranca en el borde superior
-  // del viewport), así que el destino debe sumar ese offset y no solo la
-  // altura de la barra -- si no, la sección cae parcialmente tapada debajo
-  // de la barra pegada y el scrollspy no la reconoce como activa recién
-  // saltada.
-  const offsetSuperiorBarra = parseFloat(getComputedStyle(barra).top) || 0;
-  const y = el.getBoundingClientRect().top + window.scrollY - (offsetSuperiorBarra + barra.offsetHeight + 10);
-  const miToken = ++tokenSaltoCuentas;
-  saltoCuentasEnCurso = true;
-  const terminarSalto = () => { if(tokenSaltoCuentas === miToken) saltoCuentasEnCurso = false; };
-  window.addEventListener('scrollend', terminarSalto, { once: true });
-  setTimeout(terminarSalto, 700); // respaldo si el navegador no soporta 'scrollend'
-  window.scrollTo({ top: Math.max(0, y), behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth' });
-}
-
-function volverACuentas(idSeccion){
-  mostrarSeccionCuentas(idSeccion);
-}
-
-function actualizarScrollspyCuentas(){
-  if(saltoCuentasEnCurso) return;
-  const barra = document.getElementById('tabs-cuentas');
-  if(!barra || !document.getElementById('vista-cuentas').classList.contains('activa')) return;
-  const limite = barra.getBoundingClientRect().bottom + HOLGURA_SCROLLSPY_CUENTAS;
-  let actual = null;
-  document.querySelectorAll('.seccion-cuentas').forEach(sec => {
-    if(sec.getBoundingClientRect().top <= limite) actual = sec;
-  });
-  if(!actual) actual = document.querySelector('.seccion-cuentas');
-  if(!actual) return;
-  const clave = actual.id.replace('seccion-cuentas-', '');
-  barra.querySelectorAll('.tab-cuentas').forEach(tab => tab.classList.toggle('activo', tab.dataset.seccion === clave));
-}
-
-let scrollspyCuentasListo = false;
-function inicializarScrollspyCuentas(){
-  if(scrollspyCuentasListo) return;
-  scrollspyCuentasListo = true;
-  let pendiente = false;
-  window.addEventListener('scroll', () => {
-    if(pendiente) return;
-    pendiente = true;
-    requestAnimationFrame(() => { pendiente = false; actualizarScrollspyCuentas(); });
-  }, { passive: true });
-}
+const controladorSeccionesGastos = crearControladorSeccionesConPestanas({
+  idPantalla: 'vista-gastos', idBarra: 'tabs-gastos', prefijoSeccion: 'seccion-gastos-',
+  mostrarPantalla: () => abrirGastos(),
+});
+function mostrarSeccionGastos(idSeccion){ controladorSeccionesGastos.mostrarSeccion(idSeccion); }
+function actualizarScrollspyGastos(){ controladorSeccionesGastos.actualizarScrollspy(); }
+function inicializarScrollspyGastos(){ controladorSeccionesGastos.inicializarScrollspy(); }
 
 function toggleAcordeon(id){
   const cont = document.getElementById('acordeon-contenido-' + id);
@@ -12482,23 +12534,12 @@ function etiquetaMesGastos(){
   return `${nombreMes(mesGastosActual.mes)} ${mesGastosActual.anio}`;
 }
 
-const ICONOS_GASTOS_HUB = {
-  graficas: '<path d="M4 20V11"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/>',
-  categorias: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-  movimientos: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
-  presupuesto: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>'
-};
-function iconoGastosHub(nombre){
-  return `<svg class="panel-icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS_GASTOS_HUB[nombre]}</svg>`;
-}
-
 async function abrirGastos(){
   mostrar('vista-gastos');
+  inicializarScrollspyGastos();
   document.getElementById('etiqueta-mes-gastos').textContent = etiquetaMesGastos();
   const resumen = document.getElementById('gastos-resumen');
-  const accesos = document.getElementById('gastos-accesos');
   resumen.innerHTML = skeletonCards(3);
-  accesos.innerHTML = '';
   actualizarBadgeSolicitudesPendientes();
   mostrarSugerenciaGastoRecurrente();
 
@@ -12533,24 +12574,13 @@ async function abrirGastos(){
     </div>
   `;
 
-  accesos.innerHTML = `
-    <button type="button" class="panel-tarjeta" onclick="abrirGastosMovimientos()">
-      <div class="panel-icono">${iconoGastosHub('movimientos')}</div>
-      <div class="panel-tarjeta-titulo">${t('gastos.movimientos_titulo')}</div>
-      <div class="panel-tarjeta-sub">${tf('gastos.movimientos_sub', r.gastos.length)}</div>
-    </button>
-    ${!modoDemo ? `
-    <button type="button" class="panel-tarjeta" onclick="abrirPresupuesto()">
-      <div class="panel-icono">${iconoGastosHub('presupuesto')}</div>
-      <div class="panel-tarjeta-titulo">${t('gastos.editar_presupuesto_titulo')}</div>
-      <div class="panel-tarjeta-sub">${t('gastos.editar_presupuesto_sub')}</div>
-    </button>` : ''}
-  `;
+  document.getElementById('tab-gastos-movimientos-conteo').textContent = tf('gastos.movimientos_sub', r.gastos.length);
   actualizarUIDemo();
   ajustarTamanoDatosTarjetas();
 
   renderGastosGraficasInline(r);
   renderGastosCategoriasInline(r);
+  await renderGastosMovimientosInline(r);
 }
 
 function renderGastosGraficasInline(r){
@@ -12637,17 +12667,16 @@ function claveMedioPagoGasto(g){
   return CLAVE_EFECTIVO;
 }
 
-async function abrirGastosMovimientos(){
-  mostrar('vista-gastos-movimientos');
-  document.getElementById('etiqueta-mes-gastos-movimientos').textContent = etiquetaMesGastos();
-  const cont = document.getElementById('gastos-movimientos-contenido');
-  cont.innerHTML = skeletonCards(3);
-
-  const [r, opcionesPago] = await Promise.all([
-    calcularGastosMes(mesGastosActual.anio, mesGastosActual.mes),
-    obtenerOpcionesMedioPago()
-  ]);
+// "Movimientos" dejó de ser una pantalla aparte (parte 92, misma lógica de
+// barra de acceso que "Mis cuentas") -- ahora es una sección más dentro de
+// "Gastos y presupuesto", así que se pinta en línea con el mismo `r` que
+// abrirGastos() ya calculó (sin repetir la consulta de calcularGastosMes).
+// abrirGastosMovimientos() se conserva como alias -- lo siguen llamando la
+// tarjeta de "Gastado este mes" y el enrutador de acciones de Freaky -- pero
+// ahora solo salta a la sección en vez de navegar a otra pantalla.
+async function renderGastosMovimientosInline(r){
   gastosMovimientosActuales = r.gastos;
+  const opcionesPago = await obtenerOpcionesMedioPago();
   mediosPagoLookupMovimientos = {};
   opcionesPago.todas.forEach(o => { mediosPagoLookupMovimientos[o.valor || CLAVE_EFECTIVO] = o.etiqueta; });
 
@@ -12664,6 +12693,10 @@ async function abrirGastosMovimientos(){
   ).join('');
 
   renderizarMovimientosGastos();
+}
+
+function abrirGastosMovimientos(){
+  mostrarSeccionGastos('movimientos');
 }
 
 function renderizarMovimientosGastos(){
@@ -13419,7 +13452,7 @@ const TOUR_PASOS = [
   {
     titulo: 'tour.pgastos.titulo',
     texto: 'tour.pgastos.texto',
-    selector: '#gastos-accesos',
+    selector: '#tabs-gastos',
     fallback: '#vista-gastos',
     accion: async () => { await abrirGastos(); }
   },
@@ -15066,8 +15099,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 71;
+const VERSION_APP_ACTUAL = 72;
 const CHANGELOG_APP = [
+  {
+    version: 72,
+    fecha: '2026-08-30',
+    cambios_es: [
+      '"Gastos y presupuesto" ya no manda a Movimientos a otra pantalla aparte -- ahora es una barra de accesos fija (como en "Mis cuentas") que salta a Gráficas, Categorías o Movimientos sin salir de la pantalla.'
+    ],
+    cambios_en: [
+      '"Expenses & budget" no longer sends Transactions to a separate screen -- it now has a fixed access bar (like "My accounts") that jumps to Charts, Categories, or Transactions without leaving the screen.'
+    ]
+  },
   {
     version: 71,
     fecha: '2026-08-30',
