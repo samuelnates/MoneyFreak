@@ -510,14 +510,18 @@
 
     <div class="caja" style="margin-bottom:16px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Plantilla del mensaje</div>
-      <div class="tarjeta-sub" style="margin:0 0 10px;">Usa <code>{handle}</code> donde quieras que aparezca la cuenta. Se guarda en este navegador.</div>
+      <div class="tarjeta-sub" style="margin:0 0 10px;">Usa <code>{nombre}</code> para saludar por su nombre y <code>{handle}</code> para su cuenta. Se guarda en este navegador.</div>
       <textarea id="prospecto-plantilla" spellcheck="false" style="width:100%;min-height:170px;padding:10px 12px;border-radius:8px;border:1px solid var(--borde);background:var(--bg);color:var(--texto);font-family:var(--sans);font-size:13px;resize:vertical;"></textarea>
       <button type="button" onclick="restablecerPlantillaProspecto()" style="margin-top:10px;background:none;border:none;color:var(--texto-tenue);font-family:var(--mono);font-size:11px;text-decoration:underline;cursor:pointer;padding:4px 0;">Restablecer plantilla</button>
     </div>
 
     <div class="caja" style="margin-bottom:16px;">
-      <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Agregar prospecto</div>
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;" id="titulo-form-prospecto">Agregar prospecto</div>
       <div class="form-negocio">
+        <div class="campo-negocio">
+          <label for="pros-nombre">Nombre</label>
+          <input type="text" id="pros-nombre" placeholder="Ej. Pedro Pérez">
+        </div>
         <div class="campo-negocio">
           <label for="pros-handle">Cuenta</label>
           <input type="text" id="pros-handle" placeholder="@pedrofinanzas">
@@ -537,6 +541,7 @@
         </div>
       </div>
       <button id="btn-agregar-prospecto" onclick="agregarProspecto()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Agregar</button>
+      <button id="btn-cancelar-edicion-prospecto" onclick="cancelarEdicionProspecto()" class="oculto" style="margin-top:12px;margin-left:8px;padding:10px 18px;border-radius:8px;border:1px solid var(--borde-fuerte);background:none;color:var(--texto);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>
       <div class="error-login oculto" id="error-prospecto"></div>
     </div>
 
@@ -552,7 +557,7 @@
       </div>
       <div class="tabla-scroll">
       <table>
-        <thead><tr><th>Cuenta</th><th>Plataforma</th><th>Estado</th><th>Contactado</th><th>Respondió</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Cuenta</th><th>Plataforma</th><th>Estado</th><th>Contactado</th><th>Respondió</th></tr></thead>
         <tbody id="tabla-prospectos"></tbody>
       </table>
       </div>
@@ -1427,7 +1432,7 @@ async function cargarInfluencers(){
 }
 
 // ===== Prospección (etapa antes de que exista un código real) =====
-const PLANTILLA_PROSPECTO_DEFAULT = `Hola {handle} 👋 Soy Samuel, fundador de Money Freak — una app de finanzas personales que estamos por lanzar. Sigo tu contenido de finanzas y quiero invitarte a probarla en exclusiva antes de que salga al público (ahora está en versión web).
+const PLANTILLA_PROSPECTO_DEFAULT = `Hola {nombre} 👋 Soy Samuel, fundador de Money Freak — una app de finanzas personales que estamos por lanzar. Sigo tu contenido de finanzas y quiero invitarte a probarla en exclusiva antes de que salga al público (ahora está en versión web).
 
 La idea: te doy acceso anticipado + tu propio código. Pruébala tú primero con calma — no te pido que la recomiendes a ciegas. Solo compártela con tus seguidores si de verdad te convence; eso es justo lo que te da credibilidad con tu audiencia, no forzar una recomendación que no sientes. Si te gusta, quien entre con tu código se queda sin anuncios de por vida y con las funciones de IA gratis por 1 año — un beneficio real que tú les regalas, curado por ti.
 
@@ -1437,6 +1442,7 @@ Cero costo, cero presión. ¿Te mando el acceso para que la pruebes con calma?`;
 
 let prospectosGlobal = [];
 let filtroProspectoActivo = 'todos';
+let prospectoEditandoId = null;
 
 const ETIQUETAS_ESTADO_PROSPECTO = {
   prospecto: 'Prospecto', contactado: 'Contactado', respondio_si: 'Respondió sí',
@@ -1445,6 +1451,7 @@ const ETIQUETAS_ESTADO_PROSPECTO = {
 const ETIQUETAS_PLATAFORMA = { instagram: 'Instagram', tiktok: 'TikTok', otra: 'Otra' };
 const ERRORES_PROSPECTO = {
   handle_requerido: 'Falta la cuenta.',
+  nombre_requerido: 'Falta el nombre.',
   handle_ya_existe: 'Esa cuenta ya está en la lista de prospectos.',
   plataforma_invalida: 'Plataforma inválida.',
   no_encontrado: 'No se encontró ese prospecto.',
@@ -1461,9 +1468,14 @@ function restablecerPlantillaProspecto(){
   try{ localStorage.setItem('admin_plantilla_prospecto', PLANTILLA_PROSPECTO_DEFAULT); }catch(e){}
 }
 
-function mensajeParaHandle(handle){
+// Prospectos agregados antes de que existiera el campo "nombre" se quedan
+// sin uno hasta que se editen a mano -- en ese caso el saludo cae de vuelta
+// al @handle en vez de mandar "Hola  👋" con un hueco vacío.
+function mensajeParaProspecto(p){
   const plantilla = document.getElementById('prospecto-plantilla').value || PLANTILLA_PROSPECTO_DEFAULT;
-  return plantilla.split('{handle}').join('@' + handle);
+  return plantilla
+    .split('{nombre}').join(p.nombre || ('@' + p.handle))
+    .split('{handle}').join('@' + p.handle);
 }
 
 function filtrarProspectos(filtro){
@@ -1480,11 +1492,12 @@ function pintarTablaProspectos(){
     ? prospectosGlobal
     : prospectosGlobal.filter(p => p.estado === filtroProspectoActivo);
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="5" class="tarjeta-sub">${prospectosGlobal.length ? 'Nada en este filtro.' : 'Sin prospectos agregados todavía.'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="tarjeta-sub">${prospectosGlobal.length ? 'Nada en este filtro.' : 'Sin prospectos agregados todavía.'}</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(p => `
     <tr class="fila-prospecto" data-id="${p.id}" style="cursor:pointer;">
+      <td>${p.nombre ? escapeHtmlAdmin(p.nombre) : '<span class="tarjeta-sub" style="margin:0;">Sin nombre</span>'}</td>
       <td style="font-family:var(--mono);">@${escapeHtmlAdmin(p.handle)}</td>
       <td>${ETIQUETAS_PLATAFORMA[p.plataforma] || '—'}</td>
       <td><span class="pill-estado ${p.estado}">${ETIQUETAS_ESTADO_PROSPECTO[p.estado] || p.estado}</span></td>
@@ -1506,18 +1519,20 @@ function toggleDetalleProspecto(fila){
   document.querySelectorAll('.fila-detalle').forEach(f => f.remove());
   const p = prospectosGlobal.find(x => x.id === fila.dataset.id);
   if(!p) return;
-  const mensaje = mensajeParaHandle(p.handle);
+  const mensaje = mensajeParaProspecto(p);
   const tr = document.createElement('tr');
   tr.className = 'fila-detalle';
   const celda = document.createElement('td');
-  celda.colSpan = 5;
+  celda.colSpan = 6;
   celda.style.background = 'var(--bg)';
   celda.innerHTML = `
+    ${!p.nombre ? `<div class="tarjeta-sub" style="margin-bottom:6px;color:var(--alerta);">Sin nombre todavía -- el mensaje está saludando por su @cuenta. Toca "Editar" para ponerle nombre.</div>` : ''}
     ${p.nota ? `<div class="tarjeta-sub" style="margin-bottom:6px;"><strong style="color:var(--texto);">Nota:</strong> ${escapeHtmlAdmin(p.nota)}</div>` : ''}
-    <div class="tarjeta-etiqueta">Mensaje para @${escapeHtmlAdmin(p.handle)}</div>
+    <div class="tarjeta-etiqueta">Mensaje para ${p.nombre ? escapeHtmlAdmin(p.nombre) : ('@' + escapeHtmlAdmin(p.handle))}</div>
     <div class="mensaje-generado" id="mensaje-prospecto-${p.id}">${escapeHtmlAdmin(mensaje)}</div>
     <div class="fila-acciones-usuario" style="margin-top:10px;">
       <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();copiarMensajeProspecto('${p.id}')">Copiar mensaje</button>
+      <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();cargarFormularioParaEditarProspecto('${p.id}')">Editar</button>
       ${p.estado !== 'contactado' && p.estado !== 'convertido' ? `<button type="button" class="btn-accion-fila" onclick="event.stopPropagation();cambiarEstadoProspecto('${p.id}','contactado')">Marcar contactado</button>` : ''}
       ${p.estado !== 'convertido' ? `<button type="button" class="btn-accion-fila" onclick="event.stopPropagation();cambiarEstadoProspecto('${p.id}','respondio_si')">Respondió: sí</button>` : ''}
       ${p.estado !== 'convertido' ? `<button type="button" class="btn-accion-fila" onclick="event.stopPropagation();cambiarEstadoProspecto('${p.id}','respondio_no')">Respondió: no</button>` : ''}
@@ -1533,15 +1548,52 @@ async function copiarMensajeProspecto(id){
   const p = prospectosGlobal.find(x => x.id === id);
   if(!p) return;
   try{
-    await navigator.clipboard.writeText(mensajeParaHandle(p.handle));
+    await navigator.clipboard.writeText(mensajeParaProspecto(p));
   }catch(e){
     alert('No se pudo copiar. Selecciona el texto a mano.');
   }
 }
 
+function limpiarFormularioProspecto(){
+  document.getElementById('pros-nombre').value = '';
+  document.getElementById('pros-handle').value = '';
+  document.getElementById('pros-plataforma').value = '';
+  document.getElementById('pros-nota').value = '';
+}
+
+// Reusa el mismo formulario de "Agregar prospecto" para editar -- mismo
+// patrón que "Agregar movimiento"/"Agregar influencer" ya usan en esta
+// misma página. Se usa sobre todo para completarle el nombre a los
+// prospectos que se agregaron antes de que existiera ese campo.
+function cargarFormularioParaEditarProspecto(id){
+  document.querySelectorAll('.fila-detalle').forEach(f => f.remove());
+  const p = prospectosGlobal.find(x => x.id === id);
+  if(!p) return;
+  prospectoEditandoId = id;
+  document.getElementById('pros-nombre').value = p.nombre || '';
+  document.getElementById('pros-handle').value = p.handle;
+  document.getElementById('pros-plataforma').value = p.plataforma || '';
+  document.getElementById('pros-nota').value = p.nota || '';
+  document.getElementById('btn-agregar-prospecto').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-edicion-prospecto').classList.remove('oculto');
+  document.getElementById('titulo-form-prospecto').textContent = 'Editar prospecto';
+  document.getElementById('error-prospecto').classList.add('oculto');
+  document.getElementById('pros-nombre').closest('.caja').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicionProspecto(){
+  prospectoEditandoId = null;
+  limpiarFormularioProspecto();
+  document.getElementById('btn-agregar-prospecto').textContent = 'Agregar';
+  document.getElementById('btn-cancelar-edicion-prospecto').classList.add('oculto');
+  document.getElementById('titulo-form-prospecto').textContent = 'Agregar prospecto';
+  document.getElementById('error-prospecto').classList.add('oculto');
+}
+
 async function agregarProspecto(){
   const errorEl = document.getElementById('error-prospecto');
   errorEl.classList.add('oculto');
+  const nombre = document.getElementById('pros-nombre').value.trim();
   const handle = document.getElementById('pros-handle').value.trim();
   const plataforma = document.getElementById('pros-plataforma').value;
   const nota = document.getElementById('pros-nota').value.trim();
@@ -1551,21 +1603,30 @@ async function agregarProspecto(){
     errorEl.classList.remove('oculto');
     return;
   }
-
-  const btn = document.getElementById('btn-agregar-prospecto');
-  btn.disabled = true;
-  const datos = await llamarInfluencers({ accion: 'crear_prospecto', prospecto: { handle, plataforma: plataforma || null, nota: nota || null } });
-  btn.disabled = false;
-
-  if(!datos.ok){
-    errorEl.textContent = ERRORES_PROSPECTO[datos.error] || 'No se pudo agregar. Intenta de nuevo.';
+  if(!nombre){
+    errorEl.textContent = ERRORES_PROSPECTO.nombre_requerido;
     errorEl.classList.remove('oculto');
     return;
   }
 
-  document.getElementById('pros-handle').value = '';
-  document.getElementById('pros-plataforma').value = '';
-  document.getElementById('pros-nota').value = '';
+  const editando = prospectoEditandoId;
+  const btn = document.getElementById('btn-agregar-prospecto');
+  btn.disabled = true;
+  const datos = await llamarInfluencers({
+    accion: editando ? 'editar_prospecto' : 'crear_prospecto',
+    id: editando || undefined,
+    prospecto: { nombre, handle, plataforma: plataforma || null, nota: nota || null },
+  });
+  btn.disabled = false;
+
+  if(!datos.ok){
+    errorEl.textContent = ERRORES_PROSPECTO[datos.error] || 'No se pudo guardar. Intenta de nuevo.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  if(editando) cancelarEdicionProspecto();
+  else limpiarFormularioProspecto();
   await cargarInfluencers();
 }
 
@@ -1593,7 +1654,7 @@ async function eliminarProspecto(id){
 function convertirProspecto(id){
   const p = prospectosGlobal.find(x => x.id === id);
   if(!p) return;
-  const nombre = prompt(`Nombre del influencer (para mostrarlo en el panel):`, '');
+  const nombre = prompt(`Nombre del influencer (para mostrarlo en el panel):`, p.nombre || '');
   if(nombre === null || !nombre.trim()) return;
   const codigoSugerido = p.handle.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12) || 'INFLUENCER';
   const codigo = prompt('Código para compartir (letras/números, 3-12 caracteres):', codigoSugerido);

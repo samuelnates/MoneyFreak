@@ -208,12 +208,14 @@ Deno.serve(async (req) => {
     if (body.accion === "crear_prospecto") {
       const p = body.prospecto || {};
       const handle = String(p.handle || "").trim().replace(/^@/, "");
+      const nombre = String(p.nombre || "").trim();
       const plataforma = p.plataforma ? String(p.plataforma) : null;
       const nota = p.nota ? String(p.nota).trim().slice(0, 500) : null;
       if (!handle) return jsonResponse({ error: "handle_requerido" }, 400);
+      if (!nombre) return jsonResponse({ error: "nombre_requerido" }, 400);
       if (plataforma && !PLATAFORMAS_VALIDAS.has(plataforma)) return jsonResponse({ error: "plataforma_invalida" }, 400);
 
-      const { error } = await admin.from("prospectos_influencer").insert({ handle, plataforma, nota });
+      const { error } = await admin.from("prospectos_influencer").insert({ handle, nombre, plataforma, nota });
       if (error) {
         if (error.code === "23505") return jsonResponse({ error: "handle_ya_existe" }, 400);
         throw error;
@@ -238,6 +240,11 @@ Deno.serve(async (req) => {
         const handle = String(p.handle).trim().replace(/^@/, "");
         if (!handle) return jsonResponse({ error: "handle_requerido" }, 400);
         cambios.handle = handle;
+      }
+      if (p.nombre !== undefined) {
+        const nombre = String(p.nombre).trim();
+        if (!nombre) return jsonResponse({ error: "nombre_requerido" }, 400);
+        cambios.nombre = nombre;
       }
       if (p.plataforma !== undefined) {
         const plataforma = p.plataforma ? String(p.plataforma) : null;
