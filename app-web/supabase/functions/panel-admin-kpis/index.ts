@@ -195,7 +195,8 @@ Deno.serve(async (req) => {
       .select(
         "user_id, avatar_asesor, idioma_preferido, tema_preferido, origen_registro, " +
           "notif_gastos_frecuencia, notif_saldos_frecuencia, notif_reporte_mes, " +
-          "freaky_vuelo_desactivado, freaky_dias_aviso_tarjeta",
+          "freaky_vuelo_desactivado, freaky_dias_aviso_tarjeta, " +
+          "sin_anuncios, influencer_codigo, ia_gratis_meses",
       );
     if (errorPreferencias) throw errorPreferencias;
 
@@ -422,7 +423,10 @@ Deno.serve(async (req) => {
     const tokensTotal = sumarTokens(reportesCompletados);
     const tokensMes = sumarTokens(reportesDelMes);
 
-    const preferenciasPorUsuario: Record<string, { avatar_asesor: string | null; idioma_preferido: string | null; tema_preferido: string | null }> = {};
+    const preferenciasPorUsuario: Record<string, {
+      avatar_asesor: string | null; idioma_preferido: string | null; tema_preferido: string | null;
+      sin_anuncios: boolean | null; influencer_codigo: string | null; ia_gratis_meses: number | null;
+    }> = {};
     for (const p of preferencias || []) {
       preferenciasPorUsuario[p.user_id] = p;
     }
@@ -453,6 +457,9 @@ Deno.serve(async (req) => {
         tema: pref?.tema_preferido ?? null,
         accesoIA: usuariosConAccesoIASet.has(u.id),
         reportesGenerados: reportesPorUsuario[u.id] || 0,
+        sinAnuncios: !!pref?.sin_anuncios,
+        influencerCodigo: pref?.influencer_codigo ?? null,
+        iaGratisMeses: pref?.ia_gratis_meses ?? null,
       };
     });
 

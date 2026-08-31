@@ -196,6 +196,7 @@
       <button class="tab-admin" data-seccion="audiencia" onclick="mostrarSeccionAdmin('audiencia')">Audiencia y perfil</button>
       <button class="tab-admin" data-seccion="uso" onclick="mostrarSeccionAdmin('uso')">Uso y Freaky</button>
       <button class="tab-admin" data-seccion="usuarios" onclick="mostrarSeccionAdmin('usuarios')">Usuarios</button>
+      <button class="tab-admin" data-seccion="influencers" onclick="mostrarSeccionAdmin('influencers')">Influencers</button>
       <button class="tab-admin" data-seccion="negocio" onclick="mostrarSeccionAdmin('negocio')">Negocio</button>
       <button class="tab-admin" data-seccion="logs" onclick="mostrarSeccionAdmin('logs')">Logs</button>
     </div>
@@ -479,6 +480,62 @@
 
     </div>
 
+    <div class="seccion-admin oculto" id="seccion-influencers">
+    <h2>Influencers</h2>
+    <div class="tarjeta-sub" style="margin:0 0 12px;">Códigos de acceso anticipado para creadores de contenido de finanzas -- programa aparte del de referidos entre usuarios normales. Quien se registra con uno de estos códigos queda "blindado": sin anuncios de por vida + 12 meses de crédito de funciones de IA gratis (el crédito empieza a contar desde que exista un muro de pago real, no desde el registro -- hoy Freaky es gratis para todos).</div>
+
+    <div class="caja" style="margin-bottom:16px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;" id="titulo-form-influencer">Agregar influencer</div>
+      <div class="form-negocio">
+        <div class="campo-negocio">
+          <label for="inf-codigo">Código</label>
+          <input type="text" id="inf-codigo" placeholder="Ej. PEDRO2026" style="text-transform:uppercase;" maxlength="12">
+        </div>
+        <div class="campo-negocio">
+          <label for="inf-nombre">Nombre</label>
+          <input type="text" id="inf-nombre" placeholder="Ej. Pedro Pérez">
+        </div>
+        <div class="campo-negocio">
+          <label for="inf-red-social">Red social / cuenta</label>
+          <input type="text" id="inf-red-social" placeholder="Ej. @pedrofinanzas (Instagram)">
+        </div>
+        <div class="campo-negocio">
+          <label for="inf-contacto">Contacto</label>
+          <input type="text" id="inf-contacto" placeholder="Correo o teléfono">
+        </div>
+        <div class="campo-negocio">
+          <label for="inf-tope">Tope de registros (opcional)</label>
+          <input type="text" id="inf-tope" inputmode="numeric" placeholder="Sin tope">
+        </div>
+        <div class="campo-negocio">
+          <label for="inf-estado">Estado</label>
+          <select id="inf-estado">
+            <option value="activo">Activo</option>
+            <option value="pausado">Pausado</option>
+          </select>
+        </div>
+        <div class="campo-negocio" style="grid-column:span 2;">
+          <label for="inf-nota">Nota interna (opcional)</label>
+          <input type="text" id="inf-nota" placeholder="Ej. contactado el 31/08, en negociación">
+        </div>
+      </div>
+      <button id="btn-agregar-influencer" onclick="agregarInfluencer()" style="margin-top:12px;padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Agregar</button>
+      <button id="btn-cancelar-edicion-influencer" onclick="cancelarEdicionInfluencer()" class="oculto" style="margin-top:12px;margin-left:8px;padding:10px 18px;border-radius:8px;border:1px solid var(--borde-fuerte);background:none;color:var(--texto);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>
+      <div class="error-login oculto" id="error-influencer"></div>
+    </div>
+
+    <div class="caja">
+      <div class="tabla-scroll">
+      <table>
+        <thead><tr><th>Código</th><th>Nombre</th><th>Estado</th><th>Registros</th><th>Activados</th><th></th></tr></thead>
+        <tbody id="tabla-influencers"></tbody>
+      </table>
+      </div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Clic en una fila para ver el detalle (red social, contacto, nota y quién se registró con ese código) y las acciones de editar/pausar/eliminar.</div>
+
+    </div>
+
     <div class="seccion-admin oculto" id="seccion-negocio">
     <h2>Negocio</h2>
     <div class="tarjeta-sub" style="margin:0 0 12px;">Esto es aparte de los datos de los usuarios — es tu propia contabilidad de Money Freak como negocio (lo invertido, gastos operativos, ingresos). Todo consolidado en pesos, al tipo de cambio que de verdad pagaste en cada movimiento en dólares — no uno de mercado inventado en este momento.</div>
@@ -613,7 +670,7 @@ function mostrar(id){
 // separan en pestañas. Los datos se cargan una sola vez para todas (ver
 // cargarPanel) así que cambiar de pestaña es instantáneo, sin volver a
 // pedir nada al servidor.
-const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'negocio', 'logs'];
+const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'influencers', 'negocio', 'logs'];
 
 function mostrarSeccionAdmin(id){
   if(!SECCIONES_ADMIN.includes(id)) id = SECCIONES_ADMIN[0];
@@ -1053,11 +1110,15 @@ function toggleDetalleUsuario(fila){
     ${campoDetalle('Tema', ETIQUETAS_TEMA[u.tema] || u.tema || '—')}
     ${campoDetalle('IA activada', u.accesoIA ? 'Sí' : 'No')}
     ${campoDetalle('Radiografías', formatoNumero(u.reportesGenerados))}
+    ${campoDetalle('Sin anuncios', u.sinAnuncios ? 'Sí' : 'No')}
+    ${campoDetalle('Código de influencer', u.influencerCodigo ? escapeHtmlAdmin(u.influencerCodigo) : '—')}
+    ${campoDetalle('Crédito de IA gratis', u.iaGratisMeses != null ? `${u.iaGratisMeses} meses` : '—')}
   </div>
   <div class="fila-acciones-usuario">
     <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();${u.suspendida ? 'reactivarUsuarioAdmin' : 'suspenderUsuarioAdmin'}('${u.id}')">${u.suspendida ? 'Reactivar cuenta' : 'Suspender (sin borrar)'}</button>
     <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();restablecerPasswordAdmin('${u.id}')">Restablecer contraseña</button>
     <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();editarCorreoAdmin('${u.id}')">Editar correo</button>
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();${u.sinAnuncios ? 'desblindarUsuarioAdmin' : 'blindarUsuarioAdmin'}('${u.id}')">${u.sinAnuncios ? 'Quitar sin anuncios / IA gratis' : 'Dar sin anuncios + IA gratis a mano'}</button>
     <button type="button" class="btn-eliminar-fila" onclick="event.stopPropagation();eliminarUsuarioAdmin('${u.id}')">Eliminar cuenta por completo</button>
   </div>`;
   tr.appendChild(celda);
@@ -1226,6 +1287,235 @@ async function editarCorreoAdmin(id){
   if(!datos.ok){ alert(`No se pudo cambiar el correo: ${datos.error || 'error'}`); return; }
   refrescarFilaUsuario(id, { correo: datos.correoNuevo || limpio });
   alert('Correo actualizado.');
+}
+
+// ===== Influencers (programa de acceso anticipado, aparte de referidos) =====
+async function llamarInfluencers(payload){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) return { error: 'sin_sesion' };
+  const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/admin-influencers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify(payload || {}),
+  });
+  return resp.json();
+}
+
+// Otorgar/quitar el beneficio a mano en un usuario puntual (soporte,
+// corrección de errores) -- desde la pestaña Usuarios, no desde Influencers,
+// porque parte de buscar a la persona por correo, no por código.
+async function blindarUsuarioAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(!u) return;
+  const ok = confirm(`Dar a ${u.correo} sin anuncios de por vida + 12 meses de crédito de IA gratis, a mano (sin que haya usado ningún código real)?`);
+  if(!ok) return;
+  const datos = await llamarInfluencers({ accion: 'blindar', user_id: id });
+  if(!datos.ok){ alert(`No se pudo aplicar: ${datos.error || 'error'}`); return; }
+  refrescarFilaUsuario(id, { sinAnuncios: true, iaGratisMeses: 12 });
+}
+
+async function desblindarUsuarioAdmin(id){
+  const u = usuariosDetalleGlobal.find(x => x.id === id);
+  if(!u) return;
+  const ok = confirm(`¿Quitarle a ${u.correo} el beneficio de sin anuncios / IA gratis?`);
+  if(!ok) return;
+  const datos = await llamarInfluencers({ accion: 'desblindar', user_id: id });
+  if(!datos.ok){ alert(`No se pudo quitar: ${datos.error || 'error'}`); return; }
+  refrescarFilaUsuario(id, { sinAnuncios: false, iaGratisMeses: null, influencerCodigo: null });
+}
+
+let influencersGlobal = [];
+let influencerEditandoId = null;
+
+const ETIQUETAS_ESTADO_INFLUENCER = { activo: 'Activo', pausado: 'Pausado' };
+const ERRORES_INFLUENCER = {
+  codigo_invalido: 'El código debe tener entre 3 y 12 letras/números (sin espacios ni acentos).',
+  nombre_requerido: 'Falta el nombre.',
+  estado_invalido: 'Estado inválido.',
+  codigo_en_uso: 'Ese código ya lo usa otro influencer, o ya es el código de referido personal de un usuario.',
+  tope_invalido: 'El tope debe ser un número mayor a 0 (o déjalo vacío para sin tope).',
+  tiene_registros_pausalo_en_vez: 'Este código ya tiene gente registrada -- no se puede eliminar. Pausalo en vez de borrarlo.',
+  no_encontrado: 'No se encontró ese influencer.',
+};
+
+async function cargarInfluencers(){
+  const datos = await llamarInfluencers({});
+  if(datos.error){
+    console.warn('No se pudo cargar influencers:', datos.error);
+    return;
+  }
+  influencersGlobal = datos.influencers || [];
+  pintarTablaInfluencers();
+}
+
+function pintarTablaInfluencers(){
+  const tbody = document.getElementById('tabla-influencers');
+  if(!influencersGlobal.length){
+    tbody.innerHTML = '<tr><td colspan="6" class="tarjeta-sub">Sin influencers agregados todavía.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = influencersGlobal.map(inf => `
+    <tr class="fila-influencer" data-id="${inf.id}" style="cursor:pointer;">
+      <td style="font-family:var(--mono);">${escapeHtmlAdmin(inf.codigo)}</td>
+      <td>${escapeHtmlAdmin(inf.nombre)}</td>
+      <td>${ETIQUETAS_ESTADO_INFLUENCER[inf.estado] || inf.estado}${inf.agotado ? ' <span class="tag-suspendida">Agotado</span>' : ''}</td>
+      <td>${formatoNumero(inf.registros)}${inf.tope_registros !== null ? ` / ${formatoNumero(inf.tope_registros)}` : ''}</td>
+      <td>${formatoNumero(inf.activados)}</td>
+      <td></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('.fila-influencer').forEach(fila => {
+    fila.addEventListener('click', () => toggleDetalleInfluencer(fila));
+  });
+}
+
+function toggleDetalleInfluencer(fila){
+  const siguiente = fila.nextElementSibling;
+  if(siguiente && siguiente.classList.contains('fila-detalle')){
+    siguiente.remove();
+    return;
+  }
+  document.querySelectorAll('.fila-detalle').forEach(f => f.remove());
+  const inf = influencersGlobal.find(x => x.id === fila.dataset.id);
+  if(!inf) return;
+  const campoDetalle = (etiqueta, valor) => `<div><span class="tarjeta-etiqueta">${etiqueta}</span><br>${valor}</div>`;
+  const tr = document.createElement('tr');
+  tr.className = 'fila-detalle';
+  const celda = document.createElement('td');
+  celda.colSpan = 6;
+  celda.style.background = 'var(--bg)';
+  const listaUsuarios = inf.usuarios.length
+    ? `<table style="margin-top:8px;"><thead><tr><th>Correo</th><th>Registrado</th><th>Activado</th></tr></thead><tbody>${
+        inf.usuarios.map(u => `<tr><td>${escapeHtmlAdmin(u.correo || '—')}</td><td>${formatoFechaHora(u.registrado_en)}</td><td>${u.activado ? 'Sí' : 'No'}</td></tr>`).join('')
+      }</tbody></table>`
+    : '<div class="tarjeta-sub" style="margin-top:8px;">Nadie se ha registrado con este código todavía.</div>';
+  celda.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;padding:6px 0;font-size:12px;">
+    ${campoDetalle('Red social', escapeHtmlAdmin(inf.red_social || '—'))}
+    ${campoDetalle('Contacto', escapeHtmlAdmin(inf.contacto || '—'))}
+    ${campoDetalle('Nota', escapeHtmlAdmin(inf.nota || '—'))}
+  </div>
+  <div class="fila-acciones-usuario">
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();cargarFormularioParaEditarInfluencer('${inf.id}')">Editar</button>
+    <button type="button" class="btn-accion-fila" onclick="event.stopPropagation();toggleEstadoInfluencer('${inf.id}')">${inf.estado === 'activo' ? 'Pausar' : 'Reactivar'}</button>
+    <button type="button" class="btn-eliminar-fila" onclick="event.stopPropagation();eliminarInfluencer('${inf.id}')">Eliminar</button>
+  </div>
+  <div class="tarjeta-etiqueta" style="margin-top:14px;margin-bottom:4px;">Quién se registró con este código</div>
+  ${listaUsuarios}`;
+  tr.appendChild(celda);
+  fila.after(tr);
+}
+
+function limpiarFormularioInfluencer(){
+  document.getElementById('inf-codigo').value = '';
+  document.getElementById('inf-nombre').value = '';
+  document.getElementById('inf-red-social').value = '';
+  document.getElementById('inf-contacto').value = '';
+  document.getElementById('inf-tope').value = '';
+  document.getElementById('inf-estado').value = 'activo';
+  document.getElementById('inf-nota').value = '';
+}
+
+function cargarFormularioParaEditarInfluencer(id){
+  document.querySelectorAll('.fila-detalle').forEach(f => f.remove());
+  const inf = influencersGlobal.find(x => x.id === id);
+  if(!inf) return;
+  influencerEditandoId = id;
+  document.getElementById('inf-codigo').value = inf.codigo;
+  document.getElementById('inf-nombre').value = inf.nombre;
+  document.getElementById('inf-red-social').value = inf.red_social || '';
+  document.getElementById('inf-contacto').value = inf.contacto || '';
+  document.getElementById('inf-tope').value = inf.tope_registros != null ? String(inf.tope_registros) : '';
+  document.getElementById('inf-estado').value = inf.estado;
+  document.getElementById('inf-nota').value = inf.nota || '';
+  document.getElementById('btn-agregar-influencer').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-edicion-influencer').classList.remove('oculto');
+  document.getElementById('titulo-form-influencer').textContent = 'Editar influencer';
+  document.getElementById('error-influencer').classList.add('oculto');
+  document.getElementById('inf-codigo').closest('.caja').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicionInfluencer(){
+  influencerEditandoId = null;
+  limpiarFormularioInfluencer();
+  document.getElementById('btn-agregar-influencer').textContent = 'Agregar';
+  document.getElementById('btn-cancelar-edicion-influencer').classList.add('oculto');
+  document.getElementById('titulo-form-influencer').textContent = 'Agregar influencer';
+  document.getElementById('error-influencer').classList.add('oculto');
+}
+
+async function agregarInfluencer(){
+  const errorEl = document.getElementById('error-influencer');
+  errorEl.classList.add('oculto');
+  const codigo = document.getElementById('inf-codigo').value.trim().toUpperCase();
+  const nombre = document.getElementById('inf-nombre').value.trim();
+  const redSocial = document.getElementById('inf-red-social').value.trim();
+  const contacto = document.getElementById('inf-contacto').value.trim();
+  const topeTexto = document.getElementById('inf-tope').value.trim();
+  const estado = document.getElementById('inf-estado').value;
+  const nota = document.getElementById('inf-nota').value.trim();
+
+  if(!codigo || !nombre){
+    errorEl.textContent = 'Falta el código o el nombre.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+  if(topeTexto !== '' && (!Number.isFinite(Number(topeTexto)) || Number(topeTexto) <= 0)){
+    errorEl.textContent = ERRORES_INFLUENCER.tope_invalido;
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  const editando = influencerEditandoId;
+  const btn = document.getElementById('btn-agregar-influencer');
+  btn.disabled = true;
+  const datos = await llamarInfluencers({
+    accion: editando ? 'editar' : 'crear',
+    id: editando || undefined,
+    influencer: {
+      codigo, nombre,
+      red_social: redSocial || null,
+      contacto: contacto || null,
+      tope_registros: topeTexto === '' ? null : Number(topeTexto),
+      estado,
+      nota: nota || null,
+    },
+  });
+  btn.disabled = false;
+
+  if(!datos.ok){
+    errorEl.textContent = ERRORES_INFLUENCER[datos.error] || 'No se pudo guardar. Intenta de nuevo.';
+    errorEl.classList.remove('oculto');
+    return;
+  }
+
+  if(editando) cancelarEdicionInfluencer();
+  else limpiarFormularioInfluencer();
+  await cargarInfluencers();
+}
+
+async function toggleEstadoInfluencer(id){
+  const inf = influencersGlobal.find(x => x.id === id);
+  if(!inf) return;
+  const nuevoEstado = inf.estado === 'activo' ? 'pausado' : 'activo';
+  const datos = await llamarInfluencers({
+    accion: 'editar', id,
+    influencer: { codigo: inf.codigo, nombre: inf.nombre, red_social: inf.red_social, contacto: inf.contacto, tope_registros: inf.tope_registros, estado: nuevoEstado, nota: inf.nota },
+  });
+  if(!datos.ok){ alert(`No se pudo cambiar el estado: ${ERRORES_INFLUENCER[datos.error] || datos.error || 'error'}`); return; }
+  await cargarInfluencers();
+}
+
+async function eliminarInfluencer(id){
+  const inf = influencersGlobal.find(x => x.id === id);
+  if(!inf) return;
+  const ok = confirm(`¿Eliminar el código de ${inf.nombre} (${inf.codigo})?`);
+  if(!ok) return;
+  const datos = await llamarInfluencers({ accion: 'eliminar', id });
+  if(!datos.ok){
+    alert(ERRORES_INFLUENCER[datos.error] || 'No se pudo eliminar.');
+    return;
+  }
+  await cargarInfluencers();
 }
 
 const ETIQUETAS_FUENTE_LOG = {
@@ -1607,6 +1897,7 @@ async function cargarPanel(){
   usuariosDetalleGlobal = datos.detalleUsuarios || [];
   pintarTablaUsuarios();
 
+  await cargarInfluencers();
   await cargarNegocio();
 
   let seccionInicial = SECCIONES_ADMIN[0];

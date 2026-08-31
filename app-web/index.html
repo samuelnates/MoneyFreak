@@ -1656,7 +1656,11 @@
   <div class="registro-paso" data-paso="6" style="display:none;">
     <div class="campo">
       <label for="input-codigo-referido-registro" data-i18n="registro.codigo_referido_label">¿Alguien te invitó? Código (opcional)</label>
-      <input type="text" id="input-codigo-referido-registro" placeholder="Ej. AB12CD" data-i18n-placeholder="registro.codigo_referido_placeholder" style="text-transform:uppercase;" maxlength="6">
+      <!-- maxlength en 12, no 6: el código de referido personal es fijo a 6, pero
+           los códigos de influencer (parte 96 de CONTEXTO_PROYECTO.md) los elige a
+           mano el admin y pueden ser más largos/memorables (ej. "PEDRO2026"). Mismo
+           campo de captura para los 2 -- la Edge Function referidos decide cuál es cuál. -->
+      <input type="text" id="input-codigo-referido-registro" placeholder="Ej. AB12CD" data-i18n-placeholder="registro.codigo_referido_placeholder" style="text-transform:uppercase;" maxlength="12">
     </div>
     <div class="cf-turnstile" id="turnstile-registro" style="margin:12px 0;"></div>
     <div id="registro-error" class="aviso" style="display:none;"></div>

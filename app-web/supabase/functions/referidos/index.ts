@@ -11,6 +11,14 @@
 // La tabla `referidos` no tiene ninguna policy de RLS para clientes -- esta
 // función (service role) es la única forma de leerla/escribirla, mismo
 // patrón que negocio-movimientos y panel-admin-kpis.
+//
+// El mismo campo de código en el registro también acepta códigos de
+// influencer (programa aparte, curado desde el panel de admin -- ver
+// migración 20260831000000_influencers.sql y admin-influencers). Esta
+// función revisa ese caso primero dentro de "canjear"; los detalles de ese
+// programa se manejan ahí mismo, no en un endpoint separado, porque
+// comparten el punto de entrada (el usuario nunca sabe -- ni le importa --
+// que son 2 sistemas distintos por debajo).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -78,6 +86,62 @@ Deno.serve(async (req) => {
     if (body.accion === "canjear") {
       const codigo = String(body.codigo || "").trim().toUpperCase();
       if (!codigo) return jsonResponse({ error: "codigo_requerido" }, 400);
+
+      // Los códigos de influencer (programa aparte, ver migración
+      // 20260831000000_influencers.sql) comparten el mismo campo de captura
+      // del registro que los códigos de referido normal -- se revisan
+      // primero, y si coincide, nunca tocan la tabla `referidos`: no cuentan
+      // para la escalera de premios de nadie, solo aplican su propio
+      // beneficio (sin anuncios de por vida + crédito de IA gratis).
+      const { data: influencer, error: errorInfluencer } = await admin
+        .from("codigos_influencer")
+        .select("codigo, estado, tope_registros")
+        .eq("codigo", codigo)
+        .maybeSingle();
+      if (errorInfluencer) throw errorInfluencer;
+
+      if (influencer) {
+        if (influencer.estado !== "activo") {
+          return jsonResponse({ error: "codigo_pausado" }, 400);
+        }
+        if (influencer.tope_registros !== null) {
+          const { count, error: errorConteo } = await admin
+            .from("perfil_financiero")
+            .select("*", { count: "exact", head: true })
+            .eq("influencer_codigo", codigo);
+          if (errorConteo) throw errorConteo;
+          if ((count || 0) >= influencer.tope_registros) {
+            return jsonResponse({ error: "codigo_agotado" }, 400);
+          }
+        }
+        const { data: perfilActual, error: errorPerfilActual } = await admin
+          .from("perfil_financiero")
+          .select("influencer_codigo")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (errorPerfilActual) throw errorPerfilActual;
+        if (perfilActual?.influencer_codigo) {
+          return jsonResponse({ error: "ya_canjeaste_un_codigo" }, 400);
+        }
+        // upsert, no update: perfil_financiero.user_id tiene default
+        // auth.uid() para llamadas del cliente, pero esta función corre con
+        // la service role (sin sesión de usuario) -- así que hay que pasar
+        // el user_id a mano, y usar upsert (no update) por si esta es la
+        // primera escritura de este usuario a la tabla y su fila todavía no
+        // existe (mismo riesgo real: el upsert de marcarTerminosAceptados()
+        // en el cliente y este canje corren en paralelo, sin esperarse uno
+        // al otro -- con un simple update, si el upsert del cliente no ha
+        // creado la fila todavía, este canje no actualizaría nada y el
+        // beneficio se perdería en silencio).
+        const { error: errorUpdate } = await admin
+          .from("perfil_financiero")
+          .upsert(
+            { user_id: userId, influencer_codigo: codigo, sin_anuncios: true, ia_gratis_meses: 12 },
+            { onConflict: "user_id" },
+          );
+        if (errorUpdate) throw errorUpdate;
+        return jsonResponse({ ok: true, tipo: "influencer" });
+      }
 
       const { data: yaReferido, error: errorYaReferido } = await admin
         .from("referidos")
