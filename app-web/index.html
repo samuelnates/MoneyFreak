@@ -8457,6 +8457,60 @@ function inicializarRotacionInsights(insights){
   mostrarInsight(0, false);
 }
 
+// Deja deslizar con el dedo hacia la derecha/izquierda entre los mensajes de
+// "Esto es lo que está pasando", en vez de solo esperar la rotación automática.
+function activarSwipeInsights(contenedor){
+  if(!contenedor || contenedor.dataset.swipeListo) return;
+  contenedor.dataset.swipeListo = '1';
+
+  const UMBRAL_SWIPE_PX = 40;
+  let arrastre = null;
+
+  contenedor.addEventListener('touchstart', (e) => {
+    if(window.innerWidth >= 900 || REDUCIR_MOVIMIENTO || insightsActuales.length <= 1 || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    arrastre = { inicioX: t.clientX, inicioY: t.clientY, dx: 0, mover: false };
+  }, { passive: true });
+
+  contenedor.addEventListener('touchmove', (e) => {
+    if(!arrastre) return;
+    const t = e.touches[0];
+    const dx = t.clientX - arrastre.inicioX;
+    const dy = t.clientY - arrastre.inicioY;
+    if(!arrastre.mover){
+      if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if(Math.abs(dy) > Math.abs(dx)){ arrastre = null; return; } // scroll vertical normal, no interferir
+      arrastre.mover = true;
+      if(insightIntervalo) clearTimeout(insightIntervalo);
+      document.getElementById('panel-insights-texto').style.transition = 'none';
+    }
+    e.preventDefault();
+    arrastre.dx = dx;
+    const textoEl = document.getElementById('panel-insights-texto');
+    textoEl.style.transform = `translateX(${dx}px)`;
+    textoEl.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx) / 200));
+  }, { passive: false });
+
+  function soltar(){
+    if(!arrastre) return;
+    const fueArrastre = arrastre.mover;
+    const dx = arrastre.dx;
+    arrastre = null;
+    if(!fueArrastre) return;
+    const textoEl = document.getElementById('panel-insights-texto');
+    textoEl.style.transition = 'transform 220ms ease, opacity 220ms ease';
+    textoEl.style.transform = '';
+    textoEl.style.opacity = '';
+    const alcanzoUmbral = Math.abs(dx) >= UMBRAL_SWIPE_PX;
+    const direccion = dx < 0 ? 1 : -1; // deslizar a la izquierda avanza, a la derecha retrocede
+    const nuevo = alcanzoUmbral ? (insightIndiceActual + direccion + insightsActuales.length) % insightsActuales.length : insightIndiceActual;
+    mostrarInsight(nuevo, alcanzoUmbral);
+  }
+
+  contenedor.addEventListener('touchend', soltar, { passive: true });
+  contenedor.addEventListener('touchcancel', soltar, { passive: true });
+}
+
 async function abrirPanel(){
   mostrar('vista-inicio');
   const cont = document.getElementById('panel-contenido');
@@ -8613,6 +8667,7 @@ async function abrirPanel(){
   ajustarTamanoDatosTarjetas();
   actualizarUIDemo();
   inicializarRotacionInsights(insights);
+  activarSwipeInsights(document.getElementById('panel-insights'));
 }
 
 let graficaScore = null;
@@ -15732,8 +15787,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 104;
+const VERSION_APP_ACTUAL = 105;
 const CHANGELOG_APP = [
+  {
+    version: 105,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'La tarjeta "Esto es lo que está pasando" en Inicio ya se puede deslizar con el dedo hacia la izquierda o derecha para pasar entre sus mensajes, en vez de solo esperar a que roten solos.'
+    ],
+    cambios_en: [
+      'The "What\'s happening" card on Home can now be swiped left or right to move between its messages, instead of only waiting for them to rotate on their own.'
+    ]
+  },
   {
     version: 104,
     fecha: '2026-09-01',
