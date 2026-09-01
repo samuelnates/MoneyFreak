@@ -4210,7 +4210,7 @@ const TRADUCCIONES = {
     'score.constancia_explica_corta': 'Qué tan al día tienes tus registros. Toca para ver más.',
     'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
     'score.ver_salud_completa': 'Ver salud financiera completa y editar umbrales ›',
-    'flujo.liquido_disponible': 'Líquido disponible ahora',
+    'flujo.liquido_disponible': 'Disponible ahora',
     'flujo.sin_movimientos': 'Aún no tienes pagos ni aportaciones con fecha registrada. Agrega el día límite de pago en tus deudas, o el día de aportación en tus cuentas, para ver aquí tu flujo de efectivo del mes.',
     'flujo.sin_fecha': 'Sin fecha registrada',
     'flujo.hoy_vencido': 'Hoy o vencido',
@@ -4221,9 +4221,9 @@ const TRADUCCIONES = {
     'flujo.ya_se_cumplio': 'Ya se cumplió este mes',
     'flujo.ya_paso_corto': '¿Ya pasó?',
     'flujo.cumplido_este_mes': 'Cumplido este mes -- no cuenta en el saldo proyectado',
-    'flujo.ingresos_esperados': 'Ingresos esperados este ciclo',
-    'flujo.total_pagar': 'Total a pagar/aportar este ciclo',
-    'flujo.saldo_proyectado': 'Saldo proyectado después de cubrir todo',
+    'flujo.ingresos_esperados': 'Ingresos este mes',
+    'flujo.total_pagar': 'Total a pagar este mes',
+    'flujo.saldo_proyectado': 'Saldo proyectado',
     'flujo.saldo_liquido_proyectado': 'Saldo líquido proyectado',
     'flujo.aviso_proyeccion': 'Cómo se vería tu efectivo disponible día a día si no haces nada más que cubrir estos pagos y aportaciones — no incluye gastos del día a día que no hayas registrado.',
     'flujo.proximos_movimientos': 'Próximos movimientos',
@@ -5172,7 +5172,7 @@ const TRADUCCIONES = {
     'score.constancia_explica_corta': 'How current your records are. Tap to see more.',
     'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
     'score.ver_salud_completa': 'See full financial health and edit thresholds ›',
-    'flujo.liquido_disponible': 'Liquid available now',
+    'flujo.liquido_disponible': 'Available now',
     'flujo.sin_movimientos': "You don't have any payments or contributions with a date yet. Add the due date on your debts, or the contribution day on your accounts, to see your cash flow here.",
     'flujo.sin_fecha': 'No date recorded',
     'flujo.hoy_vencido': 'Today or overdue',
@@ -5183,9 +5183,9 @@ const TRADUCCIONES = {
     'flujo.ya_se_cumplio': 'Already happened this month',
     'flujo.ya_paso_corto': 'Happened?',
     'flujo.cumplido_este_mes': "Already happened this month -- not counted in the projected balance",
-    'flujo.ingresos_esperados': 'Expected income this cycle',
-    'flujo.total_pagar': 'Total to pay/contribute this cycle',
-    'flujo.saldo_proyectado': 'Projected balance after covering everything',
+    'flujo.ingresos_esperados': 'Income this month',
+    'flujo.total_pagar': 'Total to pay this month',
+    'flujo.saldo_proyectado': 'Projected balance',
     'flujo.saldo_liquido_proyectado': 'Projected liquid balance',
     'flujo.aviso_proyeccion': "What your available cash would look like day by day if you only cover these payments and contributions — doesn't include day-to-day spending you haven't logged.",
     'flujo.proximos_movimientos': 'Upcoming activity',
@@ -15711,8 +15711,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 100;
+const VERSION_APP_ACTUAL = 101;
 const CHANGELOG_APP = [
+  {
+    version: 101,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se acortaron los títulos de las 4 tarjetas de Flujo de efectivo -- "Disponible ahora", "Ingresos este mes", "Total a pagar este mes" y "Saldo proyectado".'
+    ],
+    cambios_en: [
+      'Shortened the titles of the 4 Cash flow cards -- "Available now", "Income this month", "Total to pay this month" and "Projected balance".'
+    ]
+  },
   {
     version: 100,
     fecha: '2026-09-01',
