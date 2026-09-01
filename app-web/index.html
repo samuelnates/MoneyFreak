@@ -826,11 +826,18 @@
      a @keyframes), y de nuevo reportado después como "parece un error, un
      flashazo" (con @keyframes ya no parpadeaba, pero seguía sin leerse como
      respiración real en la práctica). A petición del usuario, se quitó del
-     todo: las clases .freaky-reposo-flotando/-sentado se siguen agregando
-     igual (las usa freakyProgramarBlinkEspontaneo para saber si Freaky está
-     quieto), pero ya no disparan ninguna animación -- se queda
-     completamente inmóvil mientras descansa, sin ningún riesgo de que un
-     efecto sutil se vea raro en algún teléfono.
+     todo -- las clases .freaky-reposo-flotando/-sentado se siguen agregando
+     igual (freakyIniciarReposo/freakyDetenerReposo, usadas por el arrastre
+     de Freaky para saber si estaba quieto antes de agarrarlo), pero ya no
+     disparan ninguna animación propia.
+
+     El siguiente intento de "que no se vea muerto" fue un parpadeo real
+     (crossfade a la pose ojos_cerrados cada 4-9s, freakyProgramarBlinkEspontaneo)
+     -- el usuario también lo reportó como que se veía mal ("cambiando a
+     imagen por un microsegundo"), mismo patrón que la respiración: cualquier
+     cambio de imagen sutil en reposo termina leyéndose como un glitch, no
+     como vida. Se quitó por completo (parte 126) -- Freaky ahora simplemente
+     no anima nada mientras está quieto, punto final en este tema.
   */
   .freaky-cuerpo{position:relative;width:100%;height:100%;}
   .freaky-img{
@@ -10810,7 +10817,6 @@ function iniciarVueloFreaky(){
   }
 
   freakyIrAPerchaDePantalla();
-  freakyProgramarBlinkEspontaneo();
   // Saludo de bienvenida, una sola vez por sesión, justo después de aparecer.
   gsap.delayedCall(1, () => freakyTrigger('wave'));
 }
@@ -10902,23 +10908,6 @@ function freakyTrigger(nombre){
       .to(el, { scale: 0.97, rotation: 3, duration: 0.12, ease: 'power1.inOut' })
       .to(el, { scale: 1, rotation: 0, duration: 0.18, ease: 'back.out(2)' })
       .to({}, { duration: 0.6 });
-  } else if(nombre === 'blink'){
-    // Parpadeo real: crossfade rápido entre la pose actual y la imagen de
-    // ojos cerrados de cada avatar, y de vuelta — no es la animación completa
-    // de freakyMostrarPose() (0.25s por lado se ve lento para un parpadeo).
-    const poseBase = freakyHablandoActivo ? 'hablando' : (freakyEstaSentado ? 'sentado' : 'flotando');
-    const imgBase = document.getElementById(`freaky-img-${poseBase}`);
-    const imgCerrado = document.getElementById('freaky-img-ojos_cerrados');
-    if(imgBase && imgCerrado){
-      gsap.timeline({ onComplete: () => freakyIniciarReposo(freakyEstaSentado) })
-        .to(imgBase, { opacity: 0, duration: 0.06, ease: 'power1.in' })
-        .set(imgCerrado, { opacity: 1 })
-        .to({}, { duration: 0.09 })
-        .set(imgCerrado, { opacity: 0 })
-        .to(imgBase, { opacity: 1, duration: 0.08, ease: 'power1.out' });
-    } else {
-      freakyIniciarReposo(freakyEstaSentado);
-    }
   } else if(nombre === 'wave'){
     // Saludo de bienvenida — se usa una sola vez cuando Freaky aparece por
     // primera vez en la sesión (ver iniciarVueloFreaky()).
@@ -10929,21 +10918,6 @@ function freakyTrigger(nombre){
       .to(el, { rotation: -6, duration: 0.18, ease: 'sine.inOut' })
       .to(el, { rotation: 0, duration: 0.15, ease: 'sine.inOut' });
   }
-}
-
-// Parpadeo espontáneo cada 4-9s mientras está quieto (sentado o flotando en
-// reposo) — nunca durante el vuelo ni mientras responde en el chat.
-function freakyProgramarBlinkEspontaneo(){
-  if(freakyReducedMotion) return;
-  const espera = 4000 + Math.random() * 5000;
-  setTimeout(() => {
-    const cuerpo = document.getElementById('freaky-cuerpo');
-    const enReposo = cuerpo && (cuerpo.classList.contains('freaky-reposo-flotando') || cuerpo.classList.contains('freaky-reposo-sentado'));
-    if(!document.hidden && !freakyHablandoActivo && enReposo){
-      freakyTrigger('blink');
-    }
-    freakyProgramarBlinkEspontaneo();
-  }, espera);
 }
 
 // Busca "muebles" reales donde Freaky se pueda quedar, restringido a
@@ -15709,8 +15683,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 98;
+const VERSION_APP_ACTUAL = 99;
 const CHANGELOG_APP = [
+  {
+    version: 99,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se quitó por completo el parpadeo espontáneo de Freaky -- se veía como un glitch (cambio de imagen por una fracción de segundo), no como algo natural.'
+    ],
+    cambios_en: [
+      "Removed Freaky's spontaneous blink entirely -- it read as a glitch (image swap for a split second), not as something natural."
+    ]
+  },
   {
     version: 98,
     fecha: '2026-09-01',
