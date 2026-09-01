@@ -46,6 +46,12 @@ Todo pendiente real disperso en el historial, en un solo lugar. Verificado contr
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-09-01 (parte 120) — Pedido del usuario: "quiero que la primera sección donde aparezcas entrando a cuentas sea inversión y ya de ahí te empieces a mover".** Desde que las 6 secciones de "Mis cuentas" se fusionaron en una sola pantalla con tabs + scroll (parte 15), "Ingresos" vivía primero en el DOM -- al entrar desde el nav (`mostrar('vista-cuentas')` directo, sin pedir ninguna sección en particular), la pestaña activa y lo que se ve arriba siempre era Ingresos.
+  - **Cambio**: se reordenó el DOM -- tanto el botón de la pestaña "Inversión" como su `<section>` de contenido se movieron a primer lugar, antes de "Ingresos" (que ahora queda segundo). El resto del orden (Bienes, Acciones, Deudas, Traspasos) no se tocó. Como la navegación a "Mis cuentas" no fija ninguna sección explícita (solo `mostrar('vista-cuentas')`, que hace scroll a top), el scrollspy que ya existía recoge el cambio solo -- no hizo falta tocar ninguna lógica de JS, todas las referencias a estas 2 secciones son por id (`seccion-cuentas-cuentas`/`seccion-cuentas-ingresos`), no por posición.
+  - Probado con Playwright entrando a "Mis cuentas" tal como lo haría un usuario real: la pestaña activa por default ahora es "cuentas" (Inversión), es la primera en el DOM, y lo que se ve justo debajo de la barra de pestañas al aterrizar es "Cuentas de inversión" -- confirmado también con captura de pantalla.
+  - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 93 con entrada en `CHANGELOG_APP`.
+  - Desplegado (solo frontend).
+
 - **2026-09-01 (parte 119) — Ajuste inmediato a la parte 118: "ahora que corregiste el bug se me hizo demasiado grande, a la mitad, que se vea más elegante".** El triple (288px) resultó demasiado una vez arreglado el bug de especificidad que lo tenía atorado en 26px -- se redujo a la mitad, 144px (con su tope de `max-width/max-height` ajustado proporcionalmente a 45vw para pantallas angostas). El arreglo de especificidad de la parte 118 (`.logo-mark.logo-mark-carga`) se queda igual, solo cambió el valor.
   - Confirmado con Playwright: 144x144px exacto en pantalla.
   - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 92 con entrada en `CHANGELOG_APP`.

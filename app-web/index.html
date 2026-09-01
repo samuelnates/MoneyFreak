@@ -1874,13 +1874,13 @@
   <div id="aviso-demo" class="aviso" style="display:none;" data-i18n="cuentas.aviso_demo">Estás viendo una cuenta de muestra con datos ficticios (solo lectura).</div>
 
   <div class="tabs-cuentas" id="tabs-cuentas">
-    <button type="button" class="tab-cuentas" data-seccion="ingresos" onclick="mostrarSeccionCuentas('ingresos')">
-      <span class="tab-cuentas-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</span>
-      <span class="tab-cuentas-dato" id="acordeon-total-ingresos"></span>
-    </button>
     <button type="button" class="tab-cuentas" data-seccion="cuentas" onclick="mostrarSeccionCuentas('cuentas')">
       <span class="tab-cuentas-titulo" data-i18n="cuentas.inversion_tab_titulo">Inversión</span>
       <span class="tab-cuentas-dato" id="acordeon-total-cuentas"></span>
+    </button>
+    <button type="button" class="tab-cuentas" data-seccion="ingresos" onclick="mostrarSeccionCuentas('ingresos')">
+      <span class="tab-cuentas-titulo" data-i18n="sidebar.ingresos_titulo">Ingresos</span>
+      <span class="tab-cuentas-dato" id="acordeon-total-ingresos"></span>
     </button>
     <button type="button" class="tab-cuentas" data-seccion="bienes" onclick="mostrarSeccionCuentas('bienes')">
       <span class="tab-cuentas-titulo" data-i18n="balance.bienes">Bienes</span>
@@ -1900,12 +1900,6 @@
     </button>
   </div>
 
-  <section class="seccion-cuentas" id="seccion-cuentas-ingresos">
-    <h2 data-i18n="sidebar.ingresos_titulo">Ingresos</h2>
-    <div id="lista-ingresos" class="lista"></div>
-    <button class="btn-grande" id="btn-agregar-ingreso" onclick="mostrar('vista-agregar-ingreso')" data-i18n="cuentas.agregar_ingreso">+ Agregar ingreso</button>
-  </section>
-
   <section class="seccion-cuentas" id="seccion-cuentas-cuentas">
     <h2 data-i18n="balance.cuentas_inversion">Cuentas de inversión</h2>
     <div class="toolbar-cuentas">
@@ -1924,6 +1918,12 @@
     </div>
     <div id="lista-cuentas-inversion" class="lista"></div>
     <button class="btn-grande" id="btn-agregar-cuenta" onclick="mostrar('vista-agregar-cuenta')" data-i18n="cuentas.agregar_cuenta">+ Agregar cuenta</button>
+  </section>
+
+  <section class="seccion-cuentas" id="seccion-cuentas-ingresos">
+    <h2 data-i18n="sidebar.ingresos_titulo">Ingresos</h2>
+    <div id="lista-ingresos" class="lista"></div>
+    <button class="btn-grande" id="btn-agregar-ingreso" onclick="mostrar('vista-agregar-ingreso')" data-i18n="cuentas.agregar_ingreso">+ Agregar ingreso</button>
   </section>
 
   <section class="seccion-cuentas" id="seccion-cuentas-bienes">
@@ -15460,8 +15460,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 92;
+const VERSION_APP_ACTUAL = 93;
 const CHANGELOG_APP = [
+  {
+    version: 93,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Al entrar a "Mis cuentas" ahora aparece primero "Inversión" en vez de "Ingresos" -- las demás secciones (Ingresos, Bienes, Acciones, Deudas, Traspasos) siguen en el mismo orden a partir de ahí.'
+    ],
+    cambios_en: [
+      'Opening "My accounts" now shows "Investments" first instead of "Income" -- the other sections (Income, Property, Stocks, Debts, Transfers) stay in the same order from there.'
+    ]
+  },
   {
     version: 92,
     fecha: '2026-09-01',
