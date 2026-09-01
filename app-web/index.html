@@ -8717,7 +8717,13 @@ function skeletonCards(n){
   return Array.from({length:n}).map(() => '<div class="skeleton-tarjeta"></div>').join('');
 }
 
-function renderSparkline(puntos){
+// invertirTendencia: para deudas -- ahí que el número BAJE es la buena
+// noticia (se debe menos), al revés que en cuentas de inversión (donde
+// que SUBA es lo bueno). Sin invertir, un saldo de deuda bajando se
+// pintaría con el color de "baja" (el mismo tono apagado que ya se usa
+// para negativos/gastos en toda la app), que se leería como algo malo
+// cuando en realidad es la mejora -- por eso se invierte solo para deudas.
+function renderSparkline(puntos, invertirTendencia){
   if(!puntos || puntos.length < 2) return '';
   const valores = puntos.map(p => Number(p.monto));
   const min = Math.min(...valores), max = Math.max(...valores);
@@ -8728,8 +8734,9 @@ function renderSparkline(puntos){
     const y = alto - pad - ((v - min) / rango) * (alto - pad * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
-  const subiendo = valores[valores.length - 1] >= valores[0];
-  return `<svg class="sparkline ${subiendo ? 'sparkline-sube' : 'sparkline-baja'}" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none"><polyline points="${coords}"></polyline></svg>`;
+  const subioValor = valores[valores.length - 1] >= valores[0];
+  const mejorando = invertirTendencia ? !subioValor : subioValor;
+  return `<svg class="sparkline ${mejorando ? 'sparkline-sube' : 'sparkline-baja'}" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none"><polyline points="${coords}"></polyline></svg>`;
 }
 
 async function cargarCuentasInversion(){
@@ -9587,6 +9594,22 @@ async function cargarDeudas(){
   }
   const totalDeudasMXN = data.reduce((a, d) => a + convertirAMXN(Number(d.saldo), d.moneda || 'MXN'), 0);
   document.getElementById('acordeon-total-deudas').textContent = '-' + formatoMonto(totalDeudasMXN, 'MXN');
+
+  // Mini gráfica por deuda (parte 127, pedido del usuario: "que las deudas
+  // también tengan su mini gráfica así como las cuentas de inversión") --
+  // mismo patrón que cargarCuentasInversion()/saldos: se trae deudas_historico
+  // limitado a "hoy o antes" (mismo motivo que las cuentas -- un ajuste con
+  // fecha futura, ej. de una compra a meses, no debe ganarle al saldo real
+  // de hoy) y se guardan hasta 7 puntos recientes por deuda, en orden
+  // cronológico para dibujar la línea de izquierda a derecha.
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const { data: historico } = await sb.from('deudas_historico').select('*').lte('fecha', hoyISO).order('fecha', {ascending:false});
+  const historicoPorDeuda = {};
+  (historico || []).forEach(h => {
+    if(!historicoPorDeuda[h.deuda_id]) historicoPorDeuda[h.deuda_id] = [];
+    if(historicoPorDeuda[h.deuda_id].length < 7) historicoPorDeuda[h.deuda_id].push(h);
+  });
+
   cont.innerHTML = '';
   data.forEach((d, i) => {
     const btn = document.createElement('button');
@@ -9597,12 +9620,17 @@ async function cargarDeudas(){
     const pagoTxt = d.pago_mensual !== null && d.pago_mensual !== undefined ? ' · ' + tf('tarjeta.pago_mensual', formatoMonto(d.pago_mensual, d.moneda)) : '';
     const utilTxt = (d.tipo === 'Tarjeta de crédito' && d.limite_credito) ? ' · ' + tf('tarjeta.uso_limite', ((Number(d.saldo) / Number(d.limite_credito)) * 100).toFixed(0)) : '';
     const proximoPagoTxt = (d.tipo === 'Tarjeta de crédito' && d.monto_proximo_pago != null) ? ' · ' + tf('tarjeta.proximo_pago', formatoMonto(d.monto_proximo_pago, d.moneda)) : '';
+    const historicoReciente = (historicoPorDeuda[d.id] || []).slice().reverse().map(h => ({ fecha: h.fecha, monto: h.saldo }));
+    const sparklineHtml = renderSparkline(historicoReciente, true);
     btn.innerHTML = `
       <div>
         <div class="nombre">${escapeHtml(d.nombre)}</div>
         <div class="detalle">${escapeHtml(nombreTipoDeuda(d.tipo))}${tasaTxt}${pagoTxt}${utilTxt}${proximoPagoTxt}</div>
       </div>
-      <div class="monto">-${formatoMonto(d.saldo, d.moneda)}</div>
+      <div>
+        <div class="monto">-${formatoMonto(d.saldo, d.moneda)}</div>
+        ${sparklineHtml}
+      </div>
     `;
     cont.appendChild(btn);
   });
@@ -15683,8 +15711,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 99;
+const VERSION_APP_ACTUAL = 100;
 const CHANGELOG_APP = [
+  {
+    version: 100,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Las deudas ahora también tienen su mini gráfica de tendencia, igual que las cuentas de inversión.'
+    ],
+    cambios_en: [
+      'Debts now also show their own trend mini-chart, just like investment accounts.'
+    ]
+  },
   {
     version: 99,
     fecha: '2026-09-01',
