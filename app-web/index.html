@@ -799,8 +799,13 @@
   @keyframes freaky-hablar{0%,100%{transform:scale(1) translateY(0);}50%{transform:scale(1.08) translateY(-2px);}}
 
   .freaky-personaje{
-    display:none;position:fixed;left:0;top:0;z-index:8;cursor:pointer;
+    display:none;position:fixed;left:0;top:0;z-index:8;cursor:grab;
     width:84px;height:84px;border:none;padding:0;background:none;
+    /* Pedido del usuario: se puede arrastrar y aventar -- sin esto, en
+       móvil cada intento de arrastre también haría scroll de la página
+       (el navegador interpretaría el toque como un gesto de paneo normal),
+       peleando contra el movimiento que sí queremos. */
+    touch-action:none;
     /* La sombra vivía en cada .freaky-img (abajo) — 6 imágenes apiladas, cada
        una con su propio filtro. Con la respiración en reposo animando este
        botón en un loop infinito (repeat:-1, nunca para), Safari/iOS tenía que
@@ -817,6 +822,7 @@
        (causa raíz del parpadeo). No afecta nada visual: no hay rotación 3D. */
     -webkit-backface-visibility:hidden;backface-visibility:hidden;
   }
+  .freaky-personaje.freaky-arrastrando{cursor:grabbing;}
   body.con-sesion:not(.freaky-vuelo-desactivado):not(.freaky-en-chat) .freaky-personaje{display:flex;}
   /* El contenedor de arriba (.freaky-personaje) es el que GSAP mueve de un
      lado a otro de la pantalla (x/y) durante los vuelos, y el que usan los
@@ -1536,7 +1542,7 @@
   <span>Freaky</span>
   <span class="freaky-badge" id="freaky-badge-fallback" aria-hidden="true"></span>
 </button>
-<button type="button" class="freaky-personaje" id="freaky-personaje" onclick="onClickFreakyPersonaje()" aria-label="Freaky">
+<button type="button" class="freaky-personaje" id="freaky-personaje" onclick="freakyClickTrasArrastre(event)" onpointerdown="freakyIniciarArrastre(event)" onpointermove="freakyMoverArrastre(event)" onpointerup="freakySoltarArrastre(event)" onpointercancel="freakySoltarArrastre(event)" aria-label="Freaky">
   <div class="freaky-cuerpo" id="freaky-cuerpo">
     <img id="freaky-img-flotando" class="freaky-img" alt="" style="opacity:1;">
     <img id="freaky-img-pensando" class="freaky-img" alt="" style="opacity:0;">
@@ -10993,6 +10999,114 @@ function freakyDejarEstela(el){
   gsap.to(punto, { opacity: 0, scale: 0.3, duration: 0.55, ease: 'power1.out', onComplete: () => punto.remove() });
 }
 
+// ===== Freaky: arrastrar y aventar =====
+// Pedido del usuario ("si el usuario se queda picando al freaky lo pueda
+// mover de lugar o aventar a otro lugar"): mantener presionado y arrastrar
+// deja a Freaky seguir el dedo/cursor; soltar con velocidad lo "avienta"
+// con inercia hasta que frena solo, recortado siempre dentro de la misma
+// zona segura que ya usan los vuelos automáticos (nunca detrás del nav ni
+// fuera de pantalla). Un toque corto sin arrastrar sigue abriendo el chat
+// como siempre -- se distingue por una distancia mínima de movimiento
+// (8px), mismo umbral que ya usa el swipe-to-delete de gastos.
+let freakyArrastre = null;
+let freakyUltimoFueArrastre = false;
+
+function freakyIniciarArrastre(ev){
+  if(typeof gsap === 'undefined' || freakyReducedMotion || freakyArrastre) return; // ya hay un dedo/cursor arrastrando, ignora un segundo contacto
+  const el = document.getElementById('freaky-personaje');
+  if(!el) return;
+  const rect = el.getBoundingClientRect();
+  freakyArrastre = {
+    el,
+    inicioX: ev.clientX, inicioY: ev.clientY,
+    offsetX: ev.clientX - rect.left, offsetY: ev.clientY - rect.top,
+    moviendo: false,
+    ultimaX: ev.clientX, ultimaY: ev.clientY, ultimoTiempo: performance.now(),
+    vx: 0, vy: 0
+  };
+  try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+}
+
+function freakyMoverArrastre(ev){
+  const a = freakyArrastre;
+  if(!a) return;
+  const dx = ev.clientX - a.inicioX, dy = ev.clientY - a.inicioY;
+  if(!a.moviendo){
+    if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    a.moviendo = true;
+    freakyUltimoFueArrastre = true;
+    // Solo hasta aquí, ya confirmado que es un arrastre de verdad y no un
+    // toque normal, se interrumpe cualquier vuelo en curso y se apaga el
+    // estado de reposo -- si esto corriera en cada pointerdown (incluidos
+    // los toques normales que abren el chat), freakyDetenerReposo() dejaría
+    // la bandera de reposo apagada para siempre después de cualquier toque,
+    // sin que nada la reactive (solo freakySoltarArrastre() la reactiva, y
+    // esa función corta camino sin hacerlo cuando no hubo arrastre real).
+    gsap.killTweensOf(a.el);
+    freakyDetenerReposo();
+    a.el.classList.add('freaky-arrastrando');
+    haptic('toque');
+    gsap.to(a.el, { scale: 0.88, duration: 0.15, ease: 'power1.out' });
+  }
+  const ahora = performance.now();
+  const dt = Math.max(1, ahora - a.ultimoTiempo);
+  a.vx = (ev.clientX - a.ultimaX) / dt;
+  a.vy = (ev.clientY - a.ultimaY) / dt;
+  a.ultimaX = ev.clientX; a.ultimaY = ev.clientY; a.ultimoTiempo = ahora;
+
+  gsap.set(a.el, { x: ev.clientX - a.offsetX, y: ev.clientY - a.offsetY });
+  freakyDejarEstela(a.el);
+}
+
+function freakySoltarArrastre(ev){
+  const a = freakyArrastre;
+  if(!a) return;
+  freakyArrastre = null;
+  try{ a.el.releasePointerCapture(ev.pointerId); }catch(e){}
+  if(!a.moviendo) return; // fue un toque normal -- el click de siempre abre el chat
+
+  a.el.classList.remove('freaky-arrastrando');
+  freakyEstaSentado = false;
+
+  // Sigue la velocidad de salida (px/ms) con desaceleración suave -- el
+  // "impulso" convierte esa velocidad en qué tan lejos vuela antes de
+  // frenar, recortado dentro de la zona segura de siempre.
+  const zona = freakyZonaSegura();
+  const actualX = gsap.getProperty(a.el, 'x');
+  const actualY = gsap.getProperty(a.el, 'y');
+  const impulso = 160;
+  const destinoX = Math.max(zona.left, Math.min(zona.right, actualX + a.vx * impulso));
+  const destinoY = Math.max(zona.top, Math.min(zona.bottom, actualY + a.vy * impulso));
+  const dx = destinoX - actualX, dy = destinoY - actualY;
+  const distancia = Math.sqrt(dx * dx + dy * dy) || 1;
+  const duracion = Math.max(0.35, Math.min(1.4, distancia / 700));
+  const angulo = Math.max(-18, Math.min(18, a.vx * 40));
+
+  gsap.timeline({
+    onComplete: () => {
+      freakyIniciarReposo(false);
+      if(!freakyHablandoActivo) freakyMostrarPose('flotando');
+    }
+  })
+    .to(a.el, { scale: 1, duration: 0.2, ease: 'power1.out' }, 0)
+    .to(a.el, { x: destinoX, y: destinoY, rotation: angulo, duration: duracion, ease: 'power2.out', onUpdate: () => freakyDejarEstela(a.el) }, 0)
+    .to(a.el, { rotation: 0, duration: 0.35, ease: 'back.out(2)' }, duracion);
+}
+
+// El click de siempre (abre el chat) se suprime justo después de un
+// arrastre real -- si no, soltar tras aventarlo también abriría el chat de
+// pura casualidad, porque el navegador dispara "click" después de todo
+// pointerup sobre el mismo elemento, arrastre o no.
+function freakyClickTrasArrastre(ev){
+  if(freakyUltimoFueArrastre){
+    freakyUltimoFueArrastre = false;
+    ev.preventDefault();
+    ev.stopPropagation();
+    return;
+  }
+  onClickFreakyPersonaje();
+}
+
 let freakyEstaSentado = false;
 
 // Antes esto se reprogramaba solo con gsap.delayedCall() al terminar cada
@@ -15460,8 +15574,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 93;
+const VERSION_APP_ACTUAL = 94;
 const CHANGELOG_APP = [
+  {
+    version: 94,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Ahora puedes arrastrar a Freaky: si lo mantienes presionado y lo mueves, se deja llevar por tu dedo -- y si lo sueltas con impulso, "sale volando" hacia donde lo aventaste. Un toque simple sigue abriendo el chat como siempre.'
+    ],
+    cambios_en: [
+      'You can now drag Freaky around: hold and move him and he follows your finger -- release with momentum and he "flies off" wherever you threw him. A simple tap still opens the chat as before.'
+    ]
+  },
   {
     version: 93,
     fecha: '2026-09-01',
