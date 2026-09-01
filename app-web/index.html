@@ -1868,6 +1868,7 @@
     </div>
     <div class="aviso" id="aviso-lee-primero-onb" data-i18n="registro.lee_primero">Ábrelo y léelo — el check se activa solo cuando regreses.</div>
     <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_config_inicial">Confirma esto antes de seguir.</div>
+    <button type="button" class="btn-grande" onclick="continuarDesdeConfigInicialOnboarding()" data-i18n="comun.continuar">Continuar</button>
   </div>
 
   <div id="onb-chat-progreso" class="paso-progreso" style="display:none;"></div>
@@ -6783,6 +6784,21 @@ async function entrarAlPanelConOnboarding(){
       check.checked = false;
       check.disabled = true;
       document.getElementById('aviso-lee-primero-onb').style.display = '';
+      // Bug real reportado por el usuario ("después de la entrevista con
+      // Freaky no le aparece ningún botón para avanzar"): esta función
+      // arrancaba el chat de inmediato aunque todavía faltara aceptar el
+      // aviso de privacidad -- la persona contestaba las 5 preguntas del
+      // chat (que sí funcionan sin haber aceptado nada) y solo AL FINAL,
+      // al intentar avanzar, se topaba con que verEvaluacionRapida() y
+      // omitirOnboardingRapido() rechazan seguir si el check no está
+      // marcado (validarConfigInicialOnboarding) -- pero para entonces ya
+      // había hecho scroll varias pantallas hacia abajo por el chat, así
+      // que el bloque con el checkbox (arriba de todo) quedaba fuera de
+      // vista, sin ningún indicio de que ahí estaba el bloqueo. Reproducido
+      // y confirmado con Playwright antes de este arreglo. Ahora el chat
+      // NO arranca hasta que se resuelva este bloque -- ver
+      // continuarDesdeConfigInicialOnboarding().
+      return;
     }
     iniciarOnboardingChat();
     return;
@@ -6818,6 +6834,16 @@ function validarConfigInicialOnboarding(){
   marcarTerminosAceptados();
   bloque.style.display = 'none';
   return true;
+}
+
+// Botón "Continuar" del bloque de idioma/tema/privacidad -- solo existe
+// para el caso en que entrarAlPanelConOnboarding() no pudo arrancar el chat
+// de inmediato (faltaba aceptar privacidad). Reusa la misma validación que
+// ya usan verEvaluacionRapida()/omitirOnboardingRapido() -- si pasa, recién
+// ahí arranca el chat (nunca antes).
+function continuarDesdeConfigInicialOnboarding(){
+  if(!validarConfigInicialOnboarding()) return;
+  iniciarOnboardingChat();
 }
 
 let onbUltimosValores = null;
@@ -15722,8 +15748,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 102;
+const VERSION_APP_ACTUAL = 103;
 const CHANGELOG_APP = [
+  {
+    version: 103,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió un error real que dejaba trabado el onboarding: si todavía faltaba aceptar el Aviso de Privacidad, la app dejaba avanzar toda la entrevista de bienvenida igual, y solo hasta el final avisaba que faltaba aceptarlo -- sin mostrar dónde. Ahora no se puede empezar la entrevista sin aceptar primero.'
+    ],
+    cambios_en: [
+      "Fixed a real bug that could leave onboarding stuck: if the Privacy Notice hadn't been accepted yet, the app still let you go through the whole welcome interview, only flagging the missing acceptance at the very end -- without showing where. Now the interview can't start until it's accepted first."
+    ]
+  },
   {
     version: 102,
     fecha: '2026-09-01',
