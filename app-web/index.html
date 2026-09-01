@@ -1204,30 +1204,6 @@
   .leyenda{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
   .leyenda-fila{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13.5px;color:var(--texto-tenue);}
   .leyenda-punto{width:6px;height:6px;border-radius:1px;flex:none;}
-  /* Heatmap de calendario ("cuándo gastas") -- estilo GitHub contributions,
-     dibujado en HTML/CSS puro, sin canvas ni librería. */
-  .heatmap-grid-encabezados, .heatmap-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:4px;}
-  .heatmap-encabezado{
-    text-align:center;font-family:var(--mono);font-size:9.5px;color:var(--texto-tenue-2);
-    text-transform:uppercase;padding-bottom:4px;
-  }
-  .heatmap-celda{
-    aspect-ratio:1;border-radius:4px;background:var(--borde);position:relative;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .heatmap-celda-vacia{background:none;}
-  .heatmap-dia-num{font-family:var(--mono);font-size:9px;color:var(--texto-tenue-2);}
-  .heatmap-nivel-1{background:color-mix(in srgb, var(--texto) 25%, var(--borde));}
-  .heatmap-nivel-2{background:color-mix(in srgb, var(--texto) 48%, var(--borde));}
-  .heatmap-nivel-3{background:color-mix(in srgb, var(--texto) 70%, var(--borde));}
-  .heatmap-nivel-4{background:var(--texto);}
-  .heatmap-nivel-1 .heatmap-dia-num, .heatmap-nivel-2 .heatmap-dia-num{color:var(--texto);}
-  .heatmap-nivel-3 .heatmap-dia-num, .heatmap-nivel-4 .heatmap-dia-num{color:var(--bg);}
-  .heatmap-leyenda{
-    display:flex;align-items:center;gap:5px;margin-top:12px;justify-content:flex-end;
-    font-family:var(--mono);font-size:10.5px;color:var(--texto-tenue-2);
-  }
-  .heatmap-leyenda .heatmap-celda{width:12px;height:12px;aspect-ratio:auto;border-radius:2px;flex:none;}
   .login-caja{
     position:relative;max-width:380px;margin:16vh auto 0;text-align:center;
     background:none;border:none;padding:0;
@@ -4209,9 +4185,6 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Gastado vs presupuesto total',
     'gastos.de': 'de {0}',
     'gastos.vs_tiempo': 'Gasto vs presupuesto en el tiempo',
-    'gastos.heatmap_titulo': 'Cuándo gastas',
-    'gastos.heatmap_menos': 'Menos',
-    'gastos.heatmap_mas': 'Más',
     'gastos.grafica_categoria': 'Gasto por categoría',
     'gastos.seccion_categoria': 'Por categoría',
     'gastos.movimientos_mes': 'Movimientos del mes',
@@ -5180,9 +5153,6 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Spent vs total budget',
     'gastos.de': 'of {0}',
     'gastos.vs_tiempo': 'Spending vs budget over time',
-    'gastos.heatmap_titulo': 'When you spend',
-    'gastos.heatmap_menos': 'Less',
-    'gastos.heatmap_mas': 'More',
     'gastos.grafica_categoria': 'Spending by category',
     'gastos.seccion_categoria': 'By category',
     'gastos.movimientos_mes': "This month's activity",
@@ -12880,12 +12850,6 @@ function renderGastosGraficasInline(r){
       </div>
       <canvas id="grafica-historico-gastos" height="220"></canvas>
     </div>
-    ${r.gastos.length > 0 ? `
-      <div class="chart-caja">
-        <h2 style="margin-top:0;">${t('gastos.heatmap_titulo')}</h2>
-        ${renderHeatmapGastos(r.gastos, mesGastosActual.anio, mesGastosActual.mes)}
-      </div>
-    ` : ''}
     ${r.categorias.length > 0 ? `
       <div class="chart-caja">
         <h2 style="margin-top:0;">${t('gastos.grafica_categoria')}</h2>
@@ -12901,57 +12865,6 @@ function renderGastosGraficasInline(r){
   const rangoGuardadoHistorico = localStorage.getItem('pro_rango_historico_gastos') || '6m';
   document.querySelectorAll('#rango-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.rango === rangoGuardadoHistorico));
   renderHistoricoGastosPresupuesto(rangoGuardadoHistorico);
-}
-
-// Heatmap de calendario (estilo "contributions" de GitHub) -- pedido del
-// usuario ("qué hay de vanguardia") para ver PATRONES de cuándo gastas
-// (fines de semana vs entre semana, rachas) que ni la barra mensual ni el
-// pastel por categoría pueden mostrar. Dibujado en HTML/CSS, sin canvas --
-// es una cuadrícula de calendario, no una serie continua.
-function renderHeatmapGastos(gastos, anio, mes){
-  const porDia = {};
-  gastos.forEach(g => {
-    const dia = Number(g.fecha.split('-')[2]);
-    porDia[dia] = (porDia[dia] || 0) + convertirAMXN(Number(g.monto), g.moneda || 'MXN');
-  });
-
-  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-  const primerDiaSemana = new Date(anio, mes, 1).getDay(); // 0=domingo
-  const max = Math.max(1, ...Object.values(porDia));
-  const nivelDe = (monto) => {
-    if(!monto) return 0;
-    const pct = monto / max;
-    return pct > 0.75 ? 4 : (pct > 0.5 ? 3 : (pct > 0.25 ? 2 : 1));
-  };
-
-  const idioma = document.documentElement.lang === 'en' ? 'en-US' : 'es-MX';
-  const fmtDiaSemana = new Intl.DateTimeFormat(idioma, { weekday: 'short' });
-  const encabezados = Array.from({ length: 7 }, (_, i) => fmtDiaSemana.format(new Date(2024, 0, i + 7))) // 7 ene 2024 = domingo
-    .map(d => `<div class="heatmap-encabezado">${escapeHtml(d.replace('.', ''))}</div>`).join('');
-
-  let celdas = '';
-  for(let i = 0; i < primerDiaSemana; i++) celdas += `<div class="heatmap-celda heatmap-celda-vacia"></div>`;
-  for(let dia = 1; dia <= diasEnMes; dia++){
-    const monto = porDia[dia] || 0;
-    const titulo = monto > 0 ? `${dia}: ${formatoMonto(monto, 'MXN')}` : String(dia);
-    celdas += `<div class="heatmap-celda heatmap-nivel-${nivelDe(monto)}" title="${escapeHtml(titulo)}"><span class="heatmap-dia-num">${dia}</span></div>`;
-  }
-
-  return `
-    <div class="heatmap-gastos">
-      <div class="heatmap-grid-encabezados">${encabezados}</div>
-      <div class="heatmap-grid">${celdas}</div>
-      <div class="heatmap-leyenda">
-        <span>${t('gastos.heatmap_menos')}</span>
-        <span class="heatmap-celda heatmap-nivel-0"></span>
-        <span class="heatmap-celda heatmap-nivel-1"></span>
-        <span class="heatmap-celda heatmap-nivel-2"></span>
-        <span class="heatmap-celda heatmap-nivel-3"></span>
-        <span class="heatmap-celda heatmap-nivel-4"></span>
-        <span>${t('gastos.heatmap_mas')}</span>
-      </div>
-    </div>
-  `;
 }
 
 function renderGastosCategoriasInline(r){
@@ -15579,10 +15492,10 @@ const CHANGELOG_APP = [
     version: 89,
     fecha: '2026-09-01',
     cambios_es: [
-      '3 gráficas nuevas: el Score Money Freak ahora se ve como un medidor circular, Flujo de efectivo tiene una "cascada del mes" (de dónde partes a dónde terminas), y Gastos tiene un calendario de "cuándo gastas" para ver tus patrones por día.'
+      '2 gráficas nuevas: el Score Money Freak ahora se ve como un medidor circular, y Flujo de efectivo tiene una "cascada del mes" (de dónde partes a dónde terminas).'
     ],
     cambios_en: [
-      "3 new charts: the Money Freak Score now shows as a circular gauge, Cash flow has a \"this month's waterfall\" (where you start to where you end up), and Expenses has a \"when you spend\" calendar to see your day-by-day patterns."
+      "2 new charts: the Money Freak Score now shows as a circular gauge, and Cash flow has a \"this month's waterfall\" (where you start to where you end up)."
     ]
   },
   {
