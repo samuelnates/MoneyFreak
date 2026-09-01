@@ -4211,15 +4211,10 @@ const TRADUCCIONES = {
     'score.gauge_de_100': 'de 100',
     'score.desglose_titulo': 'Desglose',
     'score.liquidez': 'Liquidez',
-    'score.liquidez_explica': 'Qué tan cerca estás de tu meta de cobertura.',
     'score.endeudamiento': 'Endeudamiento',
-    'score.endeudamiento_explica': 'Qué tan cerca de tu límite de deuda saludable.',
     'score.presupuesto': 'Presupuesto',
-    'score.presupuesto_explica': 'Si vas dentro o fuera de tu presupuesto este mes.',
     'score.tendencia': 'Tendencia',
-    'score.tendencia_explica': 'Si tu patrimonio viene subiendo o bajando.',
     'score.constancia': 'Constancia',
-    'score.constancia_explica_corta': 'Qué tan al día tienes tus registros. Toca para ver más.',
     'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
     'score.ver_salud_completa': 'Ver salud financiera completa y editar umbrales ›',
     'flujo.liquido_disponible': 'Disponible ahora',
@@ -5173,15 +5168,10 @@ const TRADUCCIONES = {
     'score.gauge_de_100': 'out of 100',
     'score.desglose_titulo': 'Breakdown',
     'score.liquidez': 'Liquidity',
-    'score.liquidez_explica': 'How close you are to your coverage goal.',
     'score.endeudamiento': 'Debt ratio',
-    'score.endeudamiento_explica': 'How close you are to a healthy debt limit.',
     'score.presupuesto': 'Budget',
-    'score.presupuesto_explica': 'Whether you\'re on track with this month\'s budget.',
     'score.tendencia': 'Trend',
-    'score.tendencia_explica': 'Whether your net worth is trending up or down.',
     'score.constancia': 'Consistency',
-    'score.constancia_explica_corta': 'How current your records are. Tap to see more.',
     'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
     'score.ver_salud_completa': 'See full financial health and edit thresholds ›',
     'flujo.liquido_disponible': 'Available now',
@@ -8675,33 +8665,27 @@ async function abrirScore(){
     <button type="button" class="score-fila score-fila-clic" onclick="abrirSaludDetalle()">
       <div class="score-fila-titulo"><span>${t('score.liquidez')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.liquidez)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.liquidez)}" style="width:${score.liquidez !== null ? Math.min(score.liquidez, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.liquidez_explica')}</div>
     </button>
     <button type="button" class="score-fila score-fila-clic" onclick="abrirSaludDetalle()">
       <div class="score-fila-titulo"><span>${t('score.endeudamiento')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.endeudamiento)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.endeudamiento)}" style="width:${score.endeudamiento !== null ? Math.min(score.endeudamiento, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.endeudamiento_explica')}</div>
     </button>
     ${modoDemo ? `
     <div class="score-fila">
       <div class="score-fila-titulo"><span>${t('score.presupuesto')}</span><span class="valor">${txtSub(score.presupuesto)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.presupuesto)}" style="width:${score.presupuesto !== null ? Math.min(score.presupuesto, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.presupuesto_explica')}</div>
     </div>` : `
     <button type="button" class="score-fila score-fila-clic" onclick="abrirPresupuesto()">
       <div class="score-fila-titulo"><span>${t('score.presupuesto')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.presupuesto)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.presupuesto)}" style="width:${score.presupuesto !== null ? Math.min(score.presupuesto, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.presupuesto_explica')}</div>
     </button>`}
     <button type="button" class="score-fila score-fila-clic" onclick="abrirBalanceGraficas()">
       <div class="score-fila-titulo"><span>${t('score.tendencia')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.tendencia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.tendencia)}" style="width:${score.tendencia !== null ? Math.min(score.tendencia, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.tendencia_explica')}</div>
     </button>
     <button type="button" class="score-fila score-fila-clic" onclick="mostrarAlerta(t('score.constancia_explica'), t('score.constancia'))">
-      <div class="score-fila-titulo"><span>${t('score.constancia')}</span><span class="valor">${txtSub(score.constancia)}</span></div>
+      <div class="score-fila-titulo"><span>${t('score.constancia')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.constancia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.constancia)}" style="width:${score.constancia !== null ? Math.min(score.constancia, 100) : 0}%"></div></div>
-      <div class="detalle-explica">${t('score.constancia_explica_corta')}</div>
     </button>
 
     <h2>${t('salud.recomendacion')}</h2>
@@ -15748,8 +15732,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 103;
+const VERSION_APP_ACTUAL = 104;
 const CHANGELOG_APP = [
+  {
+    version: 104,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se simplificó la pantalla de Score: se quitaron las frases explicativas repetidas bajo cada fila (Liquidez, Endeudamiento, Presupuesto, Tendencia, Constancia) — cada fila ya lleva flecha para ver el detalle al tocarla, así que el texto de abajo era redundante.'
+    ],
+    cambios_en: [
+      'Simplified the Score screen: removed the repeated explanatory captions under each row (Liquidity, Debt ratio, Budget, Trend, Consistency) — each row already has an arrow to view details on tap, so the caption below was redundant.'
+    ]
+  },
   {
     version: 103,
     fecha: '2026-09-01',
