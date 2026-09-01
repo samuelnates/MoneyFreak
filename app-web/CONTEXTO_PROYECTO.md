@@ -46,6 +46,11 @@ Todo pendiente real disperso en el historial, en un solo lugar. Verificado contr
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-09-01 (parte 119) — Ajuste inmediato a la parte 118: "ahora que corregiste el bug se me hizo demasiado grande, a la mitad, que se vea más elegante".** El triple (288px) resultó demasiado una vez arreglado el bug de especificidad que lo tenía atorado en 26px -- se redujo a la mitad, 144px (con su tope de `max-width/max-height` ajustado proporcionalmente a 45vw para pantallas angostas). El arreglo de especificidad de la parte 118 (`.logo-mark.logo-mark-carga`) se queda igual, solo cambió el valor.
+  - Confirmado con Playwright: 144x144px exacto en pantalla.
+  - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 92 con entrada en `CHANGELOG_APP`.
+  - Desplegado (solo frontend).
+
 - **2026-09-01 (parte 118) — Pedido del usuario: "el logo que aparece al abrir la app me gusta mucho, hazlo del triple de tamaño".** Se identificó como el logo de la pantalla de carga (`#config-faltante`, la que se ve un instante al abrir la app antes de decidir si mostrar login o la app ya con sesión -- distinto del logo chico del sidebar y del logo del login, que también usan el mismo SVG pero en otros tamaños).
   - **Bug real encontrado al intentar cambiar el tamaño**: el elemento lleva las clases `"logo-mark logo-mark-carga"` juntas. `.logo-mark-carga{width:96px}` vivía ANTES en la hoja de estilos que `.logo-mark{width:26px}` (pensada para el logo chico del sidebar) -- con la misma especificidad (una sola clase cada regla), gana la que aparece después en cascada, así que `.logo-mark` (26px) le ganaba siempre a `.logo-mark-carga` (96px). El logo de carga **nunca se vio a su tamaño real (96px) desde que se escribió este código** -- llevaba mostrándose a 26px todo este tiempo, sin que nadie lo notara porque solo aparece un instante al abrir.
   - **Arreglo de raíz + el cambio pedido**: se subió a `.logo-mark.logo-mark-carga` (selector compuesto, especificidad más alta, gana siempre sin depender del orden) y se triplicó el tamaño real que debía tener -- de 96px a 288px (con `max-width/max-height:70vw` de tope para que no se corte en pantallas angostas).

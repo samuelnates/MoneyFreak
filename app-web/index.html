@@ -1081,7 +1081,7 @@
      sidebar), no esta. El logo de carga nunca se vio a su tamaño real desde
      que se escribió este código. Se sube la especificidad con el selector
      compuesto para que esta regla gane siempre, sin depender del orden. */
-  .logo-mark.logo-mark-carga{width:288px;height:288px;margin:0;max-width:70vw;max-height:70vw;}
+  .logo-mark.logo-mark-carga{width:144px;height:144px;margin:0;max-width:45vw;max-height:45vw;}
   @media (prefers-reduced-motion: no-preference){
     .logo-mark-carga{animation:respirar-logo 1.6s ease-in-out infinite;}
   }
@@ -15460,8 +15460,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 91;
+const VERSION_APP_ACTUAL = 92;
 const CHANGELOG_APP = [
+  {
+    version: 92,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se redujo a la mitad el logo de la pantalla de carga -- el triple de tamaño se sentía demasiado grande, ahora se ve más elegante.'
+    ],
+    cambios_en: [
+      'Reduced the loading screen logo by half -- 3x size felt too big, it now looks more elegant.'
+    ]
+  },
   {
     version: 91,
     fecha: '2026-09-01',
