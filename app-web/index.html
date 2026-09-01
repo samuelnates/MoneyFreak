@@ -15709,8 +15709,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 97;
+const VERSION_APP_ACTUAL = 98;
 const CHANGELOG_APP = [
+  {
+    version: 98,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió el sombrero de "La Catrina" (uno de los personajes de Freaky) en la pantalla de inicio de sesión -- se veía asimétrico/cortado de un lado, ya se regeneró parejo.'
+    ],
+    cambios_en: [
+      'Fixed "La Catrina"\'s hat (one of Freaky\'s character options) on the login screen -- it looked asymmetric/cut off on one side, now it\'s even.'
+    ]
+  },
   {
     version: 97,
     fecha: '2026-09-01',
