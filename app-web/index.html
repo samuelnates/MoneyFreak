@@ -3843,8 +3843,28 @@ const PUNTOS_INTERACTIVOS_LINEA = {
   pointHoverBorderColor: colorTema('--bg'), pointHoverBorderWidth: 2,
 };
 
+// Pedido del usuario ("no hay algo como animarlas, algo de movimiento?"):
+// los números clave de las gráficas ahora suben desde 0 en vez de aparecer
+// de golpe -- mismo tipo de pulido que ya tienen el degradado/tooltips,
+// aplicado al número, no solo al trazo. Respeta prefers-reduced-motion
+// igual que el resto de la app (REDUCIR_MOVIMIENTO).
+function animarConteoTexto(el, valorFinal, formateador, duracionMs = 1000){
+  if(!el) return;
+  if(REDUCIR_MOVIMIENTO){ el.textContent = formateador(valorFinal); return; }
+  const inicio = performance.now();
+  function frame(ahora){
+    const t = Math.min(1, (ahora - inicio) / duracionMs);
+    const suave = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    el.textContent = formateador(valorFinal * suave);
+    if(t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
 // Doughnut con el total en el centro -- mismo patrón para "Gastos por
 // categoría" y "Composición del patrimonio", los 2 pie charts de la app.
+// El total ahora cuenta hacia arriba en sincronía con las rebanadas
+// creciendo, en vez de aparecer ya completo desde el primer frame.
 function crearPluginCentroDona(formatearTotal){
   return {
     id: 'centroDona',
@@ -3852,12 +3872,23 @@ function crearPluginCentroDona(formatearTotal){
       const { ctx, chartArea: area } = chart;
       if(!area) return;
       const total = chart.config.data.datasets[0].data.reduce((s, v) => s + v, 0);
+
+      let valorMostrado = total;
+      if(!REDUCIR_MOVIMIENTO){
+        if(chart.__centroDonaInicio === undefined) chart.__centroDonaInicio = performance.now();
+        const duracion = (chart.options.animation && chart.options.animation.duration) || 1000;
+        const progreso = Math.min(1, (performance.now() - chart.__centroDonaInicio) / duracion);
+        const suave = 1 - Math.pow(1 - progreso, 3);
+        valorMostrado = total * suave;
+        if(progreso < 1) requestAnimationFrame(() => chart.draw());
+      }
+
       const cx = (area.left + area.right) / 2, cy = (area.top + area.bottom) / 2;
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillStyle = colorTema('--texto');
       ctx.font = "600 15px 'JetBrains Mono', monospace";
-      ctx.fillText(formatearTotal(total), cx, cy - 8);
+      ctx.fillText(formatearTotal(valorMostrado), cx, cy - 8);
       ctx.fillStyle = colorTema('--texto-tenue-2');
       ctx.font = "11px 'JetBrains Mono', monospace";
       ctx.fillText(t('comun.total'), cx, cy + 12);
@@ -8602,6 +8633,7 @@ async function abrirScore(){
   `;
 
   activarAnillosProgreso(cont);
+  animarConteoTexto(cont.querySelector('.panel-hero .valor-pct'), score.general, (v) => String(Math.round(v)), 1100);
   renderGraficaScore(historico || []);
   actualizarUIDemo();
 }
@@ -15420,8 +15452,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 89;
+const VERSION_APP_ACTUAL = 90;
 const CHANGELOG_APP = [
+  {
+    version: 90,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Los números clave de las gráficas ahora suben en cámara en vez de aparecer de golpe: el Score y el total al centro de las gráficas de dona (gastos por categoría, composición del patrimonio).'
+    ],
+    cambios_en: [
+      'Key chart numbers now count up instead of snapping into place: the Score and the total in the center of the donut charts (spending by category, net worth composition).'
+    ]
+  },
   {
     version: 89,
     fecha: '2026-09-01',
