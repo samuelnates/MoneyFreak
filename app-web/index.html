@@ -419,13 +419,6 @@
      Freaky-vuelo desactivado -- para ese caso, la cuadrícula necesita
      pegarse más abajo para no taparlo, igual que .pantalla arriba. */
   body.con-sesion.freaky-vuelo-desactivado .tabs-cuentas{top:calc(64px + env(safe-area-inset-top, 0px));}
-  /* Balance general solo tiene 2 pestañas (Salud financiera / Gráficas) --
-     con la cuadrícula de 3 columnas compartida quedaba una columna vacía y,
-     peor, cada pestaña tenía la mitad del ancho que necesitaba, así que
-     títulos como "Salud financiera" se recortaban con "…" incluso en el
-     caso normal (parte 94). Con 2 columnas cada pestaña usa el doble de
-     ancho disponible. */
-  #tabs-balance{grid-template-columns:repeat(2, 1fr);}
   .tab-cuentas{
     display:flex;flex-direction:column;gap:1px;min-width:0;
     background:var(--superficie);border:1px solid var(--borde);
@@ -1150,6 +1143,13 @@
   .total-caja .monto.estado-riesgo{color:var(--color-riesgo);font-weight:700;}
   .total-caja-clic{cursor:pointer;display:block;width:100%;appearance:none;-webkit-appearance:none;}
   .total-caja-clic:hover, .total-caja-clic:focus-visible{border-color:var(--texto-tenue-2);}
+  /* Variante compacta -- pedida para el patrimonio neto de Balance general:
+     mismo contenido, menos espacio vertical, para dejar lugar de inmediato
+     a la gráfica de evolución justo debajo (antes vivía escondida dentro
+     del tab "Gráficas y liquidez"). */
+  .total-caja-compacta{padding:14px 0;margin-bottom:14px;}
+  .total-caja-compacta .etiqueta{margin-bottom:4px;}
+  .total-caja-compacta .monto{font-size:26px;}
   .flecha-fila{opacity:.5;font-size:12.5px;margin-left:4px;}
   .score-fila-clic{background:none;border:none;padding:0;margin:0 0 20px;width:100%;text-align:left;display:block;cursor:pointer;font:inherit;color:inherit;}
   .score-fila-clic:hover .score-fila-titulo span:first-child, .score-fila-clic:focus-visible .score-fila-titulo span:first-child{text-decoration:underline;}
@@ -1193,6 +1193,16 @@
   }
   .fila-balance-etiqueta:hover, .fila-balance-etiqueta:focus-visible{color:var(--texto);text-decoration:underline;}
   .fila-balance-etiqueta .flecha-fila{opacity:.5;font-size:12.5px;}
+  /* Desglose de Balance general (Activos/Pasivos) lado a lado SIEMPRE,
+     incluso en móvil -- ".grid-2col" (más abajo) solo hace esto a partir de
+     900px; aquí se pidió explícitamente que se vea "como en los balances"
+     (contable, 2 columnas) para no ocupar tanto alto en pantallas angostas.
+     Las categorías son pocas y cortas (Cuentas, Bienes, Acciones, Deudas),
+     así que caben bien en columnas angostas sin recortarse. */
+  .grid-2col-compacto{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start;}
+  .grid-2col-compacto h2{margin-top:0;margin-bottom:10px;}
+  .grid-2col-compacto .fila-balance{font-size:12px;padding:9px 0;flex-wrap:wrap;row-gap:2px;}
+  .grid-2col-compacto .fila-balance .valor{font-size:12px;}
   .aviso{
     background:none;border:none;border-left:2px solid var(--texto-tenue-2);color:var(--texto-tenue);
     border-radius:0;padding:4px 0 4px 14px;font-family:var(--sans);font-size:13.5px;margin-bottom:18px;line-height:1.6;
@@ -1421,6 +1431,7 @@
       border:1px solid var(--borde);border-top:2px solid var(--acento);border-radius:10px;
       background:var(--superficie);padding:22px 20px;
     }
+    .total-caja-compacta{padding:16px 20px;}
 
     .grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:0 40px;align-items:start;}
     .grid-2col > h2:first-child{margin-top:0;}
@@ -2099,38 +2110,24 @@
     <div class="mensaje"><span class="spinner"></span><span data-i18n="comun.cargando">Cargando...</span></div>
   </div>
 
-  <!-- Barra de accesos fija -- misma lógica de "Mis cuentas"/"Gastos y
-       presupuesto" (partes 83 y 92), pedida explícitamente por el usuario
-       ("aplica la misma lógica para balance"). Salta directo a la sección
-       al tocarla y se marca sola con el dedo (scrollspy, ver
-       controladorSeccionesBalance). -->
-  <div class="tabs-cuentas" id="tabs-balance">
-    <button type="button" class="tab-cuentas" data-seccion="salud" onclick="mostrarSeccionBalance('salud')">
-      <span class="tab-cuentas-titulo" data-i18n="panel.salud.titulo">Salud financiera</span>
-      <span class="tab-cuentas-dato" id="tab-balance-salud-estado"></span>
-    </button>
-    <button type="button" class="tab-cuentas" data-seccion="graficas" onclick="mostrarSeccionBalance('graficas')">
-      <span class="tab-cuentas-titulo" data-i18n="balance.graficas_titulo">Gráficas y liquidez</span>
-    </button>
-  </div>
-
+  <!-- "Salud financiera" reducida a 1 sola fila (parte 121, pedido del
+       usuario: "se siente como ruido") -- ya no es un tab propio, solo una
+       sección fija chiquita para que mostrarSeccionBalance('salud') (la
+       sigue llamando el enrutador de Freaky, guardarPerfil(), etc.) tenga
+       a dónde hacer scroll aunque balance-contenido no haya cargado. -->
   <section class="seccion-cuentas" id="seccion-balance-salud">
-    <h2 data-i18n="panel.salud.titulo">Salud financiera</h2>
-    <button type="button" class="btn-instructivo" id="btn-instructivo-salud" onclick="toggleInstructivo('salud')"><span data-i18n="comun.como_usar">¿Cómo usar esto?</span> <span class="flecha-instructivo">▾</span></button>
-    <div class="instructivo" id="instructivo-salud" style="display:none;">
-      <p><b>Cobertura de liquidez</b> = cuántos meses podrías cubrir tus pagos fijos (deudas + aportaciones) usando solo tu efectivo disponible, si dejaras de recibir ingresos hoy. Mientras más meses, mejor colchón tienes.</p>
-      <p><b>Tasa de endeudamiento</b> = qué porcentaje de tu ingreso mensual ya se va en pagar deudas. Para verla necesitas agregar tus ingresos en "Ingresos" (dentro de Mis cuentas).</p>
-      <p>Ambos indicadores se usan también en el Simulador de crédito, para saber si te conviene tomar deuda nueva.</p>
-    </div>
     <div id="salud-contenido"></div>
   </section>
 
-  <section class="seccion-cuentas" id="seccion-balance-graficas">
-    <h2 data-i18n="balance.graficas_titulo">Gráficas y liquidez</h2>
-    <div id="balance-graficas-contenido"></div>
-  </section>
-
-  <button type="button" class="btn-link-tenue btn-escritura" onclick="mostrar('vista-balance-pdf')" data-i18n="balance.pdf_titulo" style="display:block;">Exportar PDF</button>
+  <!-- Exportar PDF -- antes era solo un link de texto subrayado ("se siente
+       barato"); ahora es un bloque con su propio título/descripción y un
+       botón de verdad, mismo estilo que el resto de las acciones grandes
+       de la app (.btn-grande.secundario). -->
+  <div class="chart-caja" style="border-bottom:none;">
+    <h2 style="margin-top:0;" data-i18n="balance.pdf_titulo">Exportar PDF</h2>
+    <p class="detalle-explica" style="margin-bottom:14px;" data-i18n="balance.pdf_sub">Compartir tu balance completo</p>
+    <button type="button" class="btn-grande secundario btn-escritura" onclick="mostrar('vista-balance-pdf')" data-i18n="balance.pdf_titulo">Exportar PDF</button>
+  </div>
 </div>
 
 <div id="vista-balance-pdf" class="pantalla">
@@ -7902,13 +7899,22 @@ function mostrarSeccionGastos(idSeccion){ controladorSeccionesGastos.mostrarSecc
 function actualizarScrollspyGastos(){ controladorSeccionesGastos.actualizarScrollspy(); }
 function inicializarScrollspyGastos(){ controladorSeccionesGastos.inicializarScrollspy(); }
 
-const controladorSeccionesBalance = crearControladorSeccionesConPestanas({
-  idPantalla: 'vista-balance', idBarra: 'tabs-balance', prefijoSeccion: 'seccion-balance-',
-  mostrarPantalla: () => abrirBalance(),
-});
-function mostrarSeccionBalance(idSeccion){ controladorSeccionesBalance.mostrarSeccion(idSeccion); }
-function actualizarScrollspyBalance(){ controladorSeccionesBalance.actualizarScrollspy(); }
-function inicializarScrollspyBalance(){ controladorSeccionesBalance.inicializarScrollspy(); }
+// Balance general dejó de usar tabs + scrollspy (parte 121, pedido del
+// usuario) -- con "Salud financiera" reducida a 1 fila y el resto del
+// contenido reordenado en un solo flujo, ya no hacía falta la barra de
+// pestañas de crearControladorSeccionesConPestanas (esa maquinaria sigue
+// viva para "Mis cuentas" y "Gastos", que sí tienen secciones largas).
+// mostrarSeccionBalance() se conserva como nombre público -- lo siguen
+// llamando el enrutador de Freaky, guardarPerfil() y los botones "volver"
+// de umbrales/desglose -- pero ahora es un scroll directo a la sección
+// (que vive fija en el HTML, así que existe aunque abrirBalance() todavía
+// no haya terminado de cargar datos).
+function mostrarSeccionBalance(idSeccion){
+  if(!document.getElementById('vista-balance').classList.contains('activa')) abrirBalance();
+  requestAnimationFrame(() => {
+    document.getElementById('seccion-balance-' + idSeccion)?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
+  });
+}
 
 function toggleAcordeon(id){
   const cont = document.getElementById('acordeon-contenido-' + id);
@@ -8630,7 +8636,7 @@ async function abrirScore(){
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.presupuesto)}" style="width:${score.presupuesto !== null ? Math.min(score.presupuesto, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.presupuesto_explica')}</div>
     </button>`}
-    <button type="button" class="score-fila score-fila-clic" onclick="abrirBalanceGraficas('evolucion')">
+    <button type="button" class="score-fila score-fila-clic" onclick="abrirBalanceGraficas()">
       <div class="score-fila-titulo"><span>${t('score.tendencia')}<span class="flecha-fila">›</span></span><span class="valor">${txtSub(score.tendencia)}</span></div>
       <div class="presupuesto-barra"><div class="presupuesto-barra-relleno ${claseSub(score.tendencia)}" style="width:${score.tendencia !== null ? Math.min(score.tendencia, 100) : 0}%"></div></div>
       <div class="detalle-explica">${t('score.tendencia_explica')}</div>
@@ -13883,7 +13889,7 @@ const TOUR_PASOS = [
   {
     titulo: 'tour.p4.titulo',
     texto: 'tour.p4.texto',
-    selector: '#salud-contenido .total-caja',
+    selector: '#salud-contenido .fila-balance',
     fallback: '#salud-contenido',
     accion: async () => { await abrirSaludFinanciera(); }
   },
@@ -14355,41 +14361,23 @@ let saludDetalleData = null;
 // Freaky y guardarPerfil() -- pero ahora solo salta a la sección (y si el
 // usuario no estaba en Balance, mostrarPantalla() vuelve a calcular todo
 // desde cero, así que los datos siempre llegan frescos).
+// Reducida al máximo (parte 121, pedido del usuario: "se siente como
+// ruido") -- antes era una rejilla de 3 tarjetas + texto de recomendación,
+// duplicando casi todo lo que la pantalla de Score ya muestra (incluida la
+// misma s.recomendacion). Ahora es 1 sola fila: el estado general con link
+// directo al desglose completo (abrirSaludDetalle, que ya trae cobertura de
+// liquidez, tasa de endeudamiento y el botón de editar umbrales -- nada de
+// eso se perdió, solo dejó de repetirse aquí también).
 function renderSaludFinancieraInline(s){
   saludDetalleData = s;
   const etiquetas = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
   const claseEstado = estado => estado === 'riesgo' ? 'estado-riesgo' : (estado === 'atencion' ? 'estado-atencion' : 'estado-saludable');
 
-  const coberturaTxt = s.mesesCobertura === null
-    ? (s.compromisosMensuales === 0 ? t('salud.sin_compromisos_reg') : '—')
-    : (s.mesesCobertura >= 12 ? t('salud.mas_12_meses') : `${s.mesesCobertura.toFixed(1)} ${t('comun.meses')}`);
-
-  const endeudamientoTxt = s.tasaEndeudamiento === null ? t('comun.sin_definir') : `${s.tasaEndeudamiento.toFixed(1)}%`;
-
-  document.getElementById('tab-balance-salud-estado').className = `tab-cuentas-dato ${claseEstado(s.estadoGeneral)}`;
-  document.getElementById('tab-balance-salud-estado').textContent = etiquetas[s.estadoGeneral];
-
   document.getElementById('salud-contenido').innerHTML = `
-    <div class="totales-grid">
-      <div class="total-caja">
-        <div class="etiqueta">${t('balance.estado_general')}</div>
-        <div class="monto ${claseEstado(s.estadoGeneral)}">${etiquetas[s.estadoGeneral]}</div>
-      </div>
-      <button type="button" class="total-caja total-caja-clic" onclick="abrirSaludDetalle()">
-        <div class="etiqueta">${t('balance.cobertura_liquidez_30')}<span class="flecha-fila">›</span></div>
-        <div class="monto">${coberturaTxt}</div>
-        <div class="detalle-explica ${claseEstado(s.estadoLiquidez)}">${etiquetas[s.estadoLiquidez]}</div>
-      </button>
-      <button type="button" class="total-caja total-caja-clic" onclick="abrirSaludDetalle()">
-        <div class="etiqueta">${t('balance.tasa_endeudamiento_mensual')}<span class="flecha-fila">›</span></div>
-        <div class="monto">${endeudamientoTxt}</div>
-        ${s.estadoEndeudamiento ? `<div class="detalle-explica ${claseEstado(s.estadoEndeudamiento)}">${etiquetas[s.estadoEndeudamiento]}</div>` : ''}
-      </button>
+    <div class="fila-balance">
+      <button type="button" class="fila-balance-etiqueta" onclick="abrirSaludDetalle()">${t('panel.salud.titulo')}<span class="flecha-fila">›</span></button>
+      <span class="valor ${claseEstado(s.estadoGeneral)}">${etiquetas[s.estadoGeneral]}</span>
     </div>
-
-    <h2>${t('salud.recomendacion')}</h2>
-    <div class="aviso">${s.recomendacion}</div>
-    <button type="button" class="btn-link-tenue" onclick="abrirSaludDetalle()">${t('salud.ver_desglose')}</button>
   `;
 }
 
@@ -14643,7 +14631,6 @@ let balanceDetalleData = null;
 
 async function abrirBalance(){
   mostrar('vista-balance');
-  inicializarScrollspyBalance();
   const cont = document.getElementById('balance-contenido');
   cont.innerHTML = `<div class="mensaje"><span class="spinner"></span>${t('comun.cargando')}</div>`;
 
@@ -14657,7 +14644,14 @@ async function abrirBalance(){
     }, { onConflict: 'user_id,fecha' });
   }
 
-  const { data: historico } = await sb.from('patrimonio_historico').select('*').order('fecha', { ascending: true });
+  const { data: historicoCrudo } = await sb.from('patrimonio_historico').select('*').order('fecha', { ascending: true });
+  // Recorta el/los primeros registros en $0 -- ese "$0" no es historia real,
+  // es el estado vacío de antes de capturar la primera cuenta/deuda. Si se
+  // deja, la gráfica de evolución tiene que abarcar desde $0 hasta el monto
+  // real, y todo el movimiento real (ej. $18,000 -> $20,000) se ve aplastado
+  // en una franja angosta -- por eso antes solo "se veía bien" pasado un mes,
+  // cuando el filtro de rango por fecha ya dejaba fuera ese primer punto.
+  const historico = recortarHistoricoInicialEnCero(historicoCrudo);
   balanceDetalleData = { b, s, historico };
 
   let cambioHtml = '';
@@ -14673,13 +14667,26 @@ async function abrirBalance(){
   }
 
   cont.innerHTML = `
-    <button type="button" class="total-caja total-caja-clic" onclick="abrirBalanceGraficas('evolucion')">
+    <button type="button" class="total-caja total-caja-clic total-caja-compacta" onclick="abrirBalanceGraficas()">
       <div class="etiqueta">${t('balance.patrimonio_neto')}<span class="flecha-fila">›</span></div>
       <div class="monto" id="patrimonio-neto-monto">${formatoMonto(0, 'MXN')}</div>
       ${cambioHtml}
     </button>
 
-    <div class="grid-2col">
+    <div class="chart-caja" id="evolucion-patrimonio-caja" style="display:none;">
+      <h2 style="margin-top:0;">${t('balance.evolucion_patrimonio')}</h2>
+      <div class="rango-botones" id="rango-evolucion">
+        <button type="button" data-rango="1m" onclick="cambiarRangoEvolucion('1m')">1M</button>
+        <button type="button" data-rango="3m" onclick="cambiarRangoEvolucion('3m')">3M</button>
+        <button type="button" data-rango="6m" onclick="cambiarRangoEvolucion('6m')">6M</button>
+        <button type="button" data-rango="1a" onclick="cambiarRangoEvolucion('1a')">1A</button>
+        <button type="button" data-rango="todo" onclick="cambiarRangoEvolucion('todo')">${t('balance.rango_todo')}</button>
+      </div>
+      <canvas id="grafica-evolucion-patrimonio" height="220"></canvas>
+      <div id="evolucion-sin-datos" class="mensaje" style="display:none;">${t('balance.sin_datos_rango')}</div>
+    </div>
+
+    <div class="grid-2col-compacto">
       <div>
         <h2>${t('balance.activos')}</h2>
         <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
@@ -14694,6 +14701,8 @@ async function abrirBalance(){
         <div class="fila-balance subtotal"><span>${t('balance.total_pasivos')}</span><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
       </div>
     </div>
+
+    <div id="balance-graficas-contenido"></div>
   `;
 
   animarNumero(document.getElementById('patrimonio-neto-monto'), b.patrimonioNeto, 'MXN', 1000);
@@ -14702,15 +14711,13 @@ async function abrirBalance(){
   ajustarTamanoDatosTarjetas();
 }
 
-// "Gráficas y liquidez" dejó de ser una pantalla aparte (parte 93) -- se
-// pinta en línea con balanceDetalleData, que abrirBalance() ya calculó (sin
-// repetir el Promise.all ni la consulta de patrimonio_historico).
-// abrirBalanceGraficas(foco) se conserva como alias -- lo sigue llamando la
-// pantalla de Score con foco='evolucion' para llevar directo a esa gráfica
-// -- pero ahora solo salta a la sección; el scroll extra hasta la gráfica
-// de evolución se hace con un pequeño respiro después, para no pelear con
-// la animación del salto (mismo motivo que el scrollspy se pausa mientras
-// el salto está en curso, ver crearControladorSeccionesConPestanas).
+// "Gráficas y liquidez" dejó de ser una pantalla aparte (parte 93) y luego
+// también dejó de ser un tab propio (parte 121) -- se pinta en línea dentro
+// de balance-contenido, justo después del desglose de Activos/Pasivos,
+// usando balanceDetalleData que abrirBalance() ya calculó (sin repetir el
+// Promise.all ni la consulta de patrimonio_historico). La gráfica de
+// evolución (más arriba, debajo del patrimonio neto) ya no vive aquí --
+// abrirBalanceGraficas() abajo solo hace scroll hasta ella.
 function renderBalanceGraficasInline(){
   const cont = document.getElementById('balance-graficas-contenido');
   if(!balanceDetalleData) return;
@@ -14732,35 +14739,22 @@ function renderBalanceGraficasInline(){
       <div class="composicion-canvas-wrap"><canvas id="grafica-composicion"></canvas></div>
       <div class="leyenda" id="leyenda-composicion"></div>
     </div>
-
-    <div class="chart-caja" id="evolucion-patrimonio-caja" style="display:none;">
-      <h2 style="margin-top:0;">${t('balance.evolucion_patrimonio')}</h2>
-      <div class="rango-botones" id="rango-evolucion">
-        <button type="button" data-rango="1m" onclick="cambiarRangoEvolucion('1m')">1M</button>
-        <button type="button" data-rango="3m" onclick="cambiarRangoEvolucion('3m')">3M</button>
-        <button type="button" data-rango="6m" onclick="cambiarRangoEvolucion('6m')">6M</button>
-        <button type="button" data-rango="1a" onclick="cambiarRangoEvolucion('1a')">1A</button>
-        <button type="button" data-rango="todo" onclick="cambiarRangoEvolucion('todo')">${t('balance.rango_todo')}</button>
-      </div>
-      <canvas id="grafica-evolucion-patrimonio" height="220"></canvas>
-      <div id="evolucion-sin-datos" class="mensaje" style="display:none;">${t('balance.sin_datos_rango')}</div>
-    </div>
   `;
 
   renderizarDetalleBalance();
 }
 
-function abrirBalanceGraficas(foco){
-  mostrarSeccionBalance('graficas');
-  if(foco === 'evolucion'){
-    // Respiro después del salto animado de mostrarSeccionBalance -- si se
-    // hiciera de inmediato, este scroll adicional pelearía con el que ya
-    // está en curso (mismo motivo que el scrollspy se pausa mientras el
-    // salto anima, ver crearControladorSeccionesConPestanas).
-    setTimeout(() => {
-      document.getElementById('evolucion-patrimonio-caja')?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
-    }, REDUCIR_MOVIMIENTO ? 0 : 750);
+async function abrirBalanceGraficas(){
+  // La gráfica de evolución se genera dentro de balance-contenido (async) --
+  // a diferencia de mostrarSeccionBalance(), que salta a secciones fijas en
+  // el HTML, aquí si Balance no estaba ya cargado hay que esperar a
+  // abrirBalance() de verdad antes de poder hacer scroll al canvas.
+  if(!document.getElementById('vista-balance').classList.contains('activa')){
+    await abrirBalance();
+  } else {
+    mostrar('vista-balance');
   }
+  document.getElementById('evolucion-patrimonio-caja')?.scrollIntoView({ behavior: REDUCIR_MOVIMIENTO ? 'auto' : 'smooth', block: 'start' });
 }
 
 function renderizarDetalleBalance(){
@@ -14842,6 +14836,20 @@ function formatoFechaCorta(fechaStr){
 }
 
 let historicoPatrimonioCompleto = [];
+
+// Quita del inicio de la serie los registros con patrimonio_neto = 0 que
+// vienen antes del primer valor real -- ver comentario en abrirBalance().
+// Solo recorta el tramo inicial (mientras value === 0); en cuanto aparece un
+// valor distinto de 0, se detiene y conserva todo lo demás tal cual, aunque
+// vuelva a haber ceros reales más adelante (ej. deudas = activos).
+function recortarHistoricoInicialEnCero(historico){
+  if(!historico || historico.length === 0) return historico;
+  let inicio = 0;
+  while(inicio < historico.length - 1 && Number(historico[inicio].patrimonio_neto) === 0){
+    inicio++;
+  }
+  return historico.slice(inicio);
+}
 
 function filtrarHistoricoPorRango(data, rango){
   if(rango === 'todo') return data;
@@ -15574,8 +15582,24 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 94;
+const VERSION_APP_ACTUAL = 95;
 const CHANGELOG_APP = [
+  {
+    version: 95,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Rediseño de Balance general: el patrimonio neto ahora es más compacto, la gráfica de evolución se movió justo debajo (ya no hay que cambiar de pestaña para verla) y se corrigió un error real -- el primer registro en $0 (de antes de capturar cualquier cuenta) aplastaba toda la gráfica hasta que pasaba un mes.',
+      'Activos y Pasivos ahora se ven lado a lado (como en un balance contable) incluso en el teléfono, para ocupar menos espacio vertical.',
+      '"Salud financiera" se redujo a una sola fila con el estado general -- el desglose completo (cobertura de liquidez, tasa de endeudamiento, editar umbrales) sigue disponible con un toque, ya no se repite dos veces en la misma pantalla.',
+      '"Exportar PDF" dejó de ser un simple link de texto -- ahora es un botón real, con su propio título y descripción.'
+    ],
+    cambios_en: [
+      'Balance sheet redesign: net worth is now more compact, the net-worth-over-time chart moved right below it (no more switching tabs to see it), and a real bug was fixed -- the first $0 record (from before adding any account) used to flatten the whole chart until a month had passed.',
+      'Assets and Liabilities now show side by side (like a real balance sheet), even on phone, to use less vertical space.',
+      '"Financial health" was reduced to a single row with the overall status -- the full breakdown (liquidity coverage, debt ratio, edit thresholds) is still one tap away, it just stopped repeating itself on the same screen.',
+      '"Export PDF" stopped being a plain text link -- it\'s now a real button, with its own title and description.'
+    ]
+  },
   {
     version: 94,
     fecha: '2026-09-01',
