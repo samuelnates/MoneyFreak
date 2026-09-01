@@ -46,6 +46,13 @@ Todo pendiente real disperso en el historial, en un solo lugar. Verificado contr
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-09-01 (parte 112) — Tercer ajuste de seguimiento a la parte 109: "pero no dice para qué es el check".** La parte 111 había quitado la etiqueta de texto para que el checkbox cupiera junto al monto -- pero sin texto visible, no había forma de saber qué hacía sin leer el aria-label (invisible en pantalla, solo para lectores de pantalla).
+  - **Arreglo**: etiqueta corta visible "¿Ya pasó?" / "Happened?" junto al checkbox (clave i18n nueva `flujo.ya_paso_corto`) -- cabe cómodo en el mismo renglón junto al monto. Se conserva el texto completo ("Ya se cumplió este mes") en `aria-label`/`title` para accesibilidad.
+  - **Bug de estilo encontrado de paso**: el `<label>` que envuelve el checkbox heredaba el estilo global de `label{text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;font-weight:600;...}` (pensado para etiquetas de formulario) -- la etiqueta corta salía en MAYÚSCULAS con espaciado ancho y un margen que rompía la alineación. Se reseteó explícitamente `text-transform`, `letter-spacing`, `margin-bottom` y `font-weight` en `.chip-flujo-cumplido`.
+  - Confirmado con capturas de pantalla que el texto ya se lee en minúsculas normales, alineado con el monto y el checkbox, todo en un solo renglón sin desbordarse.
+  - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 87 con entrada en `CHANGELOG_APP`.
+  - Desplegado (solo frontend).
+
 - **2026-09-01 (parte 111) — Segundo ajuste de seguimiento a la parte 109: "el checkbox lo quiero a la derecha no abajo".** Vivía debajo del nombre/detalle en la columna izquierda de la tarjeta; se movió a la columna derecha, junto al monto, en el mismo renglón (`.flujo-monto-check`, flex row). Se quitó la etiqueta de texto visible junto al check (ya sobraba ahí y no cabía cómodo en una sola línea junto al monto) -- se conserva accesible vía `aria-label`/`title`, y el renglón de "detalle" ya deja claro el estado ("Cumplido este mes...") en cuanto se marca.
   - Confirmado con capturas de pantalla en los 2 estados que el checkbox queda compacto junto al monto, y con Playwright que el toggle (marcar/desmarcar, efecto en los totales, upsert/delete en `flujo_cumplido`) sigue funcionando exactamente igual que antes -- este cambio fue puramente de layout.
   - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 86 con entrada en `CHANGELOG_APP`.

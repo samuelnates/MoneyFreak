@@ -631,7 +631,11 @@
      renglón), no debajo del nombre -- .flujo-monto-check reemplaza el
      antiguo <div class="monto"> suelto como columna derecha de la tarjeta. */
   .flujo-monto-check{display:flex;align-items:center;gap:10px;}
-  .chip-flujo-cumplido{display:flex;align-items:center;cursor:pointer;}
+  .chip-flujo-cumplido{
+    display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:0;
+    font-family:var(--sans);font-size:11.5px;color:var(--texto-tenue);white-space:nowrap;
+    text-transform:none;letter-spacing:0;font-weight:400;
+  }
   /* Mismo checkbox grande y personalizado que .check-fila (24px, con su
      propia palomita) -- pedido del usuario, el nativo de 15px se sentía
      chico y además desentonaba con el resto de la app. */
@@ -4082,6 +4086,7 @@ const TRADUCCIONES = {
     'flujo.dias': 'días',
     'flujo.estimado_pago_mensual': ' · estimado con pago mensual',
     'flujo.ya_se_cumplio': 'Ya se cumplió este mes',
+    'flujo.ya_paso_corto': '¿Ya pasó?',
     'flujo.cumplido_este_mes': 'Cumplido este mes -- no cuenta en el saldo proyectado',
     'flujo.ingresos_esperados': 'Ingresos esperados este ciclo',
     'flujo.total_pagar': 'Total a pagar/aportar este ciclo',
@@ -5042,6 +5047,7 @@ const TRADUCCIONES = {
     'flujo.dias': 'days',
     'flujo.estimado_pago_mensual': ' · estimated from monthly payment',
     'flujo.ya_se_cumplio': 'Already happened this month',
+    'flujo.ya_paso_corto': 'Happened?',
     'flujo.cumplido_este_mes': "Already happened this month -- not counted in the projected balance",
     'flujo.ingresos_esperados': 'Expected income this cycle',
     'flujo.total_pagar': 'Total to pay/contribute this cycle',
@@ -13956,12 +13962,14 @@ async function abrirFlujoEfectivo(){
     // usuario): un check por ítem para marcarlo "ya se cumplió este mes" y
     // que el flujo deje de proyectarlo (ver calcularFlujoEfectivo). Solo
     // tiene sentido para ítems con día del mes -- sin fecha no hay ciclo
-    // que rastrear. Pedido de seguimiento: a la derecha del monto, junto a
-    // él, no debajo del nombre -- sin etiqueta visible (el texto ya sobra
-    // ahí, el renglón de "detalle" ya dice "Cumplido este mes" en cuanto se
-    // marca), con aria-label/title para que se siga entendiendo qué hace.
+    // que rastrear. A la derecha del monto, junto a él, no debajo del
+    // nombre -- pero sin texto no se entendía para qué era (reportado por
+    // el usuario), así que lleva una etiqueta corta visible ("¿Ya pasó?")
+    // que sí cabe junto al monto, más el texto completo en
+    // aria-label/title para quien use lector de pantalla.
     const checkCumplidoHtml = it.dia != null ? `
       <label class="chip-flujo-cumplido" onclick="event.stopPropagation();" aria-label="${escapeHtml(t('flujo.ya_se_cumplio'))}" title="${escapeHtml(t('flujo.ya_se_cumplio'))}">
+        <span>${t('flujo.ya_paso_corto')}</span>
         <input type="checkbox" data-cumplido-idx="${i}" ${it.cumplidoEsteMes ? 'checked' : ''}>
       </label>
     ` : '';
@@ -15291,8 +15299,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 86;
+const VERSION_APP_ACTUAL = 87;
 const CHANGELOG_APP = [
+  {
+    version: 87,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'El check de "Ya se cumplió este mes" en Flujo de efectivo ya no se veía sin explicación -- ahora trae la etiqueta corta "¿Ya pasó?" junto a él.'
+    ],
+    cambios_en: [
+      'The "Already happened this month" checkbox in Cash flow no longer looked unexplained -- it now has a short "Happened?" label next to it.'
+    ]
+  },
   {
     version: 86,
     fecha: '2026-09-01',
