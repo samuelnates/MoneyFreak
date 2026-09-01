@@ -1094,6 +1094,19 @@
     animation:girar-spinner .8s linear infinite;
   }
   @keyframes girar-spinner{ to{ transform:rotate(360deg); } }
+  /* Pull-to-refresh (parte 123, pedido del usuario) -- indicador chico
+     centrado arriba de la pantalla, oculto por default (opacity/scale
+     controlados desde JS mientras arrastra, ver activarPullToRefresh). */
+  .pull-refresh-indicador{
+    position:absolute;top:8px;left:50%;width:26px;height:26px;margin-left:-13px;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:none;z-index:3;opacity:0;transform:scale(.5);
+  }
+  .pull-refresh-indicador .spinner{
+    width:22px;height:22px;margin:0;border-width:2.5px;animation:none;
+  }
+  .pull-refresh-indicador.pull-refresh-listo .spinner{border-top-color:var(--acento);}
+  .pull-refresh-indicador.pull-refresh-cargando .spinner{animation:girar-spinner .6s linear infinite;}
   @keyframes entrada-tarjeta{
     from{opacity:0;transform:translateY(10px);}
     to{opacity:1;transform:translateY(0);}
@@ -11632,6 +11645,14 @@ async function confirmarGastoChat(idAccion){
   freakyTrigger('happy');
   delete accionesGastoChat[idAccion];
   snapshotFreakyCache = null; // se reconstruye en el siguiente turno con el gasto ya reflejado
+  // Bug real reportado por el usuario: un gasto confirmado aquí no aparecía
+  // en Movimientos hasta recargar -- esta pantalla (el chat) nunca tocaba
+  // los datos de Gastos. cargarGastos() refresca esos datos sin navegar
+  // (no llama mostrar(), así que no saca al usuario del chat); si Gastos
+  // no está visible ahora mismo, igual queda al día para la próxima vez
+  // que se abra. No se espera (sin await) para no retrasar la confirmación
+  // visual en el chat por una consulta extra a Supabase.
+  cargarGastos();
 }
 
 async function editarGastoDesdeChat(idAccion){
@@ -12940,6 +12961,19 @@ function etiquetaMesGastos(){
 async function abrirGastos(){
   mostrar('vista-gastos');
   inicializarScrollspyGastos();
+  activarPullToRefresh('vista-gastos', cargarGastos);
+  await cargarGastos();
+}
+
+// Separado de abrirGastos() (parte 123) -- bug real reportado por el
+// usuario: confirmar un gasto desde el chat de Freaky (confirmarGastoChat)
+// nunca refrescaba Movimientos, porque no había ninguna forma de recargar
+// los datos de Gastos sin también forzar mostrar('vista-gastos') -- y eso
+// habría sacado al usuario del chat de golpe cada vez que confirmara un
+// gasto por voz/texto. Ahora confirmarGastoChat() llama esto directo (sin
+// navegar), y abrirGastos()/el pull-to-refresh de arriba lo usan cuando sí
+// hace falta refrescar estando ya en la pantalla.
+async function cargarGastos(){
   document.getElementById('etiqueta-mes-gastos').textContent = etiquetaMesGastos();
   const resumen = document.getElementById('gastos-resumen');
   resumen.innerHTML = skeletonCards(3);
@@ -13144,6 +13178,92 @@ function renderizarMovimientosGastos(){
   });
   cont.querySelectorAll('[data-swipe-eliminar]').forEach(btn => {
     btn.onclick = () => eliminarGastoDesdeMovimiento(btn.dataset.gastoId);
+  });
+}
+
+// Pull-to-refresh (parte 123) -- pedido explícito del usuario tras reportar
+// que confirmar un gasto desde el chat de Freaky no se veía reflejado en
+// Movimientos, "habíamos quedado que si jalaba la pantalla hacia abajo
+// serviría correr un refresco" -- nunca se había implementado de verdad.
+// Solo se activa cuando el scroll ya está arriba del todo (scrollY === 0),
+// igual que el gesto nativo de iOS/Android, para no interferir con el
+// scroll normal de la lista. Reutilizable: cualquier pantalla puede llamar
+// activarPullToRefresh(idPantalla, callbackAsync); es idempotente (guard
+// por dataset) igual que activarSwipeEliminarGasto, así que es seguro
+// llamarla en cada abrirX() sin duplicar listeners.
+const UMBRAL_PULL_REFRESH_PX = 90;
+
+function activarPullToRefresh(idPantalla, callbackAsync){
+  const pantalla = document.getElementById(idPantalla);
+  if(!pantalla || pantalla.dataset.pullRefreshListo) return;
+  pantalla.dataset.pullRefreshListo = '1';
+
+  const indicador = document.createElement('div');
+  indicador.className = 'pull-refresh-indicador';
+  indicador.innerHTML = '<span class="spinner"></span>';
+  pantalla.prepend(indicador);
+
+  let inicioY = null;
+  let jalando = false;
+  let listo = false;
+  let refrescando = false;
+
+  const resetearVisual = () => {
+    indicador.style.opacity = '';
+    indicador.style.transform = '';
+    indicador.classList.remove('pull-refresh-listo', 'pull-refresh-cargando');
+  };
+
+  pantalla.addEventListener('touchstart', (e) => {
+    if(window.innerWidth >= 900 || REDUCIR_MOVIMIENTO || refrescando) return;
+    if(window.scrollY > 0 || e.touches.length !== 1) return;
+    inicioY = e.touches[0].clientY;
+    jalando = false;
+    listo = false;
+  }, { passive: true });
+
+  pantalla.addEventListener('touchmove', (e) => {
+    if(inicioY === null || refrescando) return;
+    const dy = e.touches[0].clientY - inicioY;
+    if(dy <= 0 || window.scrollY > 0){
+      if(jalando) resetearVisual();
+      inicioY = null;
+      jalando = false;
+      return;
+    }
+    if(!jalando){
+      if(dy < 8) return;
+      jalando = true;
+    }
+    e.preventDefault();
+    const progreso = Math.min(1, dy / UMBRAL_PULL_REFRESH_PX);
+    indicador.style.opacity = String(progreso);
+    indicador.style.transform = `scale(${0.5 + 0.5 * progreso})`;
+    const listoAhora = progreso >= 1;
+    if(listoAhora !== listo){
+      listo = listoAhora;
+      indicador.classList.toggle('pull-refresh-listo', listo);
+      haptic('toque');
+    }
+  }, { passive: false });
+
+  pantalla.addEventListener('touchend', async () => {
+    if(!jalando){ inicioY = null; return; }
+    const disparar = listo;
+    jalando = false;
+    inicioY = null;
+    if(!disparar){ resetearVisual(); return; }
+    refrescando = true;
+    indicador.classList.add('pull-refresh-cargando');
+    indicador.style.opacity = '1';
+    indicador.style.transform = 'scale(1)';
+    haptic('exito');
+    try{
+      await callbackAsync();
+    } finally {
+      refrescando = false;
+      resetearVisual();
+    }
   });
 }
 
@@ -15582,8 +15702,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 95;
+const VERSION_APP_ACTUAL = 96;
 const CHANGELOG_APP = [
+  {
+    version: 96,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió un error real: registrar un gasto desde el chat de Freaky (por voz o texto) no aparecía en Movimientos hasta recargar la app -- ahora se refleja de inmediato.',
+      'Se agregó "jalar hacia abajo para refrescar" en Gastos y presupuesto -- estando arriba del todo en esa pantalla, jala hacia abajo y suelta para recargar los datos al momento.'
+    ],
+    cambios_en: [
+      'Fixed a real bug: logging an expense from Freaky\'s chat (by voice or text) didn\'t show up in Transactions until you reloaded the app -- now it reflects right away.',
+      'Added "pull down to refresh" in Expenses and budget -- while at the very top of that screen, pull down and release to reload the data instantly.'
+    ]
+  },
   {
     version: 95,
     fecha: '2026-09-01',
