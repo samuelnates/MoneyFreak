@@ -1073,7 +1073,15 @@
   .resultado-no-disponible .resultado-nombre{font-style:italic;}
   .mensaje{text-align:center;font-family:var(--mono);font-size:13.5px;color:var(--texto-tenue-2);padding:26px 20px;}
   .pantalla-carga{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;}
-  .logo-mark-carga{width:96px;height:96px;margin:0;}
+  /* Bug real encontrado al triplicar este logo (pedido del usuario): el
+     elemento lleva las clases "logo-mark logo-mark-carga" juntas, y con la
+     misma especificidad (una sola clase cada regla), ganaba la que
+     apareciera después en la hoja de estilos -- que resultó ser
+     .logo-mark{width:26px} (más abajo, pensada para el logo chico del
+     sidebar), no esta. El logo de carga nunca se vio a su tamaño real desde
+     que se escribió este código. Se sube la especificidad con el selector
+     compuesto para que esta regla gane siempre, sin depender del orden. */
+  .logo-mark.logo-mark-carga{width:288px;height:288px;margin:0;max-width:70vw;max-height:70vw;}
   @media (prefers-reduced-motion: no-preference){
     .logo-mark-carga{animation:respirar-logo 1.6s ease-in-out infinite;}
   }
@@ -15452,8 +15460,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 90;
+const VERSION_APP_ACTUAL = 91;
 const CHANGELOG_APP = [
+  {
+    version: 91,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió un error real: el logo de la pantalla de carga (al abrir la app) nunca se veía a su tamaño real por un conflicto de estilos -- ahora sí, y de paso se agrandó al triple, a petición del usuario.'
+    ],
+    cambios_en: [
+      "Fixed a real bug: the loading screen logo (when opening the app) never showed at its real size due to a style conflict -- now it does, and it's also 3x bigger, per user request."
+    ]
+  },
   {
     version: 90,
     fecha: '2026-09-01',
