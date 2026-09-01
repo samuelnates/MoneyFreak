@@ -1204,6 +1204,30 @@
   .leyenda{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
   .leyenda-fila{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13.5px;color:var(--texto-tenue);}
   .leyenda-punto{width:6px;height:6px;border-radius:1px;flex:none;}
+  /* Heatmap de calendario ("cuándo gastas") -- estilo GitHub contributions,
+     dibujado en HTML/CSS puro, sin canvas ni librería. */
+  .heatmap-grid-encabezados, .heatmap-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:4px;}
+  .heatmap-encabezado{
+    text-align:center;font-family:var(--mono);font-size:9.5px;color:var(--texto-tenue-2);
+    text-transform:uppercase;padding-bottom:4px;
+  }
+  .heatmap-celda{
+    aspect-ratio:1;border-radius:4px;background:var(--borde);position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .heatmap-celda-vacia{background:none;}
+  .heatmap-dia-num{font-family:var(--mono);font-size:9px;color:var(--texto-tenue-2);}
+  .heatmap-nivel-1{background:color-mix(in srgb, var(--texto) 25%, var(--borde));}
+  .heatmap-nivel-2{background:color-mix(in srgb, var(--texto) 48%, var(--borde));}
+  .heatmap-nivel-3{background:color-mix(in srgb, var(--texto) 70%, var(--borde));}
+  .heatmap-nivel-4{background:var(--texto);}
+  .heatmap-nivel-1 .heatmap-dia-num, .heatmap-nivel-2 .heatmap-dia-num{color:var(--texto);}
+  .heatmap-nivel-3 .heatmap-dia-num, .heatmap-nivel-4 .heatmap-dia-num{color:var(--bg);}
+  .heatmap-leyenda{
+    display:flex;align-items:center;gap:5px;margin-top:12px;justify-content:flex-end;
+    font-family:var(--mono);font-size:10.5px;color:var(--texto-tenue-2);
+  }
+  .heatmap-leyenda .heatmap-celda{width:12px;height:12px;aspect-ratio:auto;border-radius:2px;flex:none;}
   .login-caja{
     position:relative;max-width:380px;margin:16vh auto 0;text-align:center;
     background:none;border:none;padding:0;
@@ -4134,6 +4158,7 @@ const TRADUCCIONES = {
     'score.instructivo_1': 'Un número de 0 a 100 que resume qué tan sano está tu dinero hoy, combinando 5 señales que ya calculamos en otras partes de la app.',
     'score.instructivo_2': 'Se guarda un registro cada vez que abres Inicio, así puedes ver si va subiendo o bajando con el tiempo — igual que un score crediticio, pero de tus finanzas completas.',
     'score.sin_datos_general': 'Aún no hay suficientes datos para calcular tu score. Agrega tus cuentas, ingresos y un presupuesto para empezar a verlo.',
+    'score.gauge_de_100': 'de 100',
     'score.desglose_titulo': 'Desglose',
     'score.liquidez': 'Liquidez',
     'score.liquidez_explica': 'Qué tan cerca estás de tu meta de cobertura.',
@@ -4163,6 +4188,12 @@ const TRADUCCIONES = {
     'flujo.saldo_proyectado': 'Saldo proyectado después de cubrir todo',
     'flujo.saldo_liquido_proyectado': 'Saldo líquido proyectado',
     'flujo.aviso_proyeccion': 'Cómo se vería tu efectivo disponible día a día si no haces nada más que cubrir estos pagos y aportaciones — no incluye gastos del día a día que no hayas registrado.',
+    'flujo.cascada_titulo': 'Cascada del mes',
+    'flujo.cascada_liquido': 'Líquido actual',
+    'flujo.cascada_ingresos': 'Ingresos',
+    'flujo.cascada_pagos': 'Pagos',
+    'flujo.cascada_saldo': 'Saldo final',
+    'flujo.aviso_cascada': 'De un vistazo, qué tan grande es cada bloque: lo que ya tienes, lo que va a entrar, lo que va a salir, y dónde terminas.',
     'flujo.proximos_movimientos': 'Próximos movimientos',
     'flujo.hoy_corto': 'Hoy',
     'ingresos.mensual': 'Mensual',
@@ -4178,6 +4209,9 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Gastado vs presupuesto total',
     'gastos.de': 'de {0}',
     'gastos.vs_tiempo': 'Gasto vs presupuesto en el tiempo',
+    'gastos.heatmap_titulo': 'Cuándo gastas',
+    'gastos.heatmap_menos': 'Menos',
+    'gastos.heatmap_mas': 'Más',
     'gastos.grafica_categoria': 'Gasto por categoría',
     'gastos.seccion_categoria': 'Por categoría',
     'gastos.movimientos_mes': 'Movimientos del mes',
@@ -5095,6 +5129,7 @@ const TRADUCCIONES = {
     'score.instructivo_1': 'A number from 0 to 100 that sums up how healthy your money is today, combining 5 signals we already calculate elsewhere in the app.',
     'score.instructivo_2': 'A record is saved every time you open Home, so you can see whether it\'s trending up or down over time — like a credit score, but for your whole financial picture.',
     'score.sin_datos_general': 'Not enough data yet to calculate your score. Add your accounts, income, and a budget to start seeing it.',
+    'score.gauge_de_100': 'out of 100',
     'score.desglose_titulo': 'Breakdown',
     'score.liquidez': 'Liquidity',
     'score.liquidez_explica': 'How close you are to your coverage goal.',
@@ -5124,6 +5159,12 @@ const TRADUCCIONES = {
     'flujo.saldo_proyectado': 'Projected balance after covering everything',
     'flujo.saldo_liquido_proyectado': 'Projected liquid balance',
     'flujo.aviso_proyeccion': "What your available cash would look like day by day if you only cover these payments and contributions — doesn't include day-to-day spending you haven't logged.",
+    'flujo.cascada_titulo': "This month's waterfall",
+    'flujo.cascada_liquido': 'Current liquid',
+    'flujo.cascada_ingresos': 'Income',
+    'flujo.cascada_pagos': 'Payments',
+    'flujo.cascada_saldo': 'Ending balance',
+    'flujo.aviso_cascada': "At a glance, how big each block is: what you already have, what's coming in, what's going out, and where you end up.",
     'flujo.proximos_movimientos': 'Upcoming activity',
     'flujo.hoy_corto': 'Today',
     'ingresos.mensual': 'Monthly',
@@ -5139,6 +5180,9 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Spent vs total budget',
     'gastos.de': 'of {0}',
     'gastos.vs_tiempo': 'Spending vs budget over time',
+    'gastos.heatmap_titulo': 'When you spend',
+    'gastos.heatmap_menos': 'Less',
+    'gastos.heatmap_mas': 'More',
     'gastos.grafica_categoria': 'Spending by category',
     'gastos.seccion_categoria': 'By category',
     'gastos.movimientos_mes': "This month's activity",
@@ -5886,9 +5930,16 @@ function actualizarTextosSelectorTema(){
   document.querySelectorAll('[data-tema="dark"]').forEach(b => { b.textContent = t('tema.oscuro'); });
 }
 
-function renderAnilloProgreso(pct, estado){
+// opciones.textoValor/opciones.etiqueta: para reusar este mismo anillo como
+// "gauge" en otros contextos (ej. el Score Money Freak) sin heredar el
+// formato de porcentaje/"de tu límite" pensado para utilización de tarjeta
+// -- por default se comporta exactamente igual que antes (nada cambia en el
+// único uso existente).
+function renderAnilloProgreso(pct, estado, opciones = {}){
   const circunferencia = 2 * Math.PI * 42;
   const claseEstado = estado === 'riesgo' ? 'estado-riesgo' : (estado === 'atencion' ? 'estado-atencion' : '');
+  const textoValor = opciones.textoValor !== undefined ? opciones.textoValor : `${pct.toFixed(1)}%`;
+  const etiqueta = opciones.etiqueta !== undefined ? opciones.etiqueta : 'de tu límite';
   return `
     <div class="anillo-progreso">
       <svg viewBox="0 0 100 100">
@@ -5897,8 +5948,8 @@ function renderAnilloProgreso(pct, estado){
           data-pct="${pct}" style="stroke-dasharray:${circunferencia};stroke-dashoffset:${circunferencia};"></circle>
       </svg>
       <div class="anillo-texto">
-        <span class="valor-pct">${pct.toFixed(1)}%</span>
-        <span class="etiqueta-pct">de tu límite</span>
+        <span class="valor-pct">${textoValor}</span>
+        <span class="etiqueta-pct">${etiqueta}</span>
       </div>
     </div>
   `;
@@ -8546,7 +8597,7 @@ async function abrirScore(){
   cont.innerHTML = `
     <div class="panel-hero">
       <div class="panel-hero-label">${t('panel.score.titulo')}</div>
-      <div class="panel-hero-monto ${claseEstado(bandaScore(score.general))}">${score.general}</div>
+      ${renderAnilloProgreso(score.general, bandaScore(score.general), { textoValor: String(score.general), etiqueta: t('score.gauge_de_100') })}
       <div class="panel-hero-flecha" aria-hidden="true">${deltaTxt}</div>
     </div>
 
@@ -8592,6 +8643,7 @@ async function abrirScore(){
     <button type="button" class="btn-link-tenue" onclick="abrirSaludFinanciera()">${t('score.ver_salud_completa')}</button>
   `;
 
+  activarAnillosProgreso(cont);
   renderGraficaScore(historico || []);
   actualizarUIDemo();
 }
@@ -12828,6 +12880,12 @@ function renderGastosGraficasInline(r){
       </div>
       <canvas id="grafica-historico-gastos" height="220"></canvas>
     </div>
+    ${r.gastos.length > 0 ? `
+      <div class="chart-caja">
+        <h2 style="margin-top:0;">${t('gastos.heatmap_titulo')}</h2>
+        ${renderHeatmapGastos(r.gastos, mesGastosActual.anio, mesGastosActual.mes)}
+      </div>
+    ` : ''}
     ${r.categorias.length > 0 ? `
       <div class="chart-caja">
         <h2 style="margin-top:0;">${t('gastos.grafica_categoria')}</h2>
@@ -12843,6 +12901,57 @@ function renderGastosGraficasInline(r){
   const rangoGuardadoHistorico = localStorage.getItem('pro_rango_historico_gastos') || '6m';
   document.querySelectorAll('#rango-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.rango === rangoGuardadoHistorico));
   renderHistoricoGastosPresupuesto(rangoGuardadoHistorico);
+}
+
+// Heatmap de calendario (estilo "contributions" de GitHub) -- pedido del
+// usuario ("qué hay de vanguardia") para ver PATRONES de cuándo gastas
+// (fines de semana vs entre semana, rachas) que ni la barra mensual ni el
+// pastel por categoría pueden mostrar. Dibujado en HTML/CSS, sin canvas --
+// es una cuadrícula de calendario, no una serie continua.
+function renderHeatmapGastos(gastos, anio, mes){
+  const porDia = {};
+  gastos.forEach(g => {
+    const dia = Number(g.fecha.split('-')[2]);
+    porDia[dia] = (porDia[dia] || 0) + convertirAMXN(Number(g.monto), g.moneda || 'MXN');
+  });
+
+  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+  const primerDiaSemana = new Date(anio, mes, 1).getDay(); // 0=domingo
+  const max = Math.max(1, ...Object.values(porDia));
+  const nivelDe = (monto) => {
+    if(!monto) return 0;
+    const pct = monto / max;
+    return pct > 0.75 ? 4 : (pct > 0.5 ? 3 : (pct > 0.25 ? 2 : 1));
+  };
+
+  const idioma = document.documentElement.lang === 'en' ? 'en-US' : 'es-MX';
+  const fmtDiaSemana = new Intl.DateTimeFormat(idioma, { weekday: 'short' });
+  const encabezados = Array.from({ length: 7 }, (_, i) => fmtDiaSemana.format(new Date(2024, 0, i + 7))) // 7 ene 2024 = domingo
+    .map(d => `<div class="heatmap-encabezado">${escapeHtml(d.replace('.', ''))}</div>`).join('');
+
+  let celdas = '';
+  for(let i = 0; i < primerDiaSemana; i++) celdas += `<div class="heatmap-celda heatmap-celda-vacia"></div>`;
+  for(let dia = 1; dia <= diasEnMes; dia++){
+    const monto = porDia[dia] || 0;
+    const titulo = monto > 0 ? `${dia}: ${formatoMonto(monto, 'MXN')}` : String(dia);
+    celdas += `<div class="heatmap-celda heatmap-nivel-${nivelDe(monto)}" title="${escapeHtml(titulo)}"><span class="heatmap-dia-num">${dia}</span></div>`;
+  }
+
+  return `
+    <div class="heatmap-gastos">
+      <div class="heatmap-grid-encabezados">${encabezados}</div>
+      <div class="heatmap-grid">${celdas}</div>
+      <div class="heatmap-leyenda">
+        <span>${t('gastos.heatmap_menos')}</span>
+        <span class="heatmap-celda heatmap-nivel-0"></span>
+        <span class="heatmap-celda heatmap-nivel-1"></span>
+        <span class="heatmap-celda heatmap-nivel-2"></span>
+        <span class="heatmap-celda heatmap-nivel-3"></span>
+        <span class="heatmap-celda heatmap-nivel-4"></span>
+        <span>${t('gastos.heatmap_mas')}</span>
+      </div>
+    </div>
+  `;
 }
 
 function renderGastosCategoriasInline(r){
@@ -14101,10 +14210,17 @@ async function abrirFlujoEfectivo(){
       <div class="aviso">${t('flujo.aviso_proyeccion')}</div>
     </div>
 
+    <div class="chart-caja">
+      <h2 style="margin-top:0;">${t('flujo.cascada_titulo')}</h2>
+      <canvas id="grafica-cascada-flujo" height="200"></canvas>
+      <div class="aviso">${t('flujo.aviso_cascada')}</div>
+    </div>
+
     <h2>${t('flujo.proximos_movimientos')}</h2>
     ${filasHtml}
   `;
   renderProyeccionLiquidez(f.items.filter(it => !it.cumplidoEsteMes), f.activosLiquidos);
+  renderCascadaFlujo(f.activosLiquidos, f.totalIngresos, f.total, f.saldoProyectado);
   ajustarTamanoDatosTarjetas();
 
   cont.querySelectorAll('[data-movimiento-idx]').forEach(btn => {
@@ -14174,6 +14290,53 @@ function renderProyeccionLiquidez(items, activosLiquidos){
       },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
+      }
+    }
+  });
+}
+
+let graficaCascadaFlujo = null;
+
+// Cascada del mes: 4 barras flotantes -- de dónde partes, cuánto sube por
+// ingresos, cuánto baja por lo que falta pagar, y dónde terminas. Pedido del
+// usuario ("qué hay de vanguardia") como alternativa a la línea proyectada
+// de arriba -- esa muestra CUÁNDO cambia el saldo día a día, esta muestra
+// de un vistazo QUÉ TAN GRANDE es cada bloque (ingresos vs. egresos) en el
+// resultado final del mes.
+function renderCascadaFlujo(activosLiquidos, totalIngresos, totalEgresos, saldoProyectado){
+  if(graficaCascadaFlujo) graficaCascadaFlujo.destroy();
+  const ctx = document.getElementById('grafica-cascada-flujo');
+  if(!ctx) return;
+  const trasIngresos = activosLiquidos + totalIngresos;
+  const colorFinal = saldoProyectado >= 0 ? colorTema('--color-saludable') : colorTema('--color-riesgo');
+
+  graficaCascadaFlujo = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [t('flujo.cascada_liquido'), t('flujo.cascada_ingresos'), t('flujo.cascada_pagos'), t('flujo.cascada_saldo')],
+      datasets: [{
+        data: [
+          [0, activosLiquidos],
+          [activosLiquidos, trasIngresos],
+          [trasIngresos - totalEgresos, trasIngresos],
+          [0, saldoProyectado]
+        ],
+        backgroundColor: [colorTema('--texto'), colorTema('--color-saludable'), colorTema('--color-riesgo'), colorFinal],
+        borderRadius: 5, borderSkipped: false
+      }]
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((c) => {
+          const [a, b] = c.raw;
+          return formatoMonto(Math.abs(b - a), 'MXN');
+        })
+      },
+      scales: {
+        x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
       }
     }
@@ -15410,8 +15573,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 88;
+const VERSION_APP_ACTUAL = 89;
 const CHANGELOG_APP = [
+  {
+    version: 89,
+    fecha: '2026-09-01',
+    cambios_es: [
+      '3 gráficas nuevas: el Score Money Freak ahora se ve como un medidor circular, Flujo de efectivo tiene una "cascada del mes" (de dónde partes a dónde terminas), y Gastos tiene un calendario de "cuándo gastas" para ver tus patrones por día.'
+    ],
+    cambios_en: [
+      "3 new charts: the Money Freak Score now shows as a circular gauge, Cash flow has a \"this month's waterfall\" (where you start to where you end up), and Expenses has a \"when you spend\" calendar to see your day-by-day patterns."
+    ]
+  },
   {
     version: 88,
     fecha: '2026-09-01',
