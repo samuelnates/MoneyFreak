@@ -12890,7 +12890,14 @@ async function calcularGastosMes(anio, mes){
   const ultimoDia = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(ultimoDiaNum).padStart(2, '0')}`;
 
   const [{ data: gastos }, { data: presupuestos }, { data: ingresos }] = await Promise.all([
-    sb.from('gastos').select('*').gte('fecha', primerDia).lte('fecha', ultimoDia).order('fecha', { ascending: false }),
+    // Bug real reportado por el usuario: "los movimientos deben ordenarse por
+    // fecha de más reciente arriba" -- .order('fecha') solo desempataba
+    // ordenando por fecha (columna DATE, sin hora), así que 2+ gastos del
+    // MISMO día no tenían un orden garantizado entre ellos (Postgres no
+    // promete nada para los empates sin un 2o criterio) -- el más nuevo
+    // podía aparecer abajo del más viejo del mismo día. Se agrega created_at
+    // desc como desempate, así el más reciente siempre queda primero.
+    sb.from('gastos').select('*').gte('fecha', primerDia).lte('fecha', ultimoDia).order('fecha', { ascending: false }).order('created_at', { ascending: false }),
     sb.from('presupuestos').select('*'),
     sb.from('ingresos').select('*')
   ]);
@@ -15702,8 +15709,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 96;
+const VERSION_APP_ACTUAL = 97;
 const CHANGELOG_APP = [
+  {
+    version: 97,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió el orden de Movimientos: cuando había más de un gasto registrado el mismo día, no siempre aparecía primero el más reciente -- ahora sí, siempre de más nuevo a más viejo.'
+    ],
+    cambios_en: [
+      'Fixed the order of Transactions: when more than one expense was logged on the same day, the most recent one didn\'t always show first -- now it always does, newest to oldest.'
+    ]
+  },
   {
     version: 96,
     fecha: '2026-09-01',
