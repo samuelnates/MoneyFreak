@@ -627,10 +627,11 @@
      (para poder desmarcarlo) pero ya no cuenta en los totales proyectados. */
   .flujo-item-cumplido{opacity:.55;}
   .flujo-item-cumplido .monto{text-decoration:line-through;}
-  .chip-flujo-cumplido{
-    display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;
-    font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue);
-  }
+  /* Pedido de seguimiento: el checkbox a la derecha del monto (mismo
+     renglón), no debajo del nombre -- .flujo-monto-check reemplaza el
+     antiguo <div class="monto"> suelto como columna derecha de la tarjeta. */
+  .flujo-monto-check{display:flex;align-items:center;gap:10px;}
+  .chip-flujo-cumplido{display:flex;align-items:center;cursor:pointer;}
   /* Mismo checkbox grande y personalizado que .check-fila (24px, con su
      propia palomita) -- pedido del usuario, el nativo de 15px se sentía
      chico y además desentonaba con el resto de la app. */
@@ -13955,11 +13956,13 @@ async function abrirFlujoEfectivo(){
     // usuario): un check por ítem para marcarlo "ya se cumplió este mes" y
     // que el flujo deje de proyectarlo (ver calcularFlujoEfectivo). Solo
     // tiene sentido para ítems con día del mes -- sin fecha no hay ciclo
-    // que rastrear.
+    // que rastrear. Pedido de seguimiento: a la derecha del monto, junto a
+    // él, no debajo del nombre -- sin etiqueta visible (el texto ya sobra
+    // ahí, el renglón de "detalle" ya dice "Cumplido este mes" en cuanto se
+    // marca), con aria-label/title para que se siga entendiendo qué hace.
     const checkCumplidoHtml = it.dia != null ? `
-      <label class="chip-flujo-cumplido" onclick="event.stopPropagation();">
+      <label class="chip-flujo-cumplido" onclick="event.stopPropagation();" aria-label="${escapeHtml(t('flujo.ya_se_cumplio'))}" title="${escapeHtml(t('flujo.ya_se_cumplio'))}">
         <input type="checkbox" data-cumplido-idx="${i}" ${it.cumplidoEsteMes ? 'checked' : ''}>
-        ${t('flujo.ya_se_cumplio')}
       </label>
     ` : '';
     return `
@@ -13967,9 +13970,11 @@ async function abrirFlujoEfectivo(){
         <div>
           <div class="nombre">${escapeHtml(it.nombre)}</div>
           <div class="detalle ${urgente ? 'estado-riesgo' : ''}">${it.cumplidoEsteMes ? t('flujo.cumplido_este_mes') : diaTxt}${estimadoTxt}</div>
+        </div>
+        <div class="flujo-monto-check">
+          <div class="monto">${signo}${formatoMonto(it.monto, 'MXN')}</div>
           ${checkCumplidoHtml}
         </div>
-        <div class="monto">${signo}${formatoMonto(it.monto, 'MXN')}</div>
       </button>
     `;
   }).join('');
@@ -15286,8 +15291,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 85;
+const VERSION_APP_ACTUAL = 86;
 const CHANGELOG_APP = [
+  {
+    version: 86,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'El check de "Ya se cumplió este mes" en Flujo de efectivo ahora va junto al monto, a la derecha -- ya no debajo del nombre.'
+    ],
+    cambios_en: [
+      'The "Already happened this month" checkbox in Cash flow now sits next to the amount, on the right -- no longer below the name.'
+    ]
+  },
   {
     version: 85,
     fecha: '2026-08-31',

@@ -46,6 +46,11 @@ Todo pendiente real disperso en el historial, en un solo lugar. Verificado contr
 
 ## 0. Avances recientes (más nuevo primero)
 
+- **2026-09-01 (parte 111) — Segundo ajuste de seguimiento a la parte 109: "el checkbox lo quiero a la derecha no abajo".** Vivía debajo del nombre/detalle en la columna izquierda de la tarjeta; se movió a la columna derecha, junto al monto, en el mismo renglón (`.flujo-monto-check`, flex row). Se quitó la etiqueta de texto visible junto al check (ya sobraba ahí y no cabía cómodo en una sola línea junto al monto) -- se conserva accesible vía `aria-label`/`title`, y el renglón de "detalle" ya deja claro el estado ("Cumplido este mes...") en cuanto se marca.
+  - Confirmado con capturas de pantalla en los 2 estados que el checkbox queda compacto junto al monto, y con Playwright que el toggle (marcar/desmarcar, efecto en los totales, upsert/delete en `flujo_cumplido`) sigue funcionando exactamente igual que antes -- este cambio fue puramente de layout.
+  - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 86 con entrada en `CHANGELOG_APP`.
+  - Desplegado (solo frontend).
+
 - **2026-08-31 (parte 110) — Ajuste inmediato a la parte 109: "está muy chico el checkbox".** El checkbox de "Ya se cumplió este mes" (Flujo de efectivo) usaba el checkbox nativo del navegador a 15px, chico y además desentonaba con el resto de la app (que ya tiene su propio checkbox grande y personalizado en `.check-fila`, 24px con su propia palomita dibujada). Se le aplicó exactamente ese mismo estilo (22px, mismo borde/relleno/palomita) en vez de inventar uno nuevo. Confirmado con capturas de pantalla en los 2 estados (marcado/sin marcar) que se ve consistente con el resto de la app y la palomita queda bien centrada.
   - Cambio visible para el usuario -- se subió `VERSION_APP_ACTUAL` a 85 con entrada en `CHANGELOG_APP`.
   - Desplegado (solo frontend).
