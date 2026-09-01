@@ -3796,6 +3796,76 @@ function rgbaTema(nombreVar, alpha){
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+// ===== Diseño compartido de las 8 gráficas de la app (Chart.js) -- pedido
+// del usuario ("los gráficos... los siento muy básicos"). Mismo tooltip,
+// mismo relleno con degradado y mismos puntos al pasar el cursor en todas,
+// en vez de cada una con el look plano por default de Chart.js. Sigue la
+// estética mono/gris de siempre a propósito -- esto no mete colores
+// nuevos, solo pule cómo se ve y se siente lo que ya había.
+function tooltipEstiloApp(formateadorValor){
+  return {
+    enabled: true,
+    backgroundColor: colorTema('--superficie'),
+    titleColor: colorTema('--texto'),
+    bodyColor: colorTema('--texto'),
+    borderColor: colorTema('--borde-fuerte'),
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 8,
+    displayColors: false,
+    titleFont: { family: 'JetBrains Mono', size: 10, weight: 'bold' },
+    bodyFont: { family: 'JetBrains Mono', size: 12 },
+    callbacks: formateadorValor ? { label: formateadorValor } : undefined,
+  };
+}
+
+// Relleno con degradado vertical (opaco arriba, transparente abajo) en vez
+// del rgba() plano de siempre -- mismo color base, se ve mucho menos chato.
+// Chart.js llama esto como "scriptable option" (una función en vez de un
+// valor fijo) en cada render, con el contexto del dataset.
+function gradienteVertical(nombreVarColor, alphaArriba = 0.35){
+  return (ctx) => {
+    const area = ctx.chart.chartArea;
+    if(!area) return rgbaTema(nombreVarColor, alphaArriba); // primer render, el área todavía no existe
+    const gradiente = ctx.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    gradiente.addColorStop(0, rgbaTema(nombreVarColor, alphaArriba));
+    gradiente.addColorStop(1, rgbaTema(nombreVarColor, 0));
+    return gradiente;
+  };
+}
+
+// Puntos invisibles hasta que el usuario pasa el cursor/dedo cerca -- junto
+// con interaction:{mode:'index',intersect:false} en options (abajo), basta
+// acercarse a la línea en cualquier punto, no acertarle exacto al pixel.
+const PUNTOS_INTERACTIVOS_LINEA = {
+  pointRadius: 0, pointHoverRadius: 5, pointHitRadius: 12,
+  pointHoverBackgroundColor: colorTema('--texto'),
+  pointHoverBorderColor: colorTema('--bg'), pointHoverBorderWidth: 2,
+};
+
+// Doughnut con el total en el centro -- mismo patrón para "Gastos por
+// categoría" y "Composición del patrimonio", los 2 pie charts de la app.
+function crearPluginCentroDona(formatearTotal){
+  return {
+    id: 'centroDona',
+    afterDraw(chart){
+      const { ctx, chartArea: area } = chart;
+      if(!area) return;
+      const total = chart.config.data.datasets[0].data.reduce((s, v) => s + v, 0);
+      const cx = (area.left + area.right) / 2, cy = (area.top + area.bottom) / 2;
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = colorTema('--texto');
+      ctx.font = "600 15px 'JetBrains Mono', monospace";
+      ctx.fillText(formatearTotal(total), cx, cy - 8);
+      ctx.fillStyle = colorTema('--texto-tenue-2');
+      ctx.font = "11px 'JetBrains Mono', monospace";
+      ctx.fillText(t('comun.total'), cx, cy + 12);
+      ctx.restore();
+    }
+  };
+}
+
 function aplicarTema(modo){
   if(modo === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = modo;
@@ -8542,12 +8612,17 @@ function renderGraficaScore(historico){
       datasets: [{
         data: historico.map(d => Number(d.score)),
         borderColor: colorTema('--texto'),
-        backgroundColor: rgbaTema('--texto', 0.08),
-        fill: true, tension: 0.2, pointRadius: 2, borderWidth: 1.5
+        backgroundColor: gradienteVertical('--texto'),
+        fill: true, tension: 0.2, borderWidth: 1.5,
+        ...PUNTOS_INTERACTIVOS_LINEA
       }]
     },
     options: {
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.parsed.y}`)
+      },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: colorTema('--borde') } },
         y: { min: 0, max: 100, ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: colorTema('--borde') } }
@@ -8844,7 +8919,7 @@ async function eliminarCuentaActual(){
   volverACuentas('cuentas');
 }
 
-function renderGraficaHistorial(canvasId, labels, valores, colorBorde, colorFondo){
+function renderGraficaHistorial(canvasId, labels, valores, moneda, varColor){
   const ctx = document.getElementById(canvasId);
   if(graficaHistorialItem) graficaHistorialItem.destroy();
   graficaHistorialItem = new Chart(ctx, {
@@ -8853,16 +8928,21 @@ function renderGraficaHistorial(canvasId, labels, valores, colorBorde, colorFond
       labels,
       datasets: [{
         data: valores,
-        borderColor: colorBorde,
-        backgroundColor: colorFondo,
-        fill: true, tension: 0.2, pointRadius: 2, borderWidth: 1.5
+        borderColor: colorTema(varColor),
+        backgroundColor: gradienteVertical(varColor),
+        fill: true, tension: 0.2, borderWidth: 1.5,
+        ...PUNTOS_INTERACTIVOS_LINEA
       }]
     },
     options: {
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => formatoMonto(ctx.parsed.y, moneda))
+      },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: colorTema('--borde') } },
-        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, moneda) }, grid: { color: colorTema('--borde') } }
       }
     }
   });
@@ -8881,7 +8961,7 @@ async function abrirHistorialCuenta(cuenta){
     return;
   }
 
-  renderGraficaHistorial('grafica-historial-cuenta', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.monto)), colorTema('--texto'), rgbaTema('--texto', 0.08));
+  renderGraficaHistorial('grafica-historial-cuenta', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.monto)), cuenta.moneda || 'MXN', '--texto');
 
   cont.innerHTML = '';
   [...data].reverse().forEach(d => {
@@ -8906,7 +8986,7 @@ async function abrirHistorialBien(){
     return;
   }
 
-  renderGraficaHistorial('grafica-historial-bien', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.valor)), colorTema('--texto'), rgbaTema('--texto', 0.08));
+  renderGraficaHistorial('grafica-historial-bien', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.valor)), bienActual.moneda || 'MXN', '--texto');
 
   cont.innerHTML = '';
   [...data].reverse().forEach(d => {
@@ -8931,7 +9011,7 @@ async function abrirHistorialDeuda(){
     return;
   }
 
-  renderGraficaHistorial('grafica-historial-deuda', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.saldo)), colorTema('--neg'), rgbaTema('--neg', 0.08));
+  renderGraficaHistorial('grafica-historial-deuda', data.map(d => formatoFechaCorta(d.fecha)), data.map(d => Number(d.saldo)), deudaActual.moneda || 'MXN', '--neg');
 
   cont.innerHTML = '';
   [...data].reverse().forEach(d => {
@@ -8960,7 +9040,7 @@ async function abrirHistorialAccion(){
     const valores = [...data.values].reverse();
     const cantidad = Number(accionActual.cantidad);
 
-    renderGraficaHistorial('grafica-historial-accion', valores.map(v => formatoFechaCorta(v.datetime)), valores.map(v => Number(v.close) * cantidad), colorTema('--texto'), rgbaTema('--texto', 0.08));
+    renderGraficaHistorial('grafica-historial-accion', valores.map(v => formatoFechaCorta(v.datetime)), valores.map(v => Number(v.close) * cantidad), 'USD', '--texto');
 
     cont.innerHTML = '';
     [...valores].reverse().slice(0, 20).forEach(v => {
@@ -13070,12 +13150,16 @@ async function renderHistoricoGastosPresupuesto(rango){
     data: {
       labels,
       datasets: [
-        { label: 'Gastado', data: gastado, backgroundColor: colorTema('--texto') },
-        { label: 'Presupuesto', data: presupuestado, backgroundColor: rgbaTema('--texto', 0.25) }
+        { label: 'Gastado', data: gastado, backgroundColor: colorTema('--texto'), borderRadius: 4, borderSkipped: false },
+        { label: 'Presupuesto', data: presupuestado, backgroundColor: rgbaTema('--texto', 0.22), borderRadius: 4, borderSkipped: false }
       ]
     },
     options: {
-      plugins: { legend: { display: true, labels: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12 } } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, labels: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12 } },
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.dataset.label}: ${formatoMonto(ctx.parsed.y, 'MXN')}`)
+      },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
@@ -13123,12 +13207,19 @@ function renderGraficaGastos(categorias){
 
   const ctx = document.getElementById('grafica-gastos');
   graficaGastos = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-      labels: categorias.map(c => c.nombre),
-      datasets: [{ data: categorias.map(c => c.gastado), backgroundColor: colores, borderColor: colorTema('--bg'), borderWidth: 2 }]
+      labels: categorias.map(c => nombreGasto(c.nombre)),
+      datasets: [{ data: categorias.map(c => c.gastado), backgroundColor: colores, borderColor: colorTema('--bg'), borderWidth: 2, hoverOffset: 10 }]
     },
-    options: { plugins: { legend: { display: false } } }
+    options: {
+      cutout: '64%',
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMonto(ctx.parsed, 'MXN')}`)
+      }
+    },
+    plugins: [crearPluginCentroDona((total) => formatoMonto(total, 'MXN'))]
   });
 }
 
@@ -14066,13 +14157,21 @@ function renderProyeccionLiquidez(items, activosLiquidos){
       datasets: [{
         data,
         borderColor: colorTema('--texto'),
-        backgroundColor: rgbaTema('--texto', 0.08),
-        segment: { borderColor: c => c.p1.parsed.y < 0 ? colorTema('--neg') : colorTema('--texto') },
-        fill: true, tension: 0.15, pointRadius: 0, borderWidth: 1.75
+        backgroundColor: gradienteVertical('--texto'),
+        segment: {
+          borderColor: c => c.p1.parsed.y < 0 ? colorTema('--neg') : colorTema('--texto'),
+          backgroundColor: c => c.p1.parsed.y < 0 ? gradienteVertical('--neg')(c) : gradienteVertical('--texto')(c)
+        },
+        fill: true, tension: 0.15, borderWidth: 1.75,
+        ...PUNTOS_INTERACTIVOS_LINEA
       }]
     },
     options: {
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => formatoMonto(ctx.parsed.y, 'MXN'))
+      },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
@@ -14557,12 +14656,19 @@ function renderComposicion(b){
   const ctx = document.getElementById('grafica-composicion');
   if(graficaComposicion) graficaComposicion.destroy();
   graficaComposicion = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels: partes.map(p => p.nombre),
-      datasets: [{ data: partes.map(p => p.valor), backgroundColor: partes.map(p => p.color), borderColor: colorTema('--bg'), borderWidth: 2 }]
+      datasets: [{ data: partes.map(p => p.valor), backgroundColor: partes.map(p => p.color), borderColor: colorTema('--bg'), borderWidth: 2, hoverOffset: 10 }]
     },
-    options: { plugins: { legend: { display: false } } }
+    options: {
+      cutout: '64%',
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMonto(ctx.parsed, 'MXN')}`)
+      }
+    },
+    plugins: [crearPluginCentroDona((total) => formatoMonto(total, 'MXN'))]
   });
 }
 
@@ -14618,12 +14724,17 @@ function renderEvolucionPatrimonio(dataCompleta, dataFiltrada){
       datasets: [{
         data: dataFiltrada.map(d => Number(d.patrimonio_neto)),
         borderColor: colorTema('--texto'),
-        backgroundColor: rgbaTema('--texto', 0.08),
-        fill: true, tension: 0.2, pointRadius: 2, borderWidth: 1.5
+        backgroundColor: gradienteVertical('--texto'),
+        fill: true, tension: 0.2, borderWidth: 1.5,
+        ...PUNTOS_INTERACTIVOS_LINEA
       }]
     },
     options: {
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => formatoMonto(ctx.parsed.y, 'MXN'))
+      },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: colorTema('--borde') } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
@@ -15299,8 +15410,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 87;
+const VERSION_APP_ACTUAL = 88;
 const CHANGELOG_APP = [
+  {
+    version: 88,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se le subió el nivel a todas las gráficas de la app: tooltips con diseño propio, relleno con degradado en vez de plano, puntos que resaltan al pasar el cursor, y las de pastel (gastos por categoría, composición del patrimonio) ahora son dona con el total al centro.'
+    ],
+    cambios_en: [
+      "Leveled up every chart in the app: custom-styled tooltips, gradient fill instead of flat color, points that highlight on hover, and the pie charts (spending by category, net worth composition) are now donuts with the total in the center."
+    ]
+  },
   {
     version: 87,
     fecha: '2026-09-01',
