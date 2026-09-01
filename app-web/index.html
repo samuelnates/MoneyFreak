@@ -4164,12 +4164,6 @@ const TRADUCCIONES = {
     'flujo.saldo_proyectado': 'Saldo proyectado después de cubrir todo',
     'flujo.saldo_liquido_proyectado': 'Saldo líquido proyectado',
     'flujo.aviso_proyeccion': 'Cómo se vería tu efectivo disponible día a día si no haces nada más que cubrir estos pagos y aportaciones — no incluye gastos del día a día que no hayas registrado.',
-    'flujo.cascada_titulo': 'Cascada del mes',
-    'flujo.cascada_liquido': 'Líquido actual',
-    'flujo.cascada_ingresos': 'Ingresos',
-    'flujo.cascada_pagos': 'Pagos',
-    'flujo.cascada_saldo': 'Saldo final',
-    'flujo.aviso_cascada': 'De un vistazo, qué tan grande es cada bloque: lo que ya tienes, lo que va a entrar, lo que va a salir, y dónde terminas.',
     'flujo.proximos_movimientos': 'Próximos movimientos',
     'flujo.hoy_corto': 'Hoy',
     'ingresos.mensual': 'Mensual',
@@ -5132,12 +5126,6 @@ const TRADUCCIONES = {
     'flujo.saldo_proyectado': 'Projected balance after covering everything',
     'flujo.saldo_liquido_proyectado': 'Projected liquid balance',
     'flujo.aviso_proyeccion': "What your available cash would look like day by day if you only cover these payments and contributions — doesn't include day-to-day spending you haven't logged.",
-    'flujo.cascada_titulo': "This month's waterfall",
-    'flujo.cascada_liquido': 'Current liquid',
-    'flujo.cascada_ingresos': 'Income',
-    'flujo.cascada_pagos': 'Payments',
-    'flujo.cascada_saldo': 'Ending balance',
-    'flujo.aviso_cascada': "At a glance, how big each block is: what you already have, what's coming in, what's going out, and where you end up.",
     'flujo.proximos_movimientos': 'Upcoming activity',
     'flujo.hoy_corto': 'Today',
     'ingresos.mensual': 'Monthly',
@@ -14123,17 +14111,10 @@ async function abrirFlujoEfectivo(){
       <div class="aviso">${t('flujo.aviso_proyeccion')}</div>
     </div>
 
-    <div class="chart-caja">
-      <h2 style="margin-top:0;">${t('flujo.cascada_titulo')}</h2>
-      <canvas id="grafica-cascada-flujo" height="200"></canvas>
-      <div class="aviso">${t('flujo.aviso_cascada')}</div>
-    </div>
-
     <h2>${t('flujo.proximos_movimientos')}</h2>
     ${filasHtml}
   `;
   renderProyeccionLiquidez(f.items.filter(it => !it.cumplidoEsteMes), f.activosLiquidos);
-  renderCascadaFlujo(f.activosLiquidos, f.totalIngresos, f.total, f.saldoProyectado);
   ajustarTamanoDatosTarjetas();
 
   cont.querySelectorAll('[data-movimiento-idx]').forEach(btn => {
@@ -14203,53 +14184,6 @@ function renderProyeccionLiquidez(items, activosLiquidos){
       },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
-      }
-    }
-  });
-}
-
-let graficaCascadaFlujo = null;
-
-// Cascada del mes: 4 barras flotantes -- de dónde partes, cuánto sube por
-// ingresos, cuánto baja por lo que falta pagar, y dónde terminas. Pedido del
-// usuario ("qué hay de vanguardia") como alternativa a la línea proyectada
-// de arriba -- esa muestra CUÁNDO cambia el saldo día a día, esta muestra
-// de un vistazo QUÉ TAN GRANDE es cada bloque (ingresos vs. egresos) en el
-// resultado final del mes.
-function renderCascadaFlujo(activosLiquidos, totalIngresos, totalEgresos, saldoProyectado){
-  if(graficaCascadaFlujo) graficaCascadaFlujo.destroy();
-  const ctx = document.getElementById('grafica-cascada-flujo');
-  if(!ctx) return;
-  const trasIngresos = activosLiquidos + totalIngresos;
-  const colorFinal = saldoProyectado >= 0 ? colorTema('--color-saludable') : colorTema('--color-riesgo');
-
-  graficaCascadaFlujo = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: [t('flujo.cascada_liquido'), t('flujo.cascada_ingresos'), t('flujo.cascada_pagos'), t('flujo.cascada_saldo')],
-      datasets: [{
-        data: [
-          [0, activosLiquidos],
-          [activosLiquidos, trasIngresos],
-          [trasIngresos - totalEgresos, trasIngresos],
-          [0, saldoProyectado]
-        ],
-        backgroundColor: [colorTema('--texto'), colorTema('--color-saludable'), colorTema('--color-riesgo'), colorFinal],
-        borderRadius: 5, borderSkipped: false
-      }]
-    },
-    options: {
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: tooltipEstiloApp((c) => {
-          const [a, b] = c.raw;
-          return formatoMonto(Math.abs(b - a), 'MXN');
-        })
-      },
-      scales: {
-        x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: false }, grid: { display: false } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
       }
     }
@@ -15492,10 +15426,10 @@ const CHANGELOG_APP = [
     version: 89,
     fecha: '2026-09-01',
     cambios_es: [
-      '2 gráficas nuevas: el Score Money Freak ahora se ve como un medidor circular, y Flujo de efectivo tiene una "cascada del mes" (de dónde partes a dónde terminas).'
+      'El Score Money Freak ahora se ve como un medidor circular en vez de solo un número.'
     ],
     cambios_en: [
-      "2 new charts: the Money Freak Score now shows as a circular gauge, and Cash flow has a \"this month's waterfall\" (where you start to where you end up)."
+      'The Money Freak Score now shows as a circular gauge instead of just a number.'
     ]
   },
   {
