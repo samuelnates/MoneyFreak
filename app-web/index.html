@@ -1187,7 +1187,18 @@
        encontró y arregló para las tarjetas de "Mis cuentas". */
     min-width:0;
   }
-  .totales-grid .total-caja .etiqueta{font-size:10.5px;margin-bottom:4px;letter-spacing:.06em;}
+  /* nowrap + min-width:0 a propósito, igual que .tab-cuentas-titulo -- sin
+     esto, una etiqueta larga ("Total a pagar este mes") envuelve a una 2a
+     línea y estira SU tarjeta más que la de al lado en la misma fila del
+     grid (CSS grid empareja el alto de toda la fila con el más alto),
+     dejando un hueco raro debajo de la etiqueta corta vecina. Con nowrap,
+     ajustarTamanoDatosTarjetas() encoge la letra hasta que quepa en una
+     línea, y solo si ni el tamaño mínimo alcanza cae al "…" como último
+     recurso -- las 4 tarjetas del mismo grid quedan siempre del mismo alto. */
+  .totales-grid .total-caja .etiqueta{
+    font-size:10.5px;margin-bottom:4px;letter-spacing:.06em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  }
   /* nowrap a propósito, igual que .panel-tarjeta-dato -- el tamaño se
      ajusta con JS (ajustarTamanoDatosTarjetas) para que quepa en una línea
      en vez de envolverse con cifras largas. Solo dentro de .totales-grid
@@ -7819,7 +7830,7 @@ function ajustarTamanoDatosTarjetas(){
   document.querySelectorAll(
     '.tab-cuentas-dato, .panel-grid .panel-tarjeta-dato, .totales-grid .total-caja .monto'
   ).forEach(el => ajustarTextoUnaLinea(el));
-  document.querySelectorAll('.tab-cuentas-titulo').forEach(el => ajustarTextoUnaLinea(el, 8, false));
+  document.querySelectorAll('.tab-cuentas-titulo, .totales-grid .total-caja .etiqueta').forEach(el => ajustarTextoUnaLinea(el, 8, false));
 }
 
 let reajusteDatosTarjetasPendiente = false;
@@ -15711,8 +15722,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 101;
+const VERSION_APP_ACTUAL = 102;
 const CHANGELOG_APP = [
+  {
+    version: 102,
+    fecha: '2026-09-01',
+    cambios_es: [
+      'Se corrigió un error real: en Flujo de efectivo (y otras pantallas con el mismo tipo de tarjetas), un título largo se envolvía a 2 líneas y descuadraba el alto de la tarjeta contra la de al lado -- ahora la letra se encoge para caber en una línea, y las tarjetas de la misma fila siempre quedan del mismo alto.'
+    ],
+    cambios_en: [
+      "Fixed a real bug: in Cash flow (and other screens with the same card type), a long title used to wrap to 2 lines and throw off the card's height compared to its neighbor -- now the text shrinks to fit on one line, and cards in the same row always match in height."
+    ]
+  },
   {
     version: 101,
     fecha: '2026-09-01',
