@@ -10349,7 +10349,7 @@ async function abrirAgregarGasto(sinFoco){
   document.getElementById('input-fecha-gasto').value = new Date().toISOString().slice(0, 10);
   document.getElementById('input-monto-gasto').value = '';
   document.getElementById('input-nota-gasto').value = '';
-  document.getElementById('select-moneda-gasto').value = localStorage.getItem('ultima_moneda_gasto') || 'MXN';
+  document.getElementById('select-moneda-gasto').value = 'MXN';
   document.getElementById('check-gasto-recurrente').checked = false;
   document.getElementById('check-gasto-compra-meses').checked = false;
   document.getElementById('input-meses-recurrente').value = '12';
@@ -12165,7 +12165,7 @@ async function confirmarGastoChat(idAccion){
     categoria: categoriaValida,
     subcategoria: subcategoriaValida,
     monto: Number(accion.monto_sugerido),
-    moneda: localStorage.getItem('ultima_moneda_gasto') || 'MXN',
+    moneda: 'MXN',
     nota: accion.nota_sugerida || null,
     cuenta_pago_id, deuda_pago_id,
     esRecurrente: !!accion.es_recurrente,
@@ -13027,7 +13027,6 @@ async function guardarGasto(){
   }
   haptic('exito');
   if(subSelectValor !== '__otro__') registrarUsoCategoriaGasto(categoria, subSelectValor);
-  localStorage.setItem('ultima_moneda_gasto', moneda);
   localStorage.setItem('ultimo_metodo_pago_gasto', document.getElementById('select-pago-gasto').value);
   if(solicitudPendienteActualId){
     sb.from('solicitudes_gasto_pendientes').update({ estado: 'aprobado' }).eq('id', solicitudPendienteActualId).then(() => {});
@@ -16252,8 +16251,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 117;
+const VERSION_APP_ACTUAL = 118;
 const CHANGELOG_APP = [
+  {
+    version: 118,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'La moneda de un gasto nuevo ahora siempre inicia en Pesos mexicanos (MXN) -- antes "recordaba" la última moneda usada, así que si alguna vez registrabas uno en dólares, se quedaba en dólares por default hasta que lo cambiaras a mano.'
+    ],
+    cambios_en: [
+      'A new expense now always starts in Mexican pesos (MXN) -- it used to "remember" the last currency used, so once you logged one in dollars, it stayed defaulted to dollars until you changed it by hand.'
+    ]
+  },
   {
     version: 117,
     fecha: '2026-09-02',
