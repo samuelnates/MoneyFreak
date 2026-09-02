@@ -368,7 +368,7 @@
 
   .panel-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:5px;margin-bottom:5px;}
   .panel-grid .panel-tarjeta{transition:border-color 150ms ease, translate 200ms ease;}
-  #panel-grid .panel-tarjeta{touch-action:none;}
+  #panel-grid .panel-tarjeta{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
   .panel-grid .panel-tarjeta:nth-child(1).entrada-escalonada{animation-delay:40ms;}
   .panel-grid .panel-tarjeta:nth-child(2).entrada-escalonada{animation-delay:80ms;}
   .panel-grid .panel-tarjeta:nth-child(3).entrada-escalonada{animation-delay:120ms;}
@@ -16025,8 +16025,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 110;
+const VERSION_APP_ACTUAL = 111;
 const CHANGELOG_APP = [
+  {
+    version: 111,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Se quitó la selección de texto/menú del navegador que aparecía al mantener presionada una tarjeta de Inicio para reordenarla.'
+    ],
+    cambios_en: [
+      'Removed the browser text-selection/menu that popped up when long-pressing a Home card to reorder it.'
+    ]
+  },
   {
     version: 110,
     fecha: '2026-09-02',
