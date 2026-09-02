@@ -367,6 +367,23 @@
   @media (prefers-reduced-motion: no-preference){ .skeleton-hero{animation:shimmer 1.4s ease infinite;} }
 
   .panel-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:5px;margin-bottom:5px;}
+  .panel-grid .panel-tarjeta{transition:border-color 150ms ease, translate 200ms ease;}
+  .panel-grid .panel-tarjeta:nth-child(1).entrada-escalonada{animation-delay:40ms;}
+  .panel-grid .panel-tarjeta:nth-child(2).entrada-escalonada{animation-delay:80ms;}
+  .panel-grid .panel-tarjeta:nth-child(3).entrada-escalonada{animation-delay:120ms;}
+  .panel-grid .panel-tarjeta:nth-child(4).entrada-escalonada{animation-delay:160ms;}
+  .panel-grid.editando .panel-tarjeta{animation:panelGridJiggle 260ms ease-in-out infinite;cursor:grab;}
+  .panel-grid.editando .panel-tarjeta:nth-child(even){animation-delay:130ms;}
+  .panel-grid .panel-tarjeta.arrastrando{
+    animation:none !important;rotate:0deg !important;
+    box-shadow:0 10px 26px rgba(0,0,0,0.3);scale:1.05;
+    z-index:20;cursor:grabbing;
+  }
+  .panel-grid .panel-tarjeta.marcador-hueco{visibility:hidden;pointer-events:none;}
+  @keyframes panelGridJiggle{
+    0%,100%{rotate:-1.3deg;}
+    50%{rotate:1.3deg;}
+  }
   .panel-tarjeta{
     background:var(--superficie);border:1px solid var(--borde);border-radius:8px;
     padding:8px 9px;text-align:left;width:100%;cursor:pointer;
@@ -8554,6 +8571,172 @@ function activarSwipeInsights(contenedor){
   contenedor.addEventListener('touchcancel', soltar, { passive: true });
 }
 
+const PANEL_GRID_IDS_DEFECTO = ['cuentas', 'flujo', 'gastos', 'simulador'];
+
+function ordenPanelGrid(){
+  let guardado;
+  try { guardado = JSON.parse(localStorage.getItem('panel_grid_orden') || 'null'); } catch { guardado = null; }
+  if(!Array.isArray(guardado)) return PANEL_GRID_IDS_DEFECTO.slice();
+  const validos = guardado.filter(id => PANEL_GRID_IDS_DEFECTO.includes(id));
+  const faltantes = PANEL_GRID_IDS_DEFECTO.filter(id => !validos.includes(id));
+  return [...validos, ...faltantes];
+}
+
+function guardarOrdenPanelGrid(){
+  const grid = document.getElementById('panel-grid');
+  if(!grid) return;
+  const orden = Array.from(grid.querySelectorAll('.panel-tarjeta')).map(t => t.dataset.id);
+  try { localStorage.setItem('panel_grid_orden', JSON.stringify(orden)); } catch {}
+}
+
+// Mantener presionada una tarjeta de Inicio activa el modo de "acomodo",
+// igual que los íconos de un iPhone: vibra, todas empiezan a tambalearse, y
+// se puede arrastrar cualquiera a otra posición. Tocar fuera de la rejilla
+// guarda el nuevo orden (solo en este dispositivo, localStorage) y sale.
+//
+// #panel-grid se recrea entero cada vez que se abre Inicio (mismo patrón que
+// el resto de la app), así que los listeners NO se cuelgan del nodo -- se
+// delegan una sola vez desde document (guardia por módulo, se ignoran
+// llamadas repetidas) y cada uno busca #panel-grid vigente al momento de
+// disparar. Colgarlos del nodo efímero habría ido acumulando un listener de
+// document nuevo cada vez que se visita Inicio, sin nunca soltar el anterior.
+let reordenPanelGridListo = false;
+function activarReordenPanelGrid(){
+  if(reordenPanelGridListo) return;
+  reordenPanelGridListo = true;
+
+  const DEMORA_LONGPRESS_MS = 500;
+  const UMBRAL_CANCELAR_PX = 10;
+  let presionando = null; // { tarjeta, inicioX, inicioY, pointerId, timer }
+  let arrastrando = null; // { grid, tarjeta, marcador, pointerId, offsetX, offsetY }
+
+  function limpiarPresion(){
+    if(presionando?.timer) clearTimeout(presionando.timer);
+    presionando = null;
+  }
+
+  function iniciarArrastre(grid, tarjeta, pointerId, clientX, clientY){
+    const rect = tarjeta.getBoundingClientRect();
+    const marcador = document.createElement('div');
+    marcador.className = 'panel-tarjeta marcador-hueco';
+    tarjeta.after(marcador);
+
+    tarjeta.classList.add('arrastrando');
+    tarjeta.style.touchAction = 'none';
+    tarjeta.style.position = 'fixed';
+    tarjeta.style.left = rect.left + 'px';
+    tarjeta.style.top = rect.top + 'px';
+    tarjeta.style.width = rect.width + 'px';
+    tarjeta.style.height = rect.height + 'px';
+    try { tarjeta.setPointerCapture(pointerId); } catch {}
+
+    arrastrando = { grid, tarjeta, marcador, pointerId, offsetX: clientX - rect.left, offsetY: clientY - rect.top };
+  }
+
+  function moverArrastre(clientX, clientY){
+    const { grid, tarjeta, marcador, offsetX, offsetY } = arrastrando;
+    tarjeta.style.left = (clientX - offsetX) + 'px';
+    tarjeta.style.top = (clientY - offsetY) + 'px';
+
+    const candidatos = Array.from(grid.children).filter(el => el !== marcador && el !== tarjeta);
+    const objetivo = candidatos.find(el => {
+      const r = el.getBoundingClientRect();
+      return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+    });
+    if(!objetivo) return;
+
+    // FLIP simple: mover el hueco invisible a la posición del objetivo, y
+    // animar al objetivo deslizándose desde donde estaba hacia donde quedó.
+    const antes = objetivo.getBoundingClientRect();
+    if(marcador.compareDocumentPosition(objetivo) & Node.DOCUMENT_POSITION_FOLLOWING){
+      objetivo.after(marcador);
+    } else {
+      objetivo.before(marcador);
+    }
+    const despues = objetivo.getBoundingClientRect();
+    objetivo.style.transition = 'none';
+    objetivo.style.translate = `${antes.left - despues.left}px ${antes.top - despues.top}px`;
+    void objetivo.offsetWidth;
+    objetivo.style.transition = '';
+    objetivo.style.translate = '0px 0px';
+  }
+
+  function soltarArrastre(){
+    const { tarjeta, marcador } = arrastrando;
+    marcador.replaceWith(tarjeta);
+    tarjeta.classList.remove('arrastrando');
+    tarjeta.style.touchAction = '';
+    tarjeta.style.position = '';
+    tarjeta.style.left = '';
+    tarjeta.style.top = '';
+    tarjeta.style.width = '';
+    tarjeta.style.height = '';
+    arrastrando = null;
+    guardarOrdenPanelGrid();
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    if(arrastrando) return;
+    const grid = document.getElementById('panel-grid');
+    if(!grid) return;
+
+    if(grid.classList.contains('editando') && !grid.contains(e.target)){
+      guardarOrdenPanelGrid();
+      grid.classList.remove('editando');
+      return;
+    }
+
+    const tarjeta = e.target.closest('#panel-grid .panel-tarjeta');
+    if(!tarjeta || tarjeta.classList.contains('marcador-hueco')) return;
+
+    if(grid.classList.contains('editando')){
+      iniciarArrastre(grid, tarjeta, e.pointerId, e.clientX, e.clientY);
+      return;
+    }
+    presionando = { tarjeta, inicioX: e.clientX, inicioY: e.clientY, pointerId: e.pointerId, timer: null };
+    presionando.timer = setTimeout(() => {
+      if(!presionando) return;
+      const { tarjeta, pointerId, inicioX, inicioY } = presionando;
+      presionando = null;
+      const gridActual = document.getElementById('panel-grid');
+      if(!gridActual || !gridActual.contains(tarjeta)) return;
+      haptic('toque');
+      gridActual.classList.add('editando');
+      iniciarArrastre(gridActual, tarjeta, pointerId, inicioX, inicioY);
+    }, DEMORA_LONGPRESS_MS);
+  });
+
+  document.addEventListener('pointermove', (e) => {
+    if(arrastrando){
+      if(e.pointerId !== arrastrando.pointerId) return;
+      moverArrastre(e.clientX, e.clientY);
+      return;
+    }
+    if(!presionando || e.pointerId !== presionando.pointerId) return;
+    if(Math.abs(e.clientX - presionando.inicioX) > UMBRAL_CANCELAR_PX || Math.abs(e.clientY - presionando.inicioY) > UMBRAL_CANCELAR_PX){
+      limpiarPresion();
+    }
+  });
+
+  function terminarPuntero(e){
+    limpiarPresion();
+    if(arrastrando && e.pointerId === arrastrando.pointerId) soltarArrastre();
+  }
+  document.addEventListener('pointerup', terminarPuntero);
+  document.addEventListener('pointercancel', terminarPuntero);
+
+  // Como en iOS: tocar un ícono mientras tambalea no lo abre, solo se puede
+  // arrastrar o tocar fuera de la rejilla para salir.
+  document.addEventListener('click', (e) => {
+    const grid = document.getElementById('panel-grid');
+    if(grid && grid.classList.contains('editando') && grid.contains(e.target)){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+}
+
 async function abrirPanel(){
   mostrar('vista-inicio');
   const cont = document.getElementById('panel-contenido');
@@ -8675,30 +8858,35 @@ async function abrirPanel(){
       <div class="panel-insights-puntos" id="panel-insights-puntos"></div>
     </div>
 
-    <div class="panel-grid">
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:40ms" onclick="mostrar('vista-cuentas')">
-        <div class="panel-icono">${iconoPanel('cuentas')}</div>
-        <div class="panel-tarjeta-titulo">${t('panel.cuentas.titulo')}</div>
-        <div class="panel-tarjeta-dato">${formatoMonto(b.totalCuentas, 'MXN')}</div>
-        <div class="panel-tarjeta-sub">${t('panel.cuentas.sub')}</div>
-      </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:80ms" onclick="abrirFlujoEfectivo()">
-        <div class="panel-icono">${iconoPanel('flujo')}</div>
-        <div class="panel-tarjeta-titulo">${t('panel.flujo.titulo')}</div>
-        <div class="panel-tarjeta-dato">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
-        <div class="panel-tarjeta-sub">${flujoSubTxt}</div>
-      </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:120ms" onclick="abrirGastos()">
-        <div class="panel-icono">${iconoPanel('gastos')}</div>
-        <div class="panel-tarjeta-titulo">${t('panel.gastos.titulo')}</div>
-        <div class="panel-tarjeta-dato ${claseGastos}">${formatoMonto(g.totalGastado, 'MXN')}</div>
-        <div class="panel-tarjeta-sub">${gastosSubTxt}</div>
-      </button>
-      <button type="button" class="panel-tarjeta entrada-escalonada" style="animation-delay:160ms" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');">
-        <div class="panel-icono">${iconoPanel('simulador')}</div>
-        <div class="panel-tarjeta-titulo">${t('panel.simulador.titulo')}</div>
-        <div class="panel-tarjeta-sub">${t('panel.simulador.sub')}</div>
-      </button>
+    <div class="panel-grid" id="panel-grid">
+      ${(() => {
+        const tarjetasPanelGrid = {
+          cuentas: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="cuentas" onclick="mostrar('vista-cuentas')">
+            <div class="panel-icono">${iconoPanel('cuentas')}</div>
+            <div class="panel-tarjeta-titulo">${t('panel.cuentas.titulo')}</div>
+            <div class="panel-tarjeta-dato">${formatoMonto(b.totalCuentas, 'MXN')}</div>
+            <div class="panel-tarjeta-sub">${t('panel.cuentas.sub')}</div>
+          </button>`,
+          flujo: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="flujo" onclick="abrirFlujoEfectivo()">
+            <div class="panel-icono">${iconoPanel('flujo')}</div>
+            <div class="panel-tarjeta-titulo">${t('panel.flujo.titulo')}</div>
+            <div class="panel-tarjeta-dato">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
+            <div class="panel-tarjeta-sub">${flujoSubTxt}</div>
+          </button>`,
+          gastos: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="gastos" onclick="abrirGastos()">
+            <div class="panel-icono">${iconoPanel('gastos')}</div>
+            <div class="panel-tarjeta-titulo">${t('panel.gastos.titulo')}</div>
+            <div class="panel-tarjeta-dato ${claseGastos}">${formatoMonto(g.totalGastado, 'MXN')}</div>
+            <div class="panel-tarjeta-sub">${gastosSubTxt}</div>
+          </button>`,
+          simulador: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="simulador" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');">
+            <div class="panel-icono">${iconoPanel('simulador')}</div>
+            <div class="panel-tarjeta-titulo">${t('panel.simulador.titulo')}</div>
+            <div class="panel-tarjeta-sub">${t('panel.simulador.sub')}</div>
+          </button>`
+        };
+        return ordenPanelGrid().map(id => tarjetasPanelGrid[id]).join('');
+      })()}
     </div>
 
     ${(window.Capacitor?.isNativePlatform?.() && localStorage.getItem('widget_tip_descartado') !== '1') ? `
@@ -8713,6 +8901,7 @@ async function abrirPanel(){
   actualizarUIDemo();
   inicializarRotacionInsights(insights);
   activarSwipeInsights(document.getElementById('panel-insights'));
+  activarReordenPanelGrid();
 }
 
 let graficaScore = null;
@@ -15832,8 +16021,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 108;
+const VERSION_APP_ACTUAL = 109;
 const CHANGELOG_APP = [
+  {
+    version: 109,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Ahora puedes mantener presionada cualquiera de las 4 tarjetas de Inicio (Cuentas, Flujo, Gastos, Simulador) para activar el modo de acomodo -- igual que en iPhone: vibra, empiezan a tambalearse, y puedes arrastrar cualquiera a otra posición. Toca fuera de la rejilla para guardar el orden (se guarda en este dispositivo).'
+    ],
+    cambios_en: [
+      "You can now long-press any of the 4 Home cards (Accounts, Cash Flow, Expenses, Simulator) to enter rearrange mode -- just like on iPhone: it vibrates, cards start jiggling, and you can drag any of them to a new spot. Tap outside the grid to save the order (saved on this device)."
+    ]
+  },
   {
     version: 108,
     fecha: '2026-09-02',
