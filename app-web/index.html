@@ -793,19 +793,28 @@
   .btn-config-flotante{
     display:none;align-items:center;justify-content:center;
     position:fixed;right:18px;bottom:74px;width:46px;height:46px;border-radius:50%;
-    background:var(--acento);color:var(--acento-texto);border:none;overflow:hidden;
+    background:var(--acento);color:var(--acento-texto);border:none;
     cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:5;
   }
   .btn-config-flotante svg{width:20px;height:20px;}
   body.con-sesion .btn-config-flotante{display:flex;}
-  .btn-config-flotante-avatar{display:none;width:100%;height:100%;object-fit:cover;pointer-events:none;}
-  /* Cuando Freaky está "guardado" (lo aventaron fuera de pantalla a
-     propósito, ver freakyGuardarEnBoton), este mismo botón muestra su
-     retrato en vez del engrane -- sigue abriendo Configuración con un toque
-     normal, pero arrastrarlo lo vuelve a sacar como Freaky de nuevo. */
-  .btn-config-flotante.freaky-guardado{touch-action:none;}
-  .btn-config-flotante.freaky-guardado svg{display:none;}
-  .btn-config-flotante.freaky-guardado .btn-config-flotante-avatar{display:block;}
+  /* Botón dedicado de Freaky "guardado" -- pedido del usuario tras probar la
+     primera versión (que reusaba el botón de Configuración): "eso es
+     confuso". Vive en su propio círculo, apilado justo arriba del botón de
+     Configuración (nunca lo toca ni lo reemplaza) -- mismo lugar donde
+     Freaky ya suele "percharse" cuando está en reposo (ver
+     freakyEncontrarPerchas), así que su forma de botón vive en ese mismo
+     sitio. Oculto por default; solo aparece cuando freaky_guardado=1
+     (ver activarFreakyGuardado). Tocarlo abre el chat (como el propio
+     Freaky); arrastrarlo lo saca de nuevo como personaje completo.
+  */
+  .btn-freaky-guardado{
+    display:none;align-items:center;justify-content:center;
+    position:fixed;right:18px;bottom:128px;width:46px;height:46px;border-radius:50%;
+    background:var(--superficie);border:1px solid var(--borde-fuerte);overflow:hidden;padding:0;
+    cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:5;touch-action:none;
+  }
+  .btn-freaky-guardado-avatar{width:100%;height:100%;object-fit:cover;pointer-events:none;}
 
   .btn-asistente-flotante{
     display:none;align-items:center;justify-content:center;gap:8px;position:fixed;
@@ -1534,6 +1543,7 @@
     body.con-sesion.freaky-vuelo-desactivado .pantalla{padding-top:calc(60px + env(safe-area-inset-top));}
     body.con-sesion .panel-acciones-rapidas{display:none;}
     body.con-sesion .btn-config-flotante{bottom:calc(88px + env(safe-area-inset-bottom));}
+    body.con-sesion .btn-freaky-guardado{bottom:calc(142px + env(safe-area-inset-bottom));}
     body.con-sesion .btn-fab-agregar{bottom:calc(88px + env(safe-area-inset-bottom));}
     body.con-sesion .menu-agregar{bottom:calc(150px + env(safe-area-inset-bottom));}
     body.con-sesion .aviso-flotante-version{bottom:calc(88px + env(safe-area-inset-bottom));}
@@ -1636,9 +1646,11 @@
     <button type="button" class="freaky-burbuja-proactiva-cerrar" onclick="cerrarAvisoProactivoFreaky()" data-i18n="freaky.aviso_cerrar">Luego</button>
   </div>
 </div>
-<button type="button" class="btn-config-flotante" id="btn-config" onclick="btnConfigClickTrasArrastre(event)" onpointerdown="btnConfigIniciarArrastre(event)" onpointermove="btnConfigMoverArrastre(event)" onpointerup="btnConfigSoltarArrastre(event)" onpointercancel="btnConfigSoltarArrastre(event)" aria-label="Configuración y privacidad" data-i18n-aria-label="sidebar.configuracion">
+<button type="button" class="btn-config-flotante" id="btn-config" onclick="mostrar('vista-privacidad')" aria-label="Configuración y privacidad" data-i18n-aria-label="sidebar.configuracion">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 17.09a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 6.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c-.44.44-.57 1.1-.33 1.82.22.61.83 1 1.51 1H9.5a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09c0 .68.39 1.29 1 1.51.6.24 1.3.11 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.44.44-.57 1.1-.33 1.82.22.61.83 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.68 0-1.29.39-1.51 1Z"/></svg>
-  <img class="btn-config-flotante-avatar freaky-avatar-dinamico" id="btn-config-avatar" alt="">
+</button>
+<button type="button" class="btn-freaky-guardado" id="btn-freaky-guardado" onclick="freakyGuardadoClickTrasArrastre(event)" onpointerdown="freakyGuardadoIniciarArrastre(event)" onpointermove="freakyGuardadoMoverArrastre(event)" onpointerup="freakyGuardadoSoltarArrastre(event)" onpointercancel="freakyGuardadoSoltarArrastre(event)" aria-label="Freaky" style="display:none;">
+  <img class="btn-freaky-guardado-avatar freaky-avatar-dinamico" alt="">
 </button>
 <div class="tour-overlay" id="tour-overlay" style="display:none;">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -11144,8 +11156,11 @@ function freakyZonaSegura(){
 }
 
 // Pedido del usuario: aventar a Freaky genuinamente FUERA de la pantalla (no
-// solo cerca del borde) lo "guarda" en el botón de configuración -- el botón
-// muestra su retrato en vez del engrane, y arrastrar el botón lo vuelve a
+// solo cerca del borde) lo "guarda" en su propio botón dedicado
+// (.btn-freaky-guardado, NO el de Configuración -- la primera versión de
+// esto reusaba el botón de Configuración y el usuario lo marcó como
+// confuso: "no que ocupara el lugar del engrane"). Ese botón vive apilado
+// justo arriba del de Configuración, sin tocarlo, y arrastrarlo lo vuelve a
 // sacar. Se guarda en localStorage para que la elección sobreviva entre
 // sesiones (si lo guardaste ayer, hoy sigue guardado hasta que lo saques).
 function freakyEstaGuardado(){
@@ -11153,11 +11168,19 @@ function freakyEstaGuardado(){
 }
 function activarFreakyGuardado(guardado){
   try{ localStorage.setItem('freaky_guardado', guardado ? '1' : '0'); }catch(e){}
-  const boton = document.getElementById('btn-config');
+  const boton = document.getElementById('btn-freaky-guardado');
   if(!boton) return;
-  boton.classList.toggle('freaky-guardado', guardado);
-  if(guardado && typeof gsap !== 'undefined' && !freakyReducedMotion){
-    gsap.fromTo(boton, { scale: 0.7 }, { scale: 1, duration: 0.4, ease: 'back.out(2.4)' });
+  if(guardado){
+    boton.style.display = 'flex';
+    if(typeof gsap !== 'undefined' && !freakyReducedMotion){
+      gsap.fromTo(boton, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(2.4)' });
+    } else {
+      boton.style.opacity = '1';
+    }
+  } else {
+    boton.style.display = 'none';
+    boton.style.opacity = '';
+    if(typeof gsap !== 'undefined') gsap.set(boton, { scale: 1 });
   }
 }
 
@@ -11169,7 +11192,7 @@ function iniciarVueloFreaky(){
 
   if(freakyEstaGuardado()){
     // Se quedó guardado de una sesión anterior -- no arranca ningún vuelo,
-    // el botón de configuración ya muestra su retrato en vez del engrane.
+    // su botón dedicado ya está visible con su retrato.
     el.style.display = 'none';
     activarFreakyGuardado(true);
     return;
@@ -11491,14 +11514,18 @@ function freakySoltarArrastre(ev){
     .to(a.el, { rotation: 0, duration: 0.35, ease: 'back.out(2)' }, duracion);
 }
 
-// Freaky vuela hacia el botón de configuración, encogiéndose hasta
-// desaparecer dentro de él -- al terminar, el botón pasa a mostrar su
-// retrato (ver activarFreakyGuardado). Si por lo que sea el botón no está en
-// pantalla (ej. sin sesión), no hay dónde "guardarlo" -- mejor dejarlo caer
-// dentro de la zona segura de siempre que perderlo fuera de la vista.
+// Freaky vuela hacia su botón dedicado (.btn-freaky-guardado, apilado arriba
+// del de Configuración, ver CSS), encogiéndose hasta desaparecer dentro de
+// él -- al terminar, ese botón aparece con su retrato (ver
+// activarFreakyGuardado). El botón está oculto por default (display:none),
+// así que se revela con opacity:0 primero para poder medir su posición real
+// con getBoundingClientRect() -- un elemento display:none siempre mide 0.
+// Si por lo que sea no hay sesión (el botón nunca se muestra), no hay dónde
+// "guardarlo" -- mejor dejarlo caer dentro de la zona segura de siempre que
+// perderlo fuera de la vista.
 function freakyGuardarEnBoton(el, actualX, actualY, vx){
-  const boton = document.getElementById('btn-config');
-  if(!boton || getComputedStyle(boton).display === 'none'){
+  const boton = document.getElementById('btn-freaky-guardado');
+  if(!boton || getComputedStyle(document.getElementById('btn-config')).display === 'none'){
     const zona = freakyZonaSegura();
     gsap.to(el, {
       x: Math.max(zona.left, Math.min(zona.right, actualX)),
@@ -11507,6 +11534,8 @@ function freakyGuardarEnBoton(el, actualX, actualY, vx){
     });
     return;
   }
+  boton.style.display = 'flex';
+  boton.style.opacity = '0';
   const rectBoton = boton.getBoundingClientRect();
   const destinoX = rectBoton.left + rectBoton.width / 2 - el.offsetWidth / 2;
   const destinoY = rectBoton.top + rectBoton.height / 2 - el.offsetHeight / 2;
@@ -11523,19 +11552,20 @@ function freakyGuardarEnBoton(el, actualX, actualY, vx){
     .to(el, { x: destinoX, y: destinoY, rotation: angulo, scale: 0.15, opacity: 0, duration: 0.42, ease: 'power2.in', onUpdate: () => freakyDejarEstela(el) });
 }
 
-// Arrastrar el botón de configuración mientras Freaky está guardado lo saca
-// de nuevo -- mismo umbral de 8px y misma física de aventón que su propio
-// arrastre (freakyIniciarArrastre/freakyMoverArrastre/freakySoltarArrastre),
-// pero aplicada al botón: un toque corto sin arrastrar sigue abriendo
-// Configuración con normalidad (ver btnConfigClickTrasArrastre).
-let btnConfigArrastre = null;
-let btnConfigUltimoFueArrastre = false;
+// Arrastrar el botón de Freaky guardado lo saca de nuevo -- mismo umbral de
+// 8px y misma física de aventón que su propio arrastre
+// (freakyIniciarArrastre/freakyMoverArrastre/freakySoltarArrastre), pero
+// aplicada al botón: un toque corto sin arrastrar abre el chat (como si
+// fuera el propio Freaky, ver freakyGuardadoClickTrasArrastre) -- el botón
+// de Configuración, aparte, nunca se toca ni cambia de comportamiento.
+let freakyGuardadoArrastre = null;
+let freakyGuardadoUltimoFueArrastre = false;
 
-function btnConfigIniciarArrastre(ev){
-  if(!freakyEstaGuardado() || typeof gsap === 'undefined' || freakyReducedMotion || btnConfigArrastre) return;
-  const boton = document.getElementById('btn-config');
+function freakyGuardadoIniciarArrastre(ev){
+  if(!freakyEstaGuardado() || typeof gsap === 'undefined' || freakyReducedMotion || freakyGuardadoArrastre) return;
+  const boton = document.getElementById('btn-freaky-guardado');
   if(!boton) return;
-  btnConfigArrastre = {
+  freakyGuardadoArrastre = {
     boton,
     inicioX: ev.clientX, inicioY: ev.clientY,
     moviendo: false,
@@ -11545,14 +11575,14 @@ function btnConfigIniciarArrastre(ev){
   try{ boton.setPointerCapture(ev.pointerId); }catch(e){}
 }
 
-function btnConfigMoverArrastre(ev){
-  const a = btnConfigArrastre;
+function freakyGuardadoMoverArrastre(ev){
+  const a = freakyGuardadoArrastre;
   if(!a) return;
   const dx = ev.clientX - a.inicioX, dy = ev.clientY - a.inicioY;
   if(!a.moviendo){
     if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
     a.moviendo = true;
-    btnConfigUltimoFueArrastre = true;
+    freakyGuardadoUltimoFueArrastre = true;
     haptic('toque');
   }
   const ahora = performance.now();
@@ -11562,20 +11592,23 @@ function btnConfigMoverArrastre(ev){
   a.ultimaX = ev.clientX; a.ultimaY = ev.clientY; a.ultimoTiempo = ahora;
 }
 
-function btnConfigSoltarArrastre(ev){
-  const a = btnConfigArrastre;
+function freakyGuardadoSoltarArrastre(ev){
+  const a = freakyGuardadoArrastre;
   if(!a) return;
-  btnConfigArrastre = null;
+  freakyGuardadoArrastre = null;
   try{ a.boton.releasePointerCapture(ev.pointerId); }catch(e){}
-  if(!a.moviendo) return; // toque normal -- el click de siempre abre Configuración
+  if(!a.moviendo) return; // toque normal -- abre el chat, ver freakyGuardadoClickTrasArrastre
   freakySacarDelBoton(a.vx, a.vy);
 }
 
 function freakySacarDelBoton(vx, vy){
   const el = document.getElementById('freaky-personaje');
-  const boton = document.getElementById('btn-config');
+  const boton = document.getElementById('btn-freaky-guardado');
   if(!el || !boton) return;
 
+  // Medir la posición del botón ANTES de ocultarlo (activarFreakyGuardado(false)
+  // le pone display:none, y a partir de ahí mediría 0×0).
+  const rectBoton = boton.getBoundingClientRect();
   activarFreakyGuardado(false);
 
   if(typeof gsap === 'undefined' || freakyReducedMotion){
@@ -11583,7 +11616,6 @@ function freakySacarDelBoton(vx, vy){
     return;
   }
 
-  const rectBoton = boton.getBoundingClientRect();
   const inicioX = rectBoton.left + rectBoton.width / 2 - el.offsetWidth / 2;
   const inicioY = rectBoton.top + rectBoton.height / 2 - el.offsetHeight / 2;
 
@@ -11611,14 +11643,14 @@ function freakySacarDelBoton(vx, vy){
     .to(el, { rotation: 0, duration: 0.35, ease: 'back.out(2)' }, 0.5);
 }
 
-function btnConfigClickTrasArrastre(ev){
-  if(btnConfigUltimoFueArrastre){
-    btnConfigUltimoFueArrastre = false;
+function freakyGuardadoClickTrasArrastre(ev){
+  if(freakyGuardadoUltimoFueArrastre){
+    freakyGuardadoUltimoFueArrastre = false;
     ev.preventDefault();
     ev.stopPropagation();
     return;
   }
-  mostrar('vista-privacidad');
+  abrirFreaky();
 }
 
 // El click de siempre (abre el chat) se suprime justo después de un
@@ -16218,16 +16250,26 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 115;
+const VERSION_APP_ACTUAL = 116;
 const CHANGELOG_APP = [
+  {
+    version: 116,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Corregido: cuando avientas a Freaky fuera de la pantalla, ahora se "guarda" en su propio botón nuevo (no en el de configuración, que se quedaba confuso al hacer doble función) -- aparece apilado justo arriba del engrane, con su retrato. Tocarlo abre el chat; arrastrarlo lo vuelve a sacar. El retrato es temporal por ahora.'
+    ],
+    cambios_en: [
+      'Fixed: throwing Freaky off-screen now tucks him into his own new button (not the settings one, which felt confusing doing double duty) -- it appears stacked right above the gear icon, showing his portrait. Tapping it opens the chat; dragging it pulls him back out. The portrait is a placeholder for now.'
+    ]
+  },
   {
     version: 115,
     fecha: '2026-09-02',
     cambios_es: [
-      'Nuevo: si avientas a Freaky con fuerza fuera de la pantalla, se "guarda" en el botón de configuración (que muestra su retrato en vez del engrane) -- y arrastrar ese botón lo vuelve a sacar. El botón sigue abriendo Configuración con un toque normal. El retrato usado por ahora es temporal, el diseño final llega en un siguiente paso.'
+      'Nuevo: si avientas a Freaky con fuerza fuera de la pantalla, se "guarda" como botón -- y arrastrarlo lo vuelve a sacar.'
     ],
     cambios_en: [
-      'New: throw Freaky hard off-screen and he "tucks away" into the settings button (which shows his portrait instead of the gear icon) -- dragging that button pulls him back out. A normal tap still opens Settings. The portrait shown for now is a placeholder; the final art comes in a follow-up.'
+      'New: throw Freaky hard off-screen and he "tucks away" as a button -- dragging it pulls him back out.'
     ]
   },
   {
