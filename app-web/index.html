@@ -8656,12 +8656,31 @@ function activarReordenPanelGrid(){
     tarjeta.style.height = rect.height + 'px';
     try { tarjeta.setPointerCapture(pointerId); } catch {}
 
-    arrastrando = { grid, tarjeta, marcador, pointerId, inicioX: clientX, inicioY: clientY };
+    arrastrando = { grid, tarjeta, marcador, pointerId, inicioX: clientX, inicioY: clientY, bloqueadoHasta: 0 };
   }
+
+  // Cuánto dura la animación de deslizamiento de la tarjeta desplazada (debe
+  // calzar con la transición real de `translate` en CSS, `.panel-grid
+  // .panel-tarjeta{transition:...,translate 200ms ease;}` -- con margen).
+  const DURACION_DESLIZAMIENTO_MS = 220;
 
   function moverArrastre(clientX, clientY){
     const { grid, tarjeta, marcador, inicioX, inicioY } = arrastrando;
     tarjeta.style.translate = `${clientX - inicioX}px ${clientY - inicioY}px`;
+
+    // Mientras la tarjeta desplazada por el último intercambio SIGUE en
+    // pleno vuelo (su transición de 200ms aún no termina), su
+    // getBoundingClientRect() barre posiciones intermedias entre el sitio
+    // viejo y el nuevo -- si el dedo se quedó quieto justo en esa franja,
+    // cada pointermove volvía a "verla" debajo del dedo y disparaba OTRO
+    // intercambio (a veces de vuelta), una y otra vez mientras dura el
+    // vuelo: eso es el parpadeo/vibración que reportó el usuario, no un
+    // error real. Bloquear nuevos intercambios hasta que el vuelo anterior
+    // se asiente evita evaluar una geometría a medio animar -- el resultado
+    // es un solo deslizamiento suave por cada vez que se cruza de posición,
+    // igual que el reacomodo de íconos en iOS, en vez de ir y volver cientos
+    // de veces por segundo.
+    if(performance.now() < arrastrando.bloqueadoHasta) return;
 
     const candidatos = Array.from(grid.children).filter(el => el !== marcador && el !== tarjeta);
     const objetivo = candidatos.find(el => {
@@ -8684,6 +8703,7 @@ function activarReordenPanelGrid(){
     void objetivo.offsetWidth;
     objetivo.style.transition = '';
     objetivo.style.translate = '0px 0px';
+    arrastrando.bloqueadoHasta = performance.now() + DURACION_DESLIZAMIENTO_MS;
   }
 
   function soltarArrastre(){
@@ -16251,8 +16271,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 118;
+const VERSION_APP_ACTUAL = 119;
 const CHANGELOG_APP = [
+  {
+    version: 119,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Corregido: al mover las tarjetas de Inicio (Cuentas, Flujo de efectivo, Gastos y presupuestos, Simulador de crédito), si te quedabas quieto justo sobre el borde de otra tarjeta antes de soltarla, aparecía un parpadeo/vibración rápida en vez de un solo movimiento limpio -- ahora el acomodo se siente como en iPhone: una sola vez y con calma.'
+    ],
+    cambios_en: [
+      "Fixed: when reordering the Home cards (Accounts, Cash flow, Expenses and budgets, Credit simulator), stopping right at another card's edge before releasing caused a rapid flash/flicker instead of one clean move -- reordering now feels like iPhone: one smooth swap, no jitter."
+    ]
+  },
   {
     version: 118,
     fecha: '2026-09-02',
