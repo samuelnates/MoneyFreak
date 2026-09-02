@@ -1650,7 +1650,7 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 17.09a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 6.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06c-.44.44-.57 1.1-.33 1.82.22.61.83 1 1.51 1H9.5a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09c0 .68.39 1.29 1 1.51.6.24 1.3.11 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.44.44-.57 1.1-.33 1.82.22.61.83 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.68 0-1.29.39-1.51 1Z"/></svg>
 </button>
 <button type="button" class="btn-freaky-guardado" id="btn-freaky-guardado" onclick="freakyGuardadoClickTrasArrastre(event)" onpointerdown="freakyGuardadoIniciarArrastre(event)" onpointermove="freakyGuardadoMoverArrastre(event)" onpointerup="freakyGuardadoSoltarArrastre(event)" onpointercancel="freakyGuardadoSoltarArrastre(event)" aria-label="Freaky" style="display:none;">
-  <img class="btn-freaky-guardado-avatar freaky-avatar-dinamico" alt="">
+  <img class="btn-freaky-guardado-avatar" id="btn-freaky-guardado-avatar" alt="">
 </button>
 <div class="tour-overlay" id="tour-overlay" style="display:none;">
   <div class="tour-spotlight" id="tour-spotlight"></div>
@@ -11001,6 +11001,8 @@ function aplicarAsesorAlPersonaje(){
   document.querySelectorAll('.freaky-avatar-dinamico').forEach(img => {
     img.src = `${carpeta}/avatar.png`;
   });
+  const imgGuardado = document.getElementById('btn-freaky-guardado-avatar');
+  if(imgGuardado) imgGuardado.src = `${carpeta}/encarcelado.png`;
 }
 
 // Se llama al cargar la pantalla de login (antes de cualquier sesión) — si ya
@@ -16250,8 +16252,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 116;
+const VERSION_APP_ACTUAL = 117;
 const CHANGELOG_APP = [
+  {
+    version: 117,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Se agregó el retrato final "encarcelado" de cada asesor -- ya no es un placeholder, cada uno de los 6 se ve detrás de las rejas con su propia expresión traviesa cuando guardas a Freaky.'
+    ],
+    cambios_en: [
+      "Added the final \"behind bars\" portrait for each advisor -- no longer a placeholder, all 6 now show their own mischievous look behind the bars when you tuck Freaky away."
+    ]
+  },
   {
     version: 116,
     fecha: '2026-09-02',
