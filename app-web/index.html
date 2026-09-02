@@ -91,8 +91,8 @@
      confirmó quitando/separando la regla y remidiendo con Playwright: con
      ambos, el div sticky de .tabs-cuentas nunca se pegaba; con overflow-x
      solo en body, se pega perfecto y el scroll horizontal sigue bloqueado). */
-  html{margin:0;padding:0;}
-  body{margin:0;padding:0;overflow-x:hidden;}
+  html{margin:0;padding:0;overscroll-behavior-y:none;}
+  body{margin:0;padding:0;overflow-x:hidden;overscroll-behavior-y:none;}
   /* Red de seguridad encontrada probando "Gastos" sin el CDN de Chart.js
      disponible (parte 92): a diferencia de una imagen, un <canvas> no se
      encoge solo para caber en un contenedor angosto -- normalmente no se
@@ -16025,8 +16025,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 113;
+const VERSION_APP_ACTUAL = 114;
 const CHANGELOG_APP = [
+  {
+    version: 114,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Se quitó el rebote elástico de la pantalla (overscroll) en toda la app -- antes, aunque el contenido ya cupiera completo, todavía se sentía como que se podía "intentar" hacer scroll con un rebotecito. Ahora, donde el contenido cabe, no se mueve nada.'
+    ],
+    cambios_en: [
+      "Removed the elastic screen bounce (overscroll) app-wide -- before, even when content already fit the screen, it still felt like you could \"try\" to scroll with a little bounce. Now, where content fits, nothing moves."
+    ]
+  },
   {
     version: 113,
     fecha: '2026-09-02',
