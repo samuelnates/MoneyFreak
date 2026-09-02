@@ -534,14 +534,20 @@
   .panel-insights-track{display:flex;align-items:stretch;}
   .panel-insights-card{
     flex:0 0 100%;min-width:100%;box-sizing:border-box;
+    min-height:0;display:flex;align-items:stretch;
+    padding:0 8px;
+  }
+  .panel-insights-card-caja{
+    flex:1;box-sizing:border-box;
     font-family:var(--sans);font-size:14px;font-weight:500;color:var(--texto);line-height:1.35;
-    min-height:0;display:flex;align-items:center;
+    display:flex;align-items:center;
     padding:9px 10px 9px 10px;border:1px solid var(--borde-fuerte);border-left:3px solid var(--borde-fuerte);
     border-radius:10px;background:var(--superficie);
+    box-shadow:0 2px 10px rgba(0,0,0,0.14);
   }
-  .panel-insights-card.severidad-riesgo{border-left-color:var(--color-riesgo);}
-  .panel-insights-card.severidad-atencion{border-left-color:var(--color-atencion);}
-  .panel-insights-card.severidad-saludable{border-left-color:var(--color-saludable);}
+  .panel-insights-card-caja.severidad-riesgo{border-left-color:var(--color-riesgo);}
+  .panel-insights-card-caja.severidad-atencion{border-left-color:var(--color-atencion);}
+  .panel-insights-card-caja.severidad-saludable{border-left-color:var(--color-saludable);}
   .panel-insights-puntos{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap;}
   .panel-insights-punto{width:5px;height:5px;border-radius:50%;background:var(--borde-fuerte);transition:background-color 200ms ease, transform 200ms ease;}
   .panel-insights-punto.activo{background:var(--acento);transform:scale(1.4);}
@@ -8491,7 +8497,7 @@ function inicializarRotacionInsights(insights){
 
   const track = document.getElementById('panel-insights-track');
   if(track){
-    const tarjetaHtml = it => `<div class="panel-insights-card severidad-${it.severidad}">${it.texto}</div>`;
+    const tarjetaHtml = it => `<div class="panel-insights-card"><div class="panel-insights-card-caja severidad-${it.severidad}">${it.texto}</div></div>`;
     const conClones = insights.length > 1 ? [insights[insights.length - 1], ...insights, insights[0]] : insights;
     track.innerHTML = conClones.map(tarjetaHtml).join('');
   }
@@ -15826,8 +15832,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 107;
+const VERSION_APP_ACTUAL = 108;
 const CHANGELOG_APP = [
+  {
+    version: 108,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Ahora se ve un espacio entre la tarjeta que se va y la que entra al deslizar en "Esto es lo que está pasando", con una sombra suave -- da la sensación de que las tarjetas flotan sobre el fondo en vez de estar pegadas una a la otra.'
+    ],
+    cambios_en: [
+      'There\'s now a visible gap between the outgoing and incoming card when swiping "What\'s happening", with a soft shadow -- gives the cards a floating feel instead of sitting flush against each other.'
+    ]
+  },
   {
     version: 107,
     fecha: '2026-09-02',
