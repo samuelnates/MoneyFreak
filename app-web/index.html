@@ -368,6 +368,7 @@
 
   .panel-grid{display:grid;grid-template-columns:repeat(2, 1fr);gap:5px;margin-bottom:5px;}
   .panel-grid .panel-tarjeta{transition:border-color 150ms ease, translate 200ms ease;}
+  #panel-grid .panel-tarjeta{touch-action:none;}
   .panel-grid .panel-tarjeta:nth-child(1).entrada-escalonada{animation-delay:40ms;}
   .panel-grid .panel-tarjeta:nth-child(2).entrada-escalonada{animation-delay:80ms;}
   .panel-grid .panel-tarjeta:nth-child(3).entrada-escalonada{animation-delay:120ms;}
@@ -375,7 +376,7 @@
   .panel-grid.editando .panel-tarjeta{animation:panelGridJiggle 260ms ease-in-out infinite;cursor:grab;}
   .panel-grid.editando .panel-tarjeta:nth-child(even){animation-delay:130ms;}
   .panel-grid .panel-tarjeta.arrastrando{
-    animation:none !important;rotate:0deg !important;
+    animation:none !important;rotate:0deg !important;transition:none !important;
     box-shadow:0 10px 26px rgba(0,0,0,0.3);scale:1.05;
     z-index:20;cursor:grabbing;
   }
@@ -8622,7 +8623,11 @@ function activarReordenPanelGrid(){
     tarjeta.after(marcador);
 
     tarjeta.classList.add('arrastrando');
-    tarjeta.style.touchAction = 'none';
+    // left/top se fijan UNA sola vez aquí (calzan con dónde ya estaba la
+    // tarjeta, sin salto visual); el resto del arrastre solo mueve
+    // `translate`, que es compositor puro y no fuerza reflow en cada frame
+    // -- usar left/top en cada pointermove es lo que causaba los tirones que
+    // reportó el usuario ("está medio glitch, no fluye bien").
     tarjeta.style.position = 'fixed';
     tarjeta.style.left = rect.left + 'px';
     tarjeta.style.top = rect.top + 'px';
@@ -8630,13 +8635,12 @@ function activarReordenPanelGrid(){
     tarjeta.style.height = rect.height + 'px';
     try { tarjeta.setPointerCapture(pointerId); } catch {}
 
-    arrastrando = { grid, tarjeta, marcador, pointerId, offsetX: clientX - rect.left, offsetY: clientY - rect.top };
+    arrastrando = { grid, tarjeta, marcador, pointerId, inicioX: clientX, inicioY: clientY };
   }
 
   function moverArrastre(clientX, clientY){
-    const { grid, tarjeta, marcador, offsetX, offsetY } = arrastrando;
-    tarjeta.style.left = (clientX - offsetX) + 'px';
-    tarjeta.style.top = (clientY - offsetY) + 'px';
+    const { grid, tarjeta, marcador, inicioX, inicioY } = arrastrando;
+    tarjeta.style.translate = `${clientX - inicioX}px ${clientY - inicioY}px`;
 
     const candidatos = Array.from(grid.children).filter(el => el !== marcador && el !== tarjeta);
     const objetivo = candidatos.find(el => {
@@ -8665,12 +8669,12 @@ function activarReordenPanelGrid(){
     const { tarjeta, marcador } = arrastrando;
     marcador.replaceWith(tarjeta);
     tarjeta.classList.remove('arrastrando');
-    tarjeta.style.touchAction = '';
     tarjeta.style.position = '';
     tarjeta.style.left = '';
     tarjeta.style.top = '';
     tarjeta.style.width = '';
     tarjeta.style.height = '';
+    tarjeta.style.translate = '';
     arrastrando = null;
     guardarOrdenPanelGrid();
   }
@@ -16021,8 +16025,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 109;
+const VERSION_APP_ACTUAL = 110;
 const CHANGELOG_APP = [
+  {
+    version: 110,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Se corrigió el arrastre del modo de acomodo de Inicio, que se sentía trabado -- ahora sigue al dedo sin tirones.'
+    ],
+    cambios_en: [
+      'Fixed the drag in Home\'s rearrange mode, which felt stuttery -- it now follows your finger smoothly.'
+    ]
+  },
   {
     version: 109,
     fecha: '2026-09-02',
