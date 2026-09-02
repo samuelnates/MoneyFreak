@@ -338,7 +338,7 @@
   .panel-saludo{margin-bottom:14px;}
   .panel-saludo-titulo{font-family:var(--sans);font-size:20px;font-weight:700;color:var(--texto);letter-spacing:-.01em;}
   .panel-saludo-sub{font-family:var(--sans);font-size:14px;color:var(--texto-tenue);margin-top:3px;}
-  .panel-acciones-rapidas{display:flex;gap:8px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+  .panel-acciones-rapidas{display:flex;gap:8px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
   .panel-accion-rapida{
     display:flex;align-items:center;gap:6px;flex:none;background:var(--superficie);border:1px solid var(--borde-fuerte);
     border-radius:20px;padding:7px 12px 7px 8px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--texto);
@@ -354,7 +354,7 @@
     padding:10px 12px;text-align:left;cursor:pointer;margin-bottom:8px;overflow:hidden;
     transition:transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
   }
-  .panel-hero-fila{display:flex;gap:8px;margin-bottom:8px;align-items:stretch;}
+  .panel-hero-fila{display:flex;gap:8px;margin-bottom:6px;align-items:stretch;}
   .panel-hero-fila .panel-hero{margin-bottom:0;flex:1;min-width:0;}
   .panel-hero-score{flex:0 0 auto;width:104px;}
   .panel-hero-label{font-family:var(--sans);font-size:11.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--texto-tenue);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -537,7 +537,7 @@
   .panel-consejo-punto.activo{background:var(--acento);transform:scale(1.4);}
 
   .panel-insights{
-    position:relative;margin-bottom:8px;min-height:0;
+    position:relative;margin-bottom:6px;min-height:0;
   }
   .panel-insights-etiqueta{
     display:flex;align-items:center;gap:8px;
@@ -917,7 +917,7 @@
 
   .panel-freaky-card{
     border:1px solid var(--borde-fuerte);border-radius:10px;background:var(--superficie);
-    padding:12px;margin-bottom:10px;
+    padding:12px;margin-bottom:8px;
   }
   .panel-freaky-encabezado{
     display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
@@ -16025,8 +16025,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 112;
+const VERSION_APP_ACTUAL = 113;
 const CHANGELOG_APP = [
+  {
+    version: 113,
+    fecha: '2026-09-02',
+    cambios_es: [
+      'Se recuperó el espacio vertical que ganó la rejilla de Inicio -- se juntaron un poco más las tarjetas fijas de arriba (Freaky, acciones rápidas, patrimonio/score, mensajes) para que todo siga cabiendo en pantalla sin necesidad de hacer scroll.'
+    ],
+    cambios_en: [
+      'Recovered the vertical space the Home grid gained -- tightened the spacing between the fixed cards above it (Freaky, quick actions, net worth/score, messages) so everything still fits on screen without scrolling.'
+    ]
+  },
   {
     version: 112,
     fecha: '2026-09-02',
