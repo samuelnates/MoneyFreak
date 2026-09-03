@@ -14384,11 +14384,11 @@ async function renderHistoricoGastosPresupuesto(rango){
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12 } },
-        tooltip: tooltipEstiloApp((ctx) => `${ctx.dataset.label}: ${formatoMonto(ctx.parsed.y, 'MXN')}`)
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.dataset.label}: ${formatoMontoPrincipal(ctx.parsed.y)}`)
       },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
-        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMontoPrincipal(v) }, grid: { color: colorTema('--borde') } }
       }
     }
   });
@@ -14427,7 +14427,7 @@ function renderGraficaGastos(categorias){
   categorias.forEach((c, i) => {
     const fila = document.createElement('div');
     fila.className = 'leyenda-fila';
-    fila.innerHTML = `<span class="leyenda-punto" style="background:${colores[i]}"></span><span>${escapeHtml(nombreGasto(c.nombre))}: ${formatoMonto(c.gastado, 'MXN')}</span>`;
+    fila.innerHTML = `<span class="leyenda-punto" style="background:${colores[i]}"></span><span>${escapeHtml(nombreGasto(c.nombre))}: ${formatoMontoPrincipal(c.gastado)}</span>`;
     leyenda.appendChild(fila);
   });
 
@@ -14442,10 +14442,10 @@ function renderGraficaGastos(categorias){
       cutout: '64%',
       plugins: {
         legend: { display: false },
-        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMonto(ctx.parsed, 'MXN')}`)
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMontoPrincipal(ctx.parsed)}`)
       }
     },
-    plugins: [crearPluginCentroDona((total) => formatoMonto(total, 'MXN'))]
+    plugins: [crearPluginCentroDona((total) => formatoMontoPrincipal(total))]
   });
 }
 
@@ -15396,11 +15396,11 @@ function renderProyeccionLiquidez(items, activosLiquidos){
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        tooltip: tooltipEstiloApp((ctx) => formatoMonto(ctx.parsed.y, 'MXN'))
+        tooltip: tooltipEstiloApp((ctx) => formatoMontoPrincipal(ctx.parsed.y))
       },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMontoPrincipal(v) }, grid: { color: colorTema('--borde') } }
       }
     }
   });
@@ -15621,12 +15621,12 @@ async function calcularSimulador(){
     if(pagoMaximo <= 0){
       const tasaActual = (compromisosExistentes / ingreso) * 100;
       capacidadTxt = `
-        <div class="fila-balance"><span>${t('simulador.capacidad_maxima')}</span><span class="valor negativo">${formatoMonto(0, 'MXN')}</span></div>
+        <div class="fila-balance"><span>${t('simulador.capacidad_maxima')}</span><span class="valor negativo">${formatoMontoPrincipal(0)}</span></div>
         <div class="aviso">${tf('simulador.sin_margen', tasaActual.toFixed(1), perfilFinanciero.umbral_rojo)}</div>
       `;
     } else {
       capacidadTxt = `
-        <div class="fila-balance"><span>${t('simulador.capacidad_maxima')}</span><span class="valor positivo">${formatoMonto(montoMaximo, 'MXN')}</span></div>
+        <div class="fila-balance"><span>${t('simulador.capacidad_maxima')}</span><span class="valor positivo">${formatoMontoPrincipal(montoMaximo)}</span></div>
         <div class="aviso">${tf('simulador.con_margen', perfilFinanciero.umbral_rojo, plazoAnios)}</div>
       `;
     }
@@ -15637,8 +15637,8 @@ async function calcularSimulador(){
   const umbralRojo = perfilFinanciero.umbral_rojo;
   const ingresoMinimoRequerido = (pagoMensualTotal + compromisosExistentes) / (umbralRojo / 100);
   const ingresoMinimoTxt = `
-    <div class="fila-balance"><span>${t('simulador.ingreso_minimo')}</span><span class="valor positivo">${formatoMonto(ingresoMinimoRequerido, 'MXN')}</span></div>
-    <div class="aviso">${tf('simulador.ingreso_minimo_aviso', formatoMonto(compromisosExistentes, 'MXN'), umbralRojo)}</div>
+    <div class="fila-balance"><span>${t('simulador.ingreso_minimo')}</span><span class="valor positivo">${formatoMontoPrincipal(ingresoMinimoRequerido)}</span></div>
+    <div class="aviso">${tf('simulador.ingreso_minimo_aviso', formatoMontoPrincipal(compromisosExistentes), umbralRojo)}</div>
   `;
 
   const etiquetas = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
@@ -15650,25 +15650,25 @@ async function calcularSimulador(){
     const pago = pagoMensualAmortizado(montoFinanciado, tasa, meses);
     const interes = (pago * meses) - montoFinanciado;
     const pagoConSeguro = pago + seguroMensualEstimado;
-    return `<div class="fila-balance"><span>${anios} ${t('simulador.anios')}</span><span class="valor positivo">${formatoMonto(pagoConSeguro, 'MXN')}${t('comun.por_mes')}</span></div>
-      <div class="detalle-explica">${tf('simulador.capital_interes_seguro', formatoMonto(pago, 'MXN'), formatoMonto(seguroMensualEstimado, 'MXN'), formatoMonto(interes, 'MXN'))}</div>`;
+    return `<div class="fila-balance"><span>${anios} ${t('simulador.anios')}</span><span class="valor positivo">${formatoMontoPrincipal(pagoConSeguro)}${t('comun.por_mes')}</span></div>
+      <div class="detalle-explica">${tf('simulador.capital_interes_seguro', formatoMontoPrincipal(pago), formatoMontoPrincipal(seguroMensualEstimado), formatoMontoPrincipal(interes))}</div>`;
   }).join('');
 
   cont.innerHTML = `
     <div class="total-caja">
       <div class="etiqueta">${t('simulador.pago_mensual_total')}</div>
-      <div class="monto">${formatoMonto(pagoMensualTotal, 'MXN')}</div>
-      <div class="detalle-explica">${tf('simulador.capital_interes_corto', formatoMonto(pagoMensual, 'MXN'), formatoMonto(seguroMensualEstimado, 'MXN'))}</div>
+      <div class="monto">${formatoMontoPrincipal(pagoMensualTotal)}</div>
+      <div class="detalle-explica">${tf('simulador.capital_interes_corto', formatoMontoPrincipal(pagoMensual), formatoMontoPrincipal(seguroMensualEstimado))}</div>
       ${estadoPago ? `<div class="detalle-explica ${claseEstado(estadoPago)}">${tf('simulador.endeudamiento_total', etiquetas[estadoPago], tasaConEsteCredito.toFixed(1))}</div>` : ''}
       ${pctIngreso !== null ? `<div class="detalle-explica">${tf('simulador.pago_representa', pctIngreso.toFixed(1))}</div>` : ''}
     </div>
-    <div class="fila-balance"><span>${t('simulador.monto_financiar')}</span><span class="valor positivo">${formatoMonto(montoFinanciado, 'MXN')}</span></div>
-    <div class="fila-balance"><span>${tf('simulador.total_pagado', plazoAnios)}</span><span class="valor positivo">${formatoMonto(totalPagado, 'MXN')}</span></div>
-    <div class="fila-balance subtotal"><span>${t('simulador.total_intereses')}</span><span class="valor negativo">${formatoMonto(totalIntereses, 'MXN')}</span></div>
+    <div class="fila-balance"><span>${t('simulador.monto_financiar')}</span><span class="valor positivo">${formatoMontoPrincipal(montoFinanciado)}</span></div>
+    <div class="fila-balance"><span>${tf('simulador.total_pagado', plazoAnios)}</span><span class="valor positivo">${formatoMontoPrincipal(totalPagado)}</span></div>
+    <div class="fila-balance subtotal"><span>${t('simulador.total_intereses')}</span><span class="valor negativo">${formatoMontoPrincipal(totalIntereses)}</span></div>
 
     <h2>${t('simulador.costos_adicionales')}</h2>
-    <div class="fila-balance"><span>${t('simulador.comision_apertura')}</span><span class="valor negativo">${formatoMonto(comisionAperturaEstimada, 'MXN')}</span></div>
-    <div class="fila-balance"><span>${t('simulador.seguro_estimado_plazo')}</span><span class="valor negativo">${formatoMonto(seguroMensualEstimado * plazoMeses, 'MXN')}</span></div>
+    <div class="fila-balance"><span>${t('simulador.comision_apertura')}</span><span class="valor negativo">${formatoMontoPrincipal(comisionAperturaEstimada)}</span></div>
+    <div class="fila-balance"><span>${t('simulador.seguro_estimado_plazo')}</span><span class="valor negativo">${formatoMontoPrincipal(seguroMensualEstimado * plazoMeses)}</span></div>
     <div class="aviso">${t('simulador.estimados_aviso')}</div>
 
     <h2>${t('simulador.tu_capacidad')}</h2>
@@ -15719,7 +15719,7 @@ async function abrirBalance(){
     const signo = deltaAbs >= 0 ? '▲' : '▼';
     const clase = deltaAbs >= 0 ? 'positivo' : 'negativo';
     const pctTxt = deltaPct !== null ? ` (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)` : '';
-    cambioHtml = `<div class="detalle-explica"><span class="valor ${clase}">${signo} ${formatoMonto(Math.abs(deltaAbs), 'MXN')}${pctTxt}</span> ${tf('balance.desde_ultima_revision', anterior.fecha)}</div>`;
+    cambioHtml = `<div class="detalle-explica"><span class="valor ${clase}">${signo} ${formatoMontoPrincipal(Math.abs(deltaAbs))}${pctTxt}</span> ${tf('balance.desde_ultima_revision', anterior.fecha)}</div>`;
   }
 
   cont.innerHTML = `
@@ -15863,7 +15863,7 @@ function renderComposicion(b){
     const pct = b.totalActivos > 0 ? ((p.valor / b.totalActivos) * 100).toFixed(1) : '0.0';
     const fila = document.createElement('div');
     fila.className = 'leyenda-fila';
-    fila.innerHTML = `<span class="leyenda-punto" style="background:${p.color}"></span><span>${p.nombre}: ${formatoMonto(p.valor, 'MXN')} (${pct}%)</span>`;
+    fila.innerHTML = `<span class="leyenda-punto" style="background:${p.color}"></span><span>${p.nombre}: ${formatoMontoPrincipal(p.valor)} (${pct}%)</span>`;
     leyenda.appendChild(fila);
   });
 
@@ -15879,10 +15879,10 @@ function renderComposicion(b){
       cutout: '64%',
       plugins: {
         legend: { display: false },
-        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMonto(ctx.parsed, 'MXN')}`)
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.label}: ${formatoMontoPrincipal(ctx.parsed)}`)
       }
     },
-    plugins: [crearPluginCentroDona((total) => formatoMonto(total, 'MXN'))]
+    plugins: [crearPluginCentroDona((total) => formatoMontoPrincipal(total))]
   });
 }
 
@@ -15961,11 +15961,11 @@ function renderEvolucionPatrimonio(dataCompleta, dataFiltrada){
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
-        tooltip: tooltipEstiloApp((ctx) => formatoMonto(ctx.parsed.y, 'MXN'))
+        tooltip: tooltipEstiloApp((ctx) => formatoMontoPrincipal(ctx.parsed.y))
       },
       scales: {
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: colorTema('--borde') } },
-        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMonto(v, 'MXN') }, grid: { color: colorTema('--borde') } }
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMontoPrincipal(v) }, grid: { color: colorTema('--borde') } }
       }
     }
   });
@@ -16151,7 +16151,7 @@ async function compartirBalance(){
     const deltaAbs = b.patrimonioNeto - patrimonioAnterior;
     const deltaPct = patrimonioAnterior !== 0 ? (deltaAbs / Math.abs(patrimonioAnterior)) * 100 : null;
     const signo = deltaAbs >= 0 ? '+' : '-';
-    deltaTxt = `${signo}${formatoMonto(Math.abs(deltaAbs), 'MXN')}${deltaPct !== null ? ` (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)` : ''} ${tf('balance.desde_ultima_revision', anterior.fecha)}`;
+    deltaTxt = `${signo}${formatoMontoPrincipal(Math.abs(deltaAbs))}${deltaPct !== null ? ` (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)` : ''} ${tf('balance.desde_ultima_revision', anterior.fecha)}`;
   }
 
   const etiquetasEstado = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
@@ -16248,7 +16248,7 @@ async function compartirBalance(){
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(...AZUL_OSCURO);
-  doc.text(`${t('balance.patrimonio_neto')}: ${formatoMonto(b.patrimonioNeto, 'MXN')}`, anchoPagina - margen, 16, { align: 'right' });
+  doc.text(`${t('balance.patrimonio_neto')}: ${formatoMontoPrincipal(b.patrimonioNeto)}`, anchoPagina - margen, 16, { align: 'right' });
   if(deltaTxt){
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -16278,12 +16278,12 @@ async function compartirBalance(){
   const detalleDeuda = item => {
     const partes = [item.tipo];
     if(item.tasa_interes !== null && item.tasa_interes !== undefined) partes.push(tf('pdf.anual_pct', item.tasa_interes));
-    if(item.pago_mensual != null) partes.push(tf('pdf.pago_mensual', formatoMonto(item.pago_mensual, 'MXN')));
+    if(item.pago_mensual != null) partes.push(tf('pdf.pago_mensual', formatoMontoPrincipal(item.pago_mensual)));
     if(item.tipo === 'Tarjeta de crédito' && item.limite_credito){
       const util = (item.saldo / item.limite_credito) * 100;
       partes.push(tf('pdf.uso_limite', util.toFixed(0)));
     }
-    if(item.tipo === 'Tarjeta de crédito' && item.anualidad) partes.push(tf('pdf.anualidad', formatoMonto(item.anualidad, 'MXN')));
+    if(item.tipo === 'Tarjeta de crédito' && item.anualidad) partes.push(tf('pdf.anualidad', formatoMontoPrincipal(item.anualidad)));
     if(item.tipo === 'Tarjeta de crédito' && item.cashback_pct) partes.push(tf('pdf.cashback', item.cashback_pct));
     return partes.filter(Boolean).join(' · ');
   };
@@ -16340,7 +16340,7 @@ async function compartirBalance(){
         doc.text(nombreLinea, x, y);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colorMonto);
-        doc.text(`${prefijo}${formatoMonto(item.montoMXN, 'MXN')}`, x + ancho, y, { align: 'right' });
+        doc.text(`${prefijo}${formatoMontoPrincipal(item.montoMXN)}`, x + ancho, y, { align: 'right' });
         if(detalle){
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(7.5);
@@ -16362,7 +16362,7 @@ async function compartirBalance(){
     doc.setTextColor(...INK);
     doc.text(etiquetaTotal, x, y);
     doc.setTextColor(...colorMonto);
-    doc.text(`${prefijo}${formatoMonto(totalGeneral, 'MXN')}`, x + ancho, y, { align: 'right' });
+    doc.text(`${prefijo}${formatoMontoPrincipal(totalGeneral)}`, x + ancho, y, { align: 'right' });
     y += 8;
 
     return { pagina, y };
@@ -16431,11 +16431,11 @@ async function compartirBalance(){
   };
 
   dibujarIndicadorCompacto(xInd[0], t('salud.cobertura_liquidez'), coberturaTxt, s.estadoLiquidez,
-    tf('pdf.liquido_compromisos', formatoMonto(s.activosLiquidos, 'MXN'), formatoMonto(s.compromisosMensuales, 'MXN')));
+    tf('pdf.liquido_compromisos', formatoMontoPrincipal(s.activosLiquidos), formatoMontoPrincipal(s.compromisosMensuales)));
   dibujarIndicadorCompacto(xInd[1], t('salud.tasa_endeudamiento'), endeudamientoTxt, s.estadoEndeudamiento,
-    s.ingreso ? tf('pdf.deuda_ingreso', formatoMonto(s.compromisosDeuda, 'MXN'), formatoMonto(s.ingreso, 'MXN')) : t('pdf.ingreso_sin_definir'));
+    s.ingreso ? tf('pdf.deuda_ingreso', formatoMontoPrincipal(s.compromisosDeuda), formatoMontoPrincipal(s.ingreso)) : t('pdf.ingreso_sin_definir'));
   dibujarIndicadorCompacto(xInd[2], t('pdf.composicion_activos'), tf('pdf.pct_liquido', pctLiquido.toFixed(0)), null,
-    tf('pdf.liquido_no_liquido', formatoMonto(s.activosLiquidos, 'MXN'), formatoMonto(activosNoLiquidos, 'MXN')));
+    tf('pdf.liquido_no_liquido', formatoMontoPrincipal(s.activosLiquidos), formatoMontoPrincipal(activosNoLiquidos)));
 
   y += alturaBloqueInd;
 
@@ -16467,11 +16467,11 @@ async function compartirBalance(){
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...(colorValor || INK));
       doc.text(valorTxt, x, y + 7);
     };
-    dibujarResumenItem(xResumen[0], t('pdf.patrimonio_inicial'), ec.patrimonioInicial !== null ? formatoMonto(ec.patrimonioInicial, 'MXN') : t('pdf.no_disponible'));
-    dibujarResumenItem(xResumen[1], t('pdf.patrimonio_final'), ec.patrimonioFinal !== null ? formatoMonto(ec.patrimonioFinal, 'MXN') : t('pdf.no_disponible'));
-    const cambioTxt = ec.cambioPatrimonio !== null ? `${ec.cambioPatrimonio >= 0 ? '+' : ''}${formatoMonto(ec.cambioPatrimonio, 'MXN')}` : t('pdf.no_disponible');
+    dibujarResumenItem(xResumen[0], t('pdf.patrimonio_inicial'), ec.patrimonioInicial !== null ? formatoMontoPrincipal(ec.patrimonioInicial) : t('pdf.no_disponible'));
+    dibujarResumenItem(xResumen[1], t('pdf.patrimonio_final'), ec.patrimonioFinal !== null ? formatoMontoPrincipal(ec.patrimonioFinal) : t('pdf.no_disponible'));
+    const cambioTxt = ec.cambioPatrimonio !== null ? `${ec.cambioPatrimonio >= 0 ? '+' : ''}${formatoMontoPrincipal(ec.cambioPatrimonio)}` : t('pdf.no_disponible');
     dibujarResumenItem(xResumen[2], t('pdf.cambio_periodo'), cambioTxt, ec.cambioPatrimonio !== null ? (ec.cambioPatrimonio >= 0 ? VERDE : ROJO) : GRIS);
-    dibujarResumenItem(xResumen[3], t('pdf.ingresos_vs_gastos'), `+${formatoMonto(ec.ingresosPeriodo.total, 'MXN')} / -${formatoMonto(ec.gastosPeriodo.total, 'MXN')}`);
+    dibujarResumenItem(xResumen[3], t('pdf.ingresos_vs_gastos'), `+${formatoMontoPrincipal(ec.ingresosPeriodo.total)} / -${formatoMontoPrincipal(ec.gastosPeriodo.total)}`);
     y += 18;
 
     if(y + 10 > altoPagina - 22){ y = nuevaPagina(); pagina = doc.internal.getNumberOfPages(); }
@@ -16488,7 +16488,7 @@ async function compartirBalance(){
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK);
         doc.text(nombreGasto(cat.nombre), margen, y);
         doc.setFont('helvetica', 'bold'); doc.setTextColor(...ROJO);
-        doc.text(`-${formatoMonto(cat.total, 'MXN')}`, anchoPagina - margen, y, { align: 'right' });
+        doc.text(`-${formatoMontoPrincipal(cat.total)}`, anchoPagina - margen, y, { align: 'right' });
         y += 5.5;
       });
     }
@@ -16566,7 +16566,7 @@ async function compartirBalance(){
         doc.rect(xIzq + tamPie + 6, yLeyenda - 3, 3, 3, 'F');
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...GRIS);
-        doc.text(`${p.nombre}: ${formatoMonto(p.valor, 'MXN')} (${pct.toFixed(1)}%)`, xIzq + tamPie + 11, yLeyenda);
+        doc.text(`${p.nombre}: ${formatoMontoPrincipal(p.valor)} (${pct.toFixed(1)}%)`, xIzq + tamPie + 11, yLeyenda);
         yLeyenda += 6;
       });
     }
@@ -16638,8 +16638,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 127;
+const VERSION_APP_ACTUAL = 128;
 const CHANGELOG_APP = [
+  {
+    version: 128,
+    fecha: '2026-09-03',
+    cambios_es: [
+      '"Moneda principal" ahora también aplica al PDF exportable, a las gráficas (Balance, Gastos, Flujo de efectivo) y al Simulador de crédito -- antes solo cambiaba las pantallas, estas tres partes seguían mostrando siempre en pesos.'
+    ],
+    cambios_en: [
+      '"Main currency" now also applies to the exportable PDF, the charts (Balance, Expenses, Cash flow) and the Credit simulator -- before it only changed the screens, these three parts still always showed in pesos.'
+    ]
+  },
   {
     version: 127,
     fecha: '2026-09-03',
