@@ -4458,6 +4458,7 @@ const TRADUCCIONES = {
     'simulador.ingreso_minimo': 'Ingreso mensual mínimo para calificar',
     'simulador.ingreso_minimo_aviso': 'Para que este pago total (con seguro, junto con tus deudas actuales de {0}) no pase de tu límite de {1}% de endeudamiento, necesitarías ingresar al menos esto al mes.',
     'simulador.anios': 'años',
+    'comun.por_mes': '/mes',
     'simulador.capital_interes_seguro': 'Capital+interés: {0} + seguro estimado: {1} · Intereses totales: {2}',
     'simulador.pago_mensual_total': 'Pago mensual total estimado',
     'simulador.capital_interes_corto': 'Capital + interés: {0} · Seguro estimado: {1}',
@@ -5422,6 +5423,7 @@ const TRADUCCIONES = {
     'simulador.ingreso_minimo': 'Minimum monthly income to qualify',
     'simulador.ingreso_minimo_aviso': 'For this total payment (with insurance, together with your current debts of {0}) to stay under your {1}% debt limit, you would need to earn at least this much per month.',
     'simulador.anios': 'years',
+    'comun.por_mes': '/mo',
     'simulador.capital_interes_seguro': 'Principal+interest: {0} + estimated insurance: {1} · Total interest: {2}',
     'simulador.pago_mensual_total': 'Estimated total monthly payment',
     'simulador.capital_interes_corto': 'Principal + interest: {0} · Estimated insurance: {1}',
@@ -10209,7 +10211,7 @@ async function cargarIngresos(){
     return;
   }
   const totalIngresosMXN = data.reduce((a, ing) => a + montoMensualIngreso(ing), 0);
-  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMonto(totalIngresosMXN, 'MXN')}/mes`;
+  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMonto(totalIngresosMXN, 'MXN')}${t('comun.por_mes')}`;
   cont.innerHTML = '';
   data.forEach((ing, i) => {
     const btn = document.createElement('button');
@@ -11142,7 +11144,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     const filasHtml = accionPresupuesto.cambios.map(c => `
       <div class="chat-accion-presupuesto-fila">
         <span>${escapeHtml(nombreGasto(c.categoria))} · ${escapeHtml(nombreGasto(c.subcategoria))}</span>
-        <span class="chat-accion-presupuesto-monto">${formatoMonto(c.monto_sugerido, 'MXN')}/mes</span>
+        <span class="chat-accion-presupuesto-monto">${formatoMonto(c.monto_sugerido, 'MXN')}${t('comun.por_mes')}</span>
       </div>`).join('');
     accionPresupuestoHtml = `<div class="chat-accion-gasto" id="chat-accion-presupuesto-${idPresupuesto}">
       <div class="chat-accion-gasto-detalle">${escapeHtml(accionPresupuesto.resumen)}</div>
@@ -12352,7 +12354,7 @@ async function preguntarSobreApp(){
     const ingresos_existentes = ingresosChat.map(i => ({ id: i.id, nombre: i.nombre, monto: Number(i.monto) }));
 
     const resultado = await llamarConAccesoIA('preguntar-sobre-app',
-      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes },
+      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
       { sinAcceso: 'ayuda_ia.sin_acceso', codigoInvalido: 'ayuda_ia.codigo_invalido' });
     escribiendo.remove();
     if(!resultado.ok || !resultado.data || !resultado.data.respuesta){
@@ -12405,7 +12407,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     const ingresos_existentes = ingresosChat.map(i => ({ id: i.id, nombre: i.nombre, monto: Number(i.monto) }));
 
     const resultado = await llamarConAccesoIA('preguntar-sobre-app',
-      { audio_base64: datos_base64, mime_type: mimeType, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes },
+      { audio_base64: datos_base64, mime_type: mimeType, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
       { sinAcceso: 'ayuda_ia.sin_acceso', codigoInvalido: 'ayuda_ia.codigo_invalido' });
     escribiendo.remove();
     if(!resultado.ok || !resultado.data || !resultado.data.respuesta){
@@ -14448,7 +14450,7 @@ function actualizarSubtotalPresupuestoCategoria(idCat){
     totalMensual += Number(valor) / (MESES_POR_PERIODICIDAD[periodicidad] || 1);
   });
   const span = document.getElementById(`acordeon-total-presupuesto-${idCat}`);
-  if(span) span.textContent = totalMensual > 0 ? `${formatoMonto(totalMensual, 'MXN')}/mes` : '';
+  if(span) span.textContent = totalMensual > 0 ? `${formatoMonto(totalMensual, 'MXN')}${t('comun.por_mes')}` : '';
 }
 
 async function guardarPresupuesto(){
@@ -15582,7 +15584,7 @@ async function calcularSimulador(){
     const pago = pagoMensualAmortizado(montoFinanciado, tasa, meses);
     const interes = (pago * meses) - montoFinanciado;
     const pagoConSeguro = pago + seguroMensualEstimado;
-    return `<div class="fila-balance"><span>${anios} ${t('simulador.anios')}</span><span class="valor positivo">${formatoMonto(pagoConSeguro, 'MXN')}/mes</span></div>
+    return `<div class="fila-balance"><span>${anios} ${t('simulador.anios')}</span><span class="valor positivo">${formatoMonto(pagoConSeguro, 'MXN')}${t('comun.por_mes')}</span></div>
       <div class="detalle-explica">${tf('simulador.capital_interes_seguro', formatoMonto(pago, 'MXN'), formatoMonto(seguroMensualEstimado, 'MXN'), formatoMonto(interes, 'MXN'))}</div>`;
   }).join('');
 
@@ -16570,8 +16572,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 124;
+const VERSION_APP_ACTUAL = 125;
 const CHANGELOG_APP = [
+  {
+    version: 125,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Corregido: Freaky (el chat) siempre respondía en español, incluso preguntándole en inglés -- ahora responde en el mismo idioma en el que tienes la app. También se corrigió un "/mes" que aparecía fijo en español en algunas pantallas aunque tuvieras la app en inglés.'
+    ],
+    cambios_en: [
+      "Fixed: Freaky (the chat) always answered in Spanish, even when asked in English -- it now replies in whatever language the app is set to. Also fixed a hardcoded Spanish \"/mes\" that showed up on a few screens even with the app in English."
+    ]
+  },
   {
     version: 124,
     fecha: '2026-09-03',

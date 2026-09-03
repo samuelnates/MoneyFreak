@@ -157,7 +157,8 @@ function construirSystemPrompt(
   mediosPago: MedioPagoDisponible[],
   cuentas: CuentaDisponible[],
   deudas: DeudaDisponible[],
-  ingresos: IngresoExistente[]
+  ingresos: IngresoExistente[],
+  idioma: string
 ): string {
   const listaMediosPago = mediosPago.length
     ? mediosPago.map((m) => `- "${m.valor}" = ${m.etiqueta}`).join("\n")
@@ -305,7 +306,7 @@ REGLAS para "destino":
 - Si la pregunta es general, conceptual, o ninguna pantalla de la lista aplica claramente, destino debe ser null. No inventes una clave que no esté en la lista.
 - Nunca menciones la clave interna (ej. "movimientos") en el texto de "respuesta" — el link ya muestra el nombre bonito de la pantalla, tú solo explica normalmente.
 
-Responde en español, corto y directo, como un mentor de confianza. Si preguntan algo totalmente fuera de finanzas personales o del uso de la app, di amablemente que solo puedes ayudar con eso.`;
+${idioma === "en" ? "IMPORTANT: respond ONLY in English, regardless of the language of these instructions." : "IMPORTANTE: responde SIEMPRE en español, sin importar el idioma de estas instrucciones."} Sé corto y directo, como un mentor de confianza. Si preguntan algo totalmente fuera de finanzas personales o del uso de la app, di amablemente que solo puedes ayudar con eso (en el mismo idioma).`;
 }
 
 const CORS_HEADERS = {
@@ -384,6 +385,7 @@ Deno.serve(async (req) => {
     ingresos_existentes?: IngresoExistente[];
     audio_base64?: string;
     mime_type?: string;
+    idioma?: string;
   };
   try {
     body = await req.json();
@@ -402,6 +404,7 @@ Deno.serve(async (req) => {
   const cuentas = Array.isArray(body.cuentas_disponibles) ? body.cuentas_disponibles : [];
   const deudas = Array.isArray(body.deudas_disponibles) ? body.deudas_disponibles : [];
   const ingresos = Array.isArray(body.ingresos_existentes) ? body.ingresos_existentes : [];
+  const idioma = body.idioma === "en" ? "en" : "es";
 
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
@@ -441,7 +444,7 @@ Deno.serve(async (req) => {
       openai.responses.parse({
         model: MODEL,
         store: false,
-        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos),
+        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos, idioma),
         input: inputTexto,
         text: { format: zodTextFormat(RespuestaFreakySchema, "respuesta_freaky") },
       }),
