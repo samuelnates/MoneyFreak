@@ -1336,7 +1336,17 @@
   .login-caja .logo-mark{width:46px;height:46px;margin-bottom:12px;}
   .logo-mark svg{width:100%;height:100%;display:block;}
   .login-caja h1{margin-bottom:6px;font-size:22px;}
-  .login-caja .subtitulo{margin-bottom:32px;}
+  .login-subtitulo{margin:8px 0 30px;}
+  .login-subtitulo-principal{
+    font-family:var(--sans);font-size:16px;font-weight:600;color:var(--texto);
+    margin:0 0 8px;letter-spacing:.005em;line-height:1.3;
+  }
+  .login-subtitulo-privacidad{
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    font-family:var(--mono);font-size:11px;color:var(--texto-tenue);
+    margin:0;letter-spacing:.03em;
+  }
+  .login-subtitulo-privacidad svg{flex-shrink:0;opacity:.7;}
   .login-features{
     list-style:none;margin:28px 0 20px;padding:0;text-align:left;
     display:flex;flex-direction:column;gap:8px;
@@ -1697,7 +1707,10 @@
     <div class="freaky-login-sentado" id="freaky-login-sentado" aria-hidden="true"><img id="freaky-login-sentado-img" alt=""></div>
     <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><polyline points="240,790 360,680 430,730 540,560 610,610 700,400" fill="none" stroke="currentColor" stroke-width="42" stroke-linejoin="miter" stroke-linecap="round"/><polygon points="743,299 757,415 650,370" fill="currentColor"/><circle cx="240" cy="790" r="24" fill="currentColor"/><circle cx="360" cy="680" r="24" fill="currentColor"/><circle cx="430" cy="730" r="24" fill="currentColor"/><circle cx="540" cy="560" r="24" fill="currentColor"/><circle cx="610" cy="610" r="24" fill="currentColor"/></svg></div>
     <h1>Money <span id="span-titulo-freak">Freak</span></h1>
-    <p class="subtitulo" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
+    <div class="login-subtitulo">
+      <p class="login-subtitulo-principal" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
+      <p class="login-subtitulo-privacidad"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span data-i18n="login.subtitulo_privacidad">Tu información siempre privada y segura</span></p>
+    </div>
     <button type="button" class="btn-grande" id="btn-login-biometrico" style="display:none;margin-bottom:14px;" onclick="iniciarSesionBiometrico()" data-i18n="login.entrar_face_id">Entrar con Face ID</button>
     <form onsubmit="event.preventDefault(); iniciarSesion();">
       <div class="campo">
@@ -4070,7 +4083,8 @@ function inicializarTema(){
 
 const TRADUCCIONES = {
   es: {
-    'login.subtitulo': 'Controla tu patrimonio completo — tu información siempre privada y segura',
+    'login.subtitulo': 'Controla tu patrimonio completo',
+    'login.subtitulo_privacidad': 'Tu información siempre privada y segura',
     'login.feature_1': 'Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.',
     'login.feature_2': 'Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.',
     'login.feature_3': 'Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.',
@@ -5038,7 +5052,8 @@ const TRADUCCIONES = {
     'registro.error_captcha': 'Confirma que no eres un robot antes de continuar.'
   },
   en: {
-    'login.subtitulo': 'Take control of your entire net worth — your information always private and secure',
+    'login.subtitulo': 'Take control of your entire net worth',
+    'login.subtitulo_privacidad': 'Your information always private and secure',
     'login.feature_1': 'Bring together your accounts, assets, debts, and stocks in one place, with your net worth always up to date.',
     'login.feature_2': 'Freaky, your AI financial mentor, logs your expenses just by you describing them and tells you if you can afford your month.',
     'login.feature_3': 'Financial health, cash flow, and credit simulator, calculated automatically from your real data.',
@@ -16638,8 +16653,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 128;
+const VERSION_APP_ACTUAL = 129;
 const CHANGELOG_APP = [
+  {
+    version: 129,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Rediseño del texto de bienvenida en la pantalla de inicio de sesión: la frase se partía a la mitad de forma fea al llegar al borde de la pantalla -- ahora son dos líneas separadas, cada una con su propio estilo (el mensaje principal en negritas, el aviso de privacidad más pequeño y con un ícono de candado).'
+    ],
+    cambios_en: [
+      "Redesigned the welcome text on the login screen: the sentence used to break awkwardly mid-line at the edge of the screen -- now it's two separate lines, each with its own style (the main message in bold, the privacy note smaller with a lock icon)."
+    ]
+  },
   {
     version: 128,
     fecha: '2026-09-03',
