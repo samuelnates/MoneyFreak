@@ -1852,6 +1852,14 @@
   </div>
   <button class="btn-grande" id="btn-enviar-recuperacion" onclick="enviarRecuperacion()" data-i18n="recuperar.enviar">Enviar link de recuperación</button>
   <div id="recuperar-mensaje" class="aviso" style="display:none;"></div>
+  <div id="bloque-codigo-recuperacion" style="display:none;">
+    <div class="campo">
+      <label for="input-codigo-recuperacion" data-i18n="recuperar.codigo_label">Código de 6 dígitos del correo</label>
+      <input type="text" id="input-codigo-recuperacion" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+    </div>
+    <div id="codigo-recuperacion-error" class="aviso" style="display:none;"></div>
+    <button class="btn-grande" id="btn-verificar-codigo-recuperacion" onclick="verificarCodigoRecuperacion()" data-i18n="recuperar.verificar_codigo">Verificar código</button>
+  </div>
   <button class="btn-grande secundario" onclick="mostrar('vista-login')" data-i18n="comun.volver">Volver</button>
 </div>
 
@@ -4929,9 +4937,13 @@ const TRADUCCIONES = {
     'registro.error_password_debil': 'Tu contraseña es muy débil o muy corta. Usa al menos 6 caracteres.',
     'registro.error_correo_invalido': 'Ese correo no es válido. Revísalo e intenta de nuevo.',
     'registro.error_conexion': 'No se pudo conectar. Revisa tu internet e intenta de nuevo.',
-    'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un link para restablecer tu contraseña.',
+    'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un link y un código de 6 dígitos para restablecer tu contraseña.',
     'recuperar.error_min_caracteres': 'La contraseña debe tener al menos 6 caracteres.',
     'recuperar.error_generico': 'No se pudo guardar. Intenta de nuevo.',
+    'recuperar.codigo_label': 'Código de 6 dígitos del correo',
+    'recuperar.verificar_codigo': 'Verificar código',
+    'recuperar.error_codigo_vacio': 'Escribe el código que te llegó por correo.',
+    'recuperar.error_codigo_invalido': 'Ese código no es válido o ya expiró. Pide uno nuevo.',
     'comun.no_conectar': 'No se pudo conectar.',
     'cuentas.sin_cuentas_mensaje': 'Todavía no hay cuentas de inversión.',
     'cuentas.sin_cuentas': 'Sin cuentas',
@@ -5888,9 +5900,13 @@ const TRADUCCIONES = {
     'registro.error_password_debil': 'Your password is too weak or too short. Use at least 6 characters.',
     'registro.error_correo_invalido': 'That email is not valid. Check it and try again.',
     'registro.error_conexion': 'Could not connect. Check your internet and try again.',
-    'recuperar.mensaje_enviado': 'If that email has an account, we sent a link to reset your password.',
+    'recuperar.mensaje_enviado': 'If that email has an account, we sent a link and a 6-digit code to reset your password.',
     'recuperar.error_min_caracteres': 'The password must be at least 6 characters.',
     'recuperar.error_generico': 'Could not save. Try again.',
+    'recuperar.codigo_label': '6-digit code from the email',
+    'recuperar.verificar_codigo': 'Verify code',
+    'recuperar.error_codigo_vacio': 'Enter the code you received by email.',
+    'recuperar.error_codigo_invalido': "That code isn't valid or already expired. Request a new one.",
     'comun.no_conectar': 'Could not connect.',
     'cuentas.sin_cuentas_mensaje': 'You do not have any investment accounts yet.',
     'cuentas.sin_cuentas': 'No accounts',
@@ -7362,8 +7378,40 @@ async function enviarRecuperacion(){
   } else {
     msgDiv.className = 'aviso exito';
     msgDiv.textContent = t('recuperar.mensaje_enviado');
+    // El correo ahora trae, además del link de siempre, un código de 6
+    // dígitos (parte 150) -- se revela el campo para escribirlo aquí mismo,
+    // sin salir de la app, evitando el bug de fondo del link (se rompe si el
+    // correo lo abre en su propio navegador interno en vez de Safari/Chrome).
+    document.getElementById('bloque-codigo-recuperacion').style.display = 'block';
+    document.getElementById('input-codigo-recuperacion').focus();
   }
   msgDiv.style.display = 'block';
+}
+
+// Verifica el código de 6 dígitos del correo de recuperación en vez de
+// depender del link -- mismo resultado final (deja una sesión de
+// recuperación activa y dispara el evento PASSWORD_RECOVERY, que el
+// listener de onAuthStateChange en init() ya escucha y manda solo a
+// vista-nueva-contrasena), pero sin ningún salto entre apps/navegadores de
+// por medio, así que no puede sufrir el bug de "code verifier" perdido.
+async function verificarCodigoRecuperacion(){
+  const email = document.getElementById('input-email-recuperar').value.trim();
+  const token = document.getElementById('input-codigo-recuperacion').value.trim();
+  const errDiv = document.getElementById('codigo-recuperacion-error');
+  errDiv.style.display = 'none';
+  if(!token){
+    errDiv.textContent = t('recuperar.error_codigo_vacio');
+    errDiv.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('btn-verificar-codigo-recuperacion');
+  btn.disabled = true;
+  const { error } = await sb.auth.verifyOtp({ email, token, type: 'recovery' });
+  btn.disabled = false;
+  if(error){
+    errDiv.textContent = t('recuperar.error_codigo_invalido');
+    errDiv.style.display = 'block';
+  }
 }
 
 async function guardarNuevaContrasena(){
@@ -16519,8 +16567,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 121;
+const VERSION_APP_ACTUAL = 122;
 const CHANGELOG_APP = [
+  {
+    version: 122,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Recuperar contraseña ahora también funciona con un código de 6 dígitos, no solo con el link del correo -- se escribe directo en la app y ya no depende de qué navegador abra el correo (antes, si se abría dentro de la app de Correo/Gmail/Yahoo en vez de Safari, el link fallaba y regresaba confundido a la pantalla de siempre).'
+    ],
+    cambios_en: [
+      "Password recovery now also works with a 6-digit code, not just the email link -- type it right in the app, no longer dependent on which browser your mail app opens (before, opening it inside the Mail/Gmail/Yahoo app instead of Safari made the link fail and bounce you back to the same screen)."
+    ]
+  },
   {
     version: 121,
     fecha: '2026-09-03',
