@@ -806,7 +806,17 @@
     display:none;align-items:center;justify-content:center;
     position:fixed;right:18px;bottom:74px;width:46px;height:46px;border-radius:50%;
     background:var(--acento);color:var(--acento-texto);border:none;
-    cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:5;
+    cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);
+    /* z-index:10, no 5: bug real reportado por un usuario (captura real, "voy
+       al engrane... y no responde") -- dentro del chat de Freaky (vista-ayuda-ia)
+       .pantalla-chat sube a z-index:9 (ver el comentario grande junto a esa
+       regla, más abajo) para ganarle a #freaky-personaje (z-index:8). Este
+       botón vive fuera de cualquier .pantalla igual que Freaky, pero se quedó
+       en z-index:5 -- .pantalla-chat lo tapaba por completo ahí, aunque se
+       siguiera viendo (position:fixed), ya no recibía ningún toque. Sigue muy
+       por debajo de los overlays de verdad (alertas, confirmaciones, el tour),
+       que usan cientos/miles. */
+    z-index:10;
   }
   .btn-config-flotante svg{width:20px;height:20px;}
   body.con-sesion .btn-config-flotante{display:flex;}
@@ -824,7 +834,12 @@
     display:none;align-items:center;justify-content:center;
     position:fixed;right:18px;bottom:128px;width:46px;height:46px;border-radius:50%;
     background:var(--superficie);border:1px solid var(--borde-fuerte);overflow:hidden;padding:0;
-    cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);z-index:5;touch-action:none;
+    cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.5);touch-action:none;
+    /* Mismo z-index:10 que .btn-config-flotante, mismo motivo (ver su
+       comentario): a diferencia de #freaky-personaje/.btn-asistente-flotante,
+       este botón NO se oculta dentro del chat (.freaky-en-chat no lo toca),
+       así que también se quedaba invisible al tacto detrás de .pantalla-chat. */
+    z-index:10;
   }
   .btn-freaky-guardado-avatar{width:100%;height:100%;object-fit:cover;pointer-events:none;}
 
@@ -16723,8 +16738,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 132;
+const VERSION_APP_ACTUAL = 133;
 const CHANGELOG_APP = [
+  {
+    version: 133,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Corregido: el botón de Configuración (engrane) no respondía al tocarlo estando dentro del chat de Freaky -- se veía normal, pero la pantalla del chat lo tapaba por completo para el toque, sin ningún aviso.'
+    ],
+    cambios_en: [
+      "Fixed: the Settings button (gear icon) didn't respond to taps while inside Freaky's chat -- it looked normal, but the chat screen was fully blocking taps to it, with no visible sign anything was wrong."
+    ]
+  },
   {
     version: 132,
     fecha: '2026-09-03',
