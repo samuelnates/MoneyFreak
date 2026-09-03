@@ -4496,7 +4496,7 @@ const TRADUCCIONES = {
     'legal.tus_derechos_h2': 'Tus derechos',
     'legal.tus_derechos_texto': 'Puedes descargar o borrar todos tus datos cuando quieras desde "Configuración → Seguridad y privacidad" dentro de la app, o pedirlo escribiendo a help@moneyfreak.app.',
     'recuperar.titulo': 'Recuperar contraseña',
-    'recuperar.enviar': 'Enviar link de recuperación',
+    'recuperar.enviar': 'Enviar código de recuperación',
     'recuperar.enviando': 'Enviando…',
     'recuperar.error_envio': 'No se pudo enviar el correo. Intenta de nuevo en un momento.',
     'recuperar.nueva_titulo': 'Nueva contraseña',
@@ -4938,7 +4938,7 @@ const TRADUCCIONES = {
     'registro.error_password_debil': 'Tu contraseña es muy débil o muy corta. Usa al menos 6 caracteres.',
     'registro.error_correo_invalido': 'Ese correo no es válido. Revísalo e intenta de nuevo.',
     'registro.error_conexion': 'No se pudo conectar. Revisa tu internet e intenta de nuevo.',
-    'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un link y un código de 6 dígitos para restablecer tu contraseña.',
+    'recuperar.mensaje_enviado': 'Si ese correo tiene una cuenta, te enviamos un código de 6 dígitos para restablecer tu contraseña.',
     'recuperar.error_min_caracteres': 'La contraseña debe tener al menos 6 caracteres.',
     'recuperar.error_generico': 'No se pudo guardar. Intenta de nuevo.',
     'recuperar.codigo_label': 'Código de 6 dígitos del correo',
@@ -5460,7 +5460,7 @@ const TRADUCCIONES = {
     'legal.tus_derechos_h2': 'Your rights',
     'legal.tus_derechos_texto': 'You can download or delete all your data anytime from "Settings → Security & privacy" inside the app, or request it by writing to help@moneyfreak.app.',
     'recuperar.titulo': 'Reset password',
-    'recuperar.enviar': 'Send reset link',
+    'recuperar.enviar': 'Send recovery code',
     'recuperar.enviando': 'Sending…',
     'recuperar.error_envio': "Couldn't send the email. Try again in a moment.",
     'recuperar.nueva_titulo': 'New password',
@@ -5902,7 +5902,7 @@ const TRADUCCIONES = {
     'registro.error_password_debil': 'Your password is too weak or too short. Use at least 6 characters.',
     'registro.error_correo_invalido': 'That email is not valid. Check it and try again.',
     'registro.error_conexion': 'Could not connect. Check your internet and try again.',
-    'recuperar.mensaje_enviado': 'If that email has an account, we sent a link and a 6-digit code to reset your password.',
+    'recuperar.mensaje_enviado': 'If that email has an account, we sent a 6-digit code to reset your password.',
     'recuperar.error_min_caracteres': 'The password must be at least 6 characters.',
     'recuperar.error_generico': 'Could not save. Try again.',
     'recuperar.codigo_label': '6-digit code from the email',
@@ -16570,8 +16570,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 123;
+const VERSION_APP_ACTUAL = 124;
 const CHANGELOG_APP = [
+  {
+    version: 124,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'El correo de recuperación de contraseña ahora solo trae el código de 6 dígitos, sin ningún link -- algunos correos/antivirus visitan los links automáticamente por seguridad, y eso podía "gastar" el código antes de que llegaras a usarlo.'
+    ],
+    cambios_en: [
+      "The password-recovery email now only includes the 6-digit code, no link -- some mail apps/antivirus scanners auto-visit links for safety, which could burn the code before you got to use it."
+    ]
+  },
   {
     version: 123,
     fecha: '2026-09-03',
