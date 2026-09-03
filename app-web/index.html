@@ -1763,6 +1763,7 @@
       <input type="text" id="input-nombre-registro" placeholder="¿Cómo te llamas?" data-i18n-placeholder="registro.nombre_placeholder" onkeydown="if(event.key==='Enter') siguientePasoRegistro()">
     </div>
     <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
+    <div class="aviso" data-i18n="registro.aviso_privacidad_corto">Tu información está cifrada, solo tú puedes verla.</div>
   </div>
 
   <div class="registro-paso" data-paso="2" style="display:none;">
@@ -4069,7 +4070,7 @@ function inicializarTema(){
 
 const TRADUCCIONES = {
   es: {
-    'login.subtitulo': 'Cuentas, bienes, deudas y salud financiera',
+    'login.subtitulo': 'Controla tu patrimonio completo — tu información siempre privada y segura',
     'login.feature_1': 'Junta tus cuentas, bienes, deudas y acciones en un solo lugar, con tu patrimonio siempre al día.',
     'login.feature_2': 'Freaky, tu mentor financiero con IA, registra tus gastos con solo describírselos y te avisa si te alcanza el mes.',
     'login.feature_3': 'Salud financiera, flujo de efectivo y simulador de crédito, calculados en automático con tus datos reales.',
@@ -4120,6 +4121,7 @@ const TRADUCCIONES = {
     'registro.paso': 'Paso {0} de {1}',
     'registro.nombre_label': 'Tu nombre',
     'registro.nombre_placeholder': '¿Cómo te llamas?',
+    'registro.aviso_privacidad_corto': 'Tu información está cifrada, solo tú puedes verla.',
     'registro.correo_label': 'Correo',
     'registro.password_label': 'Contraseña',
     'registro.password_placeholder': 'Mínimo 6 caracteres',
@@ -5036,7 +5038,7 @@ const TRADUCCIONES = {
     'registro.error_captcha': 'Confirma que no eres un robot antes de continuar.'
   },
   en: {
-    'login.subtitulo': 'Accounts, assets, debts and financial health',
+    'login.subtitulo': 'Take control of your entire net worth — your information always private and secure',
     'login.feature_1': 'Bring together your accounts, assets, debts, and stocks in one place, with your net worth always up to date.',
     'login.feature_2': 'Freaky, your AI financial mentor, logs your expenses just by you describing them and tells you if you can afford your month.',
     'login.feature_3': 'Financial health, cash flow, and credit simulator, calculated automatically from your real data.',
@@ -5087,6 +5089,7 @@ const TRADUCCIONES = {
     'registro.paso': 'Step {0} of {1}',
     'registro.nombre_label': 'Your name',
     'registro.nombre_placeholder': 'What\'s your name?',
+    'registro.aviso_privacidad_corto': 'Your information is encrypted -- only you can see it.',
     'registro.correo_label': 'Email',
     'registro.password_label': 'Password',
     'registro.password_placeholder': 'At least 6 characters',
@@ -16635,8 +16638,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 126;
+const VERSION_APP_ACTUAL = 127;
 const CHANGELOG_APP = [
+  {
+    version: 127,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Nuevo texto en las pantallas de inicio de sesión y crear cuenta, para que quede claro desde el primer momento qué gana y qué tan protegida está tu información.'
+    ],
+    cambios_en: [
+      "New text on the login and create-account screens, so it's clear from the very first moment what you get and how well protected your information is."
+    ]
+  },
   {
     version: 126,
     fecha: '2026-09-03',
