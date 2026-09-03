@@ -1855,10 +1855,11 @@
   <div id="bloque-codigo-recuperacion" style="display:none;">
     <div class="campo">
       <label for="input-codigo-recuperacion" data-i18n="recuperar.codigo_label">Código de 6 dígitos del correo</label>
-      <input type="text" id="input-codigo-recuperacion" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <input type="text" id="input-codigo-recuperacion" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="one-time-code" maxlength="6" placeholder="Ej. Lu2731">
     </div>
     <div id="codigo-recuperacion-error" class="aviso" style="display:none;"></div>
     <button class="btn-grande" id="btn-verificar-codigo-recuperacion" onclick="verificarCodigoRecuperacion()" data-i18n="recuperar.verificar_codigo">Verificar código</button>
+    <button type="button" class="btn-link-tenue" onclick="enviarRecuperacion()" data-i18n="recuperar.pedir_otro">¿No te llegó o ya expiró? Pedir un código nuevo</button>
   </div>
   <button class="btn-grande secundario" onclick="mostrar('vista-login')" data-i18n="comun.volver">Volver</button>
 </div>
@@ -4944,6 +4945,7 @@ const TRADUCCIONES = {
     'recuperar.verificar_codigo': 'Verificar código',
     'recuperar.error_codigo_vacio': 'Escribe el código que te llegó por correo.',
     'recuperar.error_codigo_invalido': 'Ese código no es válido o ya expiró. Pide uno nuevo.',
+    'recuperar.pedir_otro': '¿No te llegó o ya expiró? Pedir un código nuevo',
     'comun.no_conectar': 'No se pudo conectar.',
     'cuentas.sin_cuentas_mensaje': 'Todavía no hay cuentas de inversión.',
     'cuentas.sin_cuentas': 'Sin cuentas',
@@ -5907,6 +5909,7 @@ const TRADUCCIONES = {
     'recuperar.verificar_codigo': 'Verify code',
     'recuperar.error_codigo_vacio': 'Enter the code you received by email.',
     'recuperar.error_codigo_invalido': "That code isn't valid or already expired. Request a new one.",
+    'recuperar.pedir_otro': "Didn't get it, or it expired? Request a new code",
     'comun.no_conectar': 'Could not connect.',
     'cuentas.sin_cuentas_mensaje': 'You do not have any investment accounts yet.',
     'cuentas.sin_cuentas': 'No accounts',
@@ -16567,8 +16570,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 122;
+const VERSION_APP_ACTUAL = 123;
 const CHANGELOG_APP = [
+  {
+    version: 123,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Corregido: el código de recuperación de contraseña de la parte anterior a veces se marcaba como "expirado" sin serlo -- el campo lo cortaba a 6 caracteres antes de tiempo. Se agregó también un botón directo para pedir un código nuevo sin salir de la pantalla.'
+    ],
+    cambios_en: [
+      'Fixed: the password-recovery code added in the previous release sometimes showed as "expired" when it wasn\'t -- the field was cutting it off too early. Also added a direct button to request a new code without leaving the screen.'
+    ]
+  },
   {
     version: 122,
     fecha: '2026-09-03',
