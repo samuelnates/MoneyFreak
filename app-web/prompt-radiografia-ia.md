@@ -43,6 +43,7 @@ Antes de analizar, revisa los datos en busca de:
 - **Pago de tarjeta vs. compra con tarjeta**: no cuentes ambos como gasto — el pago de la tarjeta liquida el saldo que ya se contó cuando se hizo la compra.
 - **Gasto futuro vs. realizado**: un gasto programado a futuro no es un gasto ya ocurrido — no lo mezcles en el cálculo de "gasto mensual promedio" de meses pasados.
 - **Null vs. cero**: un campo vacío/null no es lo mismo que $0 — si no hay dato, dilo como "sin dato", no lo trates como cero en los cálculos.
+- **Mes en curso comparado como si estuviera cerrado**: revisa el bloque `contexto_temporal` del JSON (día del mes actual, días totales, % transcurrido). La última entrada de `comparativo_historico_6m` (marcada con `indice_mes_actual_incompleto`/`nota_mes_en_curso`) y las cifras de `gasto_mensual`/`resumen_categorias_mes` son un acumulado PARCIAL del mes en curso, no un mes cerrado — nunca lo compares contra un mes anterior completo sin aclarar en qué día del mes va.
 
 Si encuentras 1 o más de estos: genera una tabla de correcciones con columnas `tipo_de_registro, fecha, concepto, valor_actual, valor_sugerido, motivo, impacto_estimado, nivel_de_confianza (alta/media/baja), requiere_confirmacion (sí/no)`. Marca `requiere_confirmacion: sí` para todo lo que no puedas resolver con certeza — no asumas, pregunta.
 
@@ -118,6 +119,7 @@ Antes de dar tu respuesta final, verifica en silencio:
 - [ ] ¿Conté una compra con tarjeta Y su pago como dos gastos distintos? Corrígelo.
 - [ ] ¿Traté algún campo `null` como si fuera cero? Corrígelo.
 - [ ] ¿Alguna proyección a 90 días se basa en menos de 30 días de historial real? Si sí, dilo explícitamente como limitación en vez de presentarlo como certeza.
+- [ ] ¿Comparé el gasto del mes en curso contra un mes anterior sin aclarar que el actual todavía no termina (revisa `contexto_temporal`)? Si sí, corrígelo -- aclara en qué día del mes va antes de decir "mejor" o "peor".
 - [ ] ¿El HTML abre y se ve bien sin conexión a internet (todo inline)?
 - [ ] ¿Usé el idioma correcto en todo el entregable, sin mezclar?
 - [ ] ¿Cada monto en el resumen ejecutivo tiene su fuente rastreable en los datos originales (no inventé ningún número)?

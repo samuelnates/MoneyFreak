@@ -7663,6 +7663,8 @@ async function construirSnapshotFinanciero(){
   const ahora = new Date();
   const anio = ahora.getFullYear();
   const mes = ahora.getMonth();
+  const diaDelMes = ahora.getDate();
+  const diasEnElMes = new Date(anio, mes + 1, 0).getDate();
 
   const [balance, salud, gastosMes, flujo] = await Promise.all([
     calcularBalance(),
@@ -7678,8 +7680,29 @@ async function construirSnapshotFinanciero(){
   const cashflowScenarios = calcularEscenariosFlujo(flujo);
   const possibleAnomalies = await detectarAnomaliasBasicas(gastosMes);
 
+  // El mes en curso siempre es la ÚLTIMA entrada de comparativo_historico_6m
+  // (calcularHistoricoGastosPresupuesto lo arma en orden cronológico) -- se
+  // anota aquí para que quien lea el snapshot (Freaky, la radiografía
+  // automática, o el usuario pegando el JSON manual en otro LLM) sepa que
+  // ese mes todavía no cierra y no lo compare 1 a 1 contra meses ya
+  // completos. Bug real reportado por el usuario: le preguntó a Freaky "¿voy
+  // mejor o peor que antes?" y la respuesta trató el gasto parcial del mes
+  // en curso como si fuera comparable al de un mes ya terminado.
+  const comparativoHistoricoConContexto = comparativoHistorico ? {
+    ...comparativoHistorico,
+    indice_mes_actual_incompleto: comparativoHistorico.labels.length - 1,
+    nota_mes_en_curso: `La última entrada (índice ${comparativoHistorico.labels.length - 1}, "${comparativoHistorico.labels[comparativoHistorico.labels.length - 1]}") es el mes en curso: todavía no termina, va al día ${diaDelMes} de ${diasEnElMes}. Su "gastado" es un acumulado PARCIAL, no comparable directo contra los meses anteriores (esos sí están completos) sin aclarar esa diferencia.`
+  } : null;
+
   return {
     fecha_corte: ahora.toISOString().slice(0, 10),
+    contexto_temporal: {
+      dia_del_mes_actual: diaDelMes,
+      dias_totales_del_mes_actual: diasEnElMes,
+      dias_restantes_del_mes_actual: diasEnElMes - diaDelMes,
+      pct_transcurrido_del_mes_actual: Math.round((diaDelMes / diasEnElMes) * 100),
+      nota: 'El mes en curso (el que aparece en gasto_mensual, presupuesto_mensual, margen_mensual y resumen_categorias_mes dentro de metricas_calculadas, y en la última entrada de comparativo_historico_6m) todavía NO termina -- sus totales son un acumulado PARCIAL a la fecha de corte, no los de un mes completo. Nunca los compares directamente contra un mes ya cerrado sin aclarar esta diferencia.'
+    },
     moneda: 'MXN',
     idioma: document.documentElement.lang === 'en' ? 'en' : 'es',
     metricas_calculadas: {
@@ -7702,7 +7725,7 @@ async function construirSnapshotFinanciero(){
     saldo_liquido_proyectado: flujo.saldoProyectado,
     escenarios_flujo: cashflowScenarios,
     posibles_anomalias: possibleAnomalies,
-    comparativo_historico_6m: comparativoHistorico
+    comparativo_historico_6m: comparativoHistoricoConContexto
   };
 }
 
@@ -11438,9 +11461,11 @@ function posicionarAvatarLogin(){
   const rectSpan = span.getBoundingClientRect();
   const rectCaja = caja.getBoundingClientRect();
   const tam = cont.offsetWidth || 44;
-  // Se apoya sobre la palabra, con ~30% de su alto encima de ella (como si
-  // estuviera sentado justo en el borde superior del texto).
-  cont.style.top = (rectSpan.top - rectCaja.top - tam * 0.7) + 'px';
+  // Se apoya sobre la palabra, con ~95% de su alto encima de ella (como si
+  // estuviera sentado justo arriba del texto, sin taparlo) -- antes era 70%
+  // y con los avatares nuevos (más anchos que el original) tapaba parte de
+  // la letra "k" de "Freak" (reportado por el usuario con una captura real).
+  cont.style.top = (rectSpan.top - rectCaja.top - tam * 0.95) + 'px';
   cont.style.left = (rectSpan.left - rectCaja.left + rectSpan.width / 2 - tam / 2) + 'px';
 }
 window.addEventListener('resize', () => posicionarAvatarLogin());
@@ -16650,8 +16675,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 130;
+const VERSION_APP_ACTUAL = 131;
 const CHANGELOG_APP = [
+  {
+    version: 131,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Ajustado a Freaky en la pantalla de inicio de sesión: se sentaba encima de la letra "k" de "Freak" y la tapaba -- ahora se acomoda más arriba.',
+      'Freaky y la Radiografía financiera (manual y automática) ahora saben en qué día del mes vas -- antes podían comparar el gasto del mes en curso (todavía sin terminar) contra un mes ya cerrado como si fueran equivalentes, dando un diagnóstico engañoso ("vas peor" solo por llevar menos días acumulando gasto).'
+    ],
+    cambios_en: [
+      'Adjusted Freaky on the login screen: he used to sit right on top of the "k" in "Freak" and cover it -- now he sits a bit higher.',
+      "Freaky and the Financial X-ray (manual and automatic) now know what day of the month it is -- before, they could compare the current month's spending (still not over) against an already-closed month as if they were equivalent, giving a misleading read (\"you're doing worse\" just because fewer days have gone by)."
+    ]
+  },
   {
     version: 130,
     fecha: '2026-09-03',

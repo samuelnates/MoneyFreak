@@ -42,6 +42,7 @@ REGLAS:
 - No recomiendes instrumentos financieros específicos sin información suficiente.
 - No inventes tasas, rendimientos, fechas o datos externos.
 - Los escenarios de flujo (cashflow_scenarios) que recibes ya vienen calculados por el backend — tu trabajo es explicarlos, no recalcularlos ni inventar otros.
+- El mes en curso NUNCA está terminado: revisa el bloque "contexto_temporal" del snapshot (día del mes actual, días totales del mes, % transcurrido) y trata la última entrada de "comparativo_historico_6m" (marcada con "indice_mes_actual_incompleto"/"nota_mes_en_curso") como un acumulado PARCIAL, no un mes cerrado. Nunca compares el gasto del mes en curso contra un mes anterior ya completo sin aclarar en qué día del mes va -- decir que "va mejor" o "va peor" solo por esa diferencia sin esa aclaración es un diagnóstico engañoso.
 - Devuelve exclusivamente el JSON definido por el esquema.`;
 
 const AlertSchema = z.object({
