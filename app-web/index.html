@@ -441,8 +441,20 @@
     display:flex;flex-direction:column;gap:1px;min-width:0;
     background:var(--superficie);border:1px solid var(--borde);
     border-radius:9px;padding:8px 10px;cursor:pointer;text-align:left;
-    transition:background-color 150ms ease, border-color 150ms ease;
+    transition:background-color 150ms ease, border-color 150ms ease, translate 200ms ease;
   }
+  #tabs-cuentas .tab-cuentas{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+  /* Reacomodo de pestañas de "Mis cuentas" -- mismo mecanismo de arrastre de
+     Inicio (activarReordenTabsCuentas), reutilizando el keyframe
+     panelGridJiggle ya definido arriba. */
+  .tabs-cuentas.editando .tab-cuentas{animation:panelGridJiggle 260ms ease-in-out infinite;cursor:grab;}
+  .tabs-cuentas.editando .tab-cuentas:nth-child(even){animation-delay:130ms;}
+  .tabs-cuentas .tab-cuentas.arrastrando{
+    animation:none !important;rotate:0deg !important;transition:none !important;
+    box-shadow:0 10px 26px rgba(0,0,0,0.3);scale:1.05;
+    z-index:20;cursor:grabbing;
+  }
+  .tabs-cuentas .tab-cuentas.marcador-hueco{visibility:hidden;pointer-events:none;}
   .tab-cuentas:hover{border-color:var(--borde-fuerte);}
   /* El título se recorta con "…" si no cabe (el ancho aquí sí es fijo, a
      diferencia del diseño de barra horizontal); min-width:0 es necesario
@@ -7985,6 +7997,50 @@ function actualizarScrollspyCuentas(){ controladorSeccionesCuentas.actualizarScr
 function inicializarScrollspyCuentas(){ controladorSeccionesCuentas.inicializarScrollspy(); }
 function volverACuentas(idSeccion){ mostrarSeccionCuentas(idSeccion); }
 
+const CUENTAS_TABS_IDS_DEFECTO = ['cuentas', 'ingresos', 'bienes', 'acciones', 'deudas', 'transferencias'];
+
+function ordenTabsCuentas(){
+  let guardado;
+  try { guardado = JSON.parse(localStorage.getItem('cuentas_tabs_orden') || 'null'); } catch { guardado = null; }
+  if(!Array.isArray(guardado)) return CUENTAS_TABS_IDS_DEFECTO.slice();
+  const validos = guardado.filter(id => CUENTAS_TABS_IDS_DEFECTO.includes(id));
+  const faltantes = CUENTAS_TABS_IDS_DEFECTO.filter(id => !validos.includes(id));
+  return [...validos, ...faltantes];
+}
+
+// A diferencia de #panel-grid (que se recrea entero cada vez que se abre
+// Inicio), #tabs-cuentas y las .seccion-cuentas son HTML estático que vive
+// en la página desde que carga -- así que el orden guardado se aplica UNA
+// vez aquí (ver la llamada al final del archivo, junto a init()) moviendo
+// los nodos reales a su posición final, en vez de regenerarlos.
+function aplicarOrdenTabsCuentas(){
+  const barra = document.getElementById('tabs-cuentas');
+  const vista = document.getElementById('vista-cuentas');
+  if(!barra || !vista) return;
+  ordenTabsCuentas().forEach(id => {
+    const tab = barra.querySelector(`.tab-cuentas[data-seccion="${id}"]`);
+    if(tab) barra.appendChild(tab);
+    const seccion = document.getElementById('seccion-cuentas-' + id);
+    if(seccion) vista.appendChild(seccion);
+  });
+}
+
+// Se llama al soltar un arrastre de reacomodo: guarda el orden de las
+// pestañas (solo en este dispositivo) y reacomoda las secciones del scroll
+// para que el orden en que aparecen al bajar coincida siempre con el orden
+// de las pestañas -- pedido explícito del usuario.
+function guardarOrdenTabsCuentas(){
+  const barra = document.getElementById('tabs-cuentas');
+  const vista = document.getElementById('vista-cuentas');
+  if(!barra || !vista) return;
+  const orden = Array.from(barra.querySelectorAll('.tab-cuentas')).map(t => t.dataset.seccion);
+  try { localStorage.setItem('cuentas_tabs_orden', JSON.stringify(orden)); } catch {}
+  orden.forEach(id => {
+    const seccion = document.getElementById('seccion-cuentas-' + id);
+    if(seccion) vista.appendChild(seccion);
+  });
+}
+
 const controladorSeccionesGastos = crearControladorSeccionesConPestanas({
   idPantalla: 'vista-gastos', idBarra: 'tabs-gastos', prefijoSeccion: 'seccion-gastos-',
   mostrarPantalla: () => abrirGastos(),
@@ -8776,6 +8832,150 @@ function activarReordenPanelGrid(){
   document.addEventListener('click', (e) => {
     const grid = document.getElementById('panel-grid');
     if(grid && grid.classList.contains('editando') && grid.contains(e.target)){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+}
+
+// Mismo mecanismo de acomodo que activarReordenPanelGrid (long-press,
+// tambaleo, arrastre por translate con FLIP + enfriamiento anti-parpadeo),
+// aplicado a las 6 pestañas de "Mis cuentas" en vez de las tarjetas de
+// Inicio -- pedido explícito del usuario, incluyendo que el orden de las
+// pestañas reacomode también las secciones del scroll (ver
+// guardarOrdenTabsCuentas). Se duplica en vez de compartir función con
+// activarReordenPanelGrid a propósito: esa ya quedó afinada y probada este
+// mismo día (parpadeo, glitch de arrastre, selección de texto) y no vale la
+// pena arriesgar una regresión ahí por compartir código con una pantalla
+// distinta.
+let reordenTabsCuentasListo = false;
+function activarReordenTabsCuentas(){
+  if(reordenTabsCuentasListo) return;
+  reordenTabsCuentasListo = true;
+
+  const DEMORA_LONGPRESS_MS = 500;
+  const UMBRAL_CANCELAR_PX = 10;
+  const DURACION_DESLIZAMIENTO_MS = 220;
+  let presionando = null;
+  let arrastrando = null;
+
+  function limpiarPresion(){
+    if(presionando?.timer) clearTimeout(presionando.timer);
+    presionando = null;
+  }
+
+  function iniciarArrastre(barra, tab, pointerId, clientX, clientY){
+    const rect = tab.getBoundingClientRect();
+    const marcador = document.createElement('div');
+    marcador.className = 'tab-cuentas marcador-hueco';
+    tab.after(marcador);
+
+    tab.classList.add('arrastrando');
+    tab.style.position = 'fixed';
+    tab.style.left = rect.left + 'px';
+    tab.style.top = rect.top + 'px';
+    tab.style.width = rect.width + 'px';
+    tab.style.height = rect.height + 'px';
+    try { tab.setPointerCapture(pointerId); } catch {}
+
+    arrastrando = { barra, tab, marcador, pointerId, inicioX: clientX, inicioY: clientY, bloqueadoHasta: 0 };
+  }
+
+  function moverArrastre(clientX, clientY){
+    const { barra, tab, marcador, inicioX, inicioY } = arrastrando;
+    tab.style.translate = `${clientX - inicioX}px ${clientY - inicioY}px`;
+    if(performance.now() < arrastrando.bloqueadoHasta) return;
+
+    const candidatos = Array.from(barra.children).filter(el => el !== marcador && el !== tab);
+    const objetivo = candidatos.find(el => {
+      const r = el.getBoundingClientRect();
+      return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+    });
+    if(!objetivo) return;
+
+    const antes = objetivo.getBoundingClientRect();
+    if(marcador.compareDocumentPosition(objetivo) & Node.DOCUMENT_POSITION_FOLLOWING){
+      objetivo.after(marcador);
+    } else {
+      objetivo.before(marcador);
+    }
+    const despues = objetivo.getBoundingClientRect();
+    objetivo.style.transition = 'none';
+    objetivo.style.translate = `${antes.left - despues.left}px ${antes.top - despues.top}px`;
+    void objetivo.offsetWidth;
+    objetivo.style.transition = '';
+    objetivo.style.translate = '0px 0px';
+    arrastrando.bloqueadoHasta = performance.now() + DURACION_DESLIZAMIENTO_MS;
+  }
+
+  function soltarArrastre(){
+    const { tab, marcador } = arrastrando;
+    marcador.replaceWith(tab);
+    tab.classList.remove('arrastrando');
+    tab.style.position = '';
+    tab.style.left = '';
+    tab.style.top = '';
+    tab.style.width = '';
+    tab.style.height = '';
+    tab.style.translate = '';
+    arrastrando = null;
+    guardarOrdenTabsCuentas();
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    if(arrastrando) return;
+    const barra = document.getElementById('tabs-cuentas');
+    if(!barra) return;
+
+    if(barra.classList.contains('editando') && !barra.contains(e.target)){
+      guardarOrdenTabsCuentas();
+      barra.classList.remove('editando');
+      return;
+    }
+
+    const tab = e.target.closest('#tabs-cuentas .tab-cuentas');
+    if(!tab || tab.classList.contains('marcador-hueco')) return;
+
+    if(barra.classList.contains('editando')){
+      iniciarArrastre(barra, tab, e.pointerId, e.clientX, e.clientY);
+      return;
+    }
+    presionando = { tab, inicioX: e.clientX, inicioY: e.clientY, pointerId: e.pointerId, timer: null };
+    presionando.timer = setTimeout(() => {
+      if(!presionando) return;
+      const { tab, pointerId, inicioX, inicioY } = presionando;
+      presionando = null;
+      const barraActual = document.getElementById('tabs-cuentas');
+      if(!barraActual || !barraActual.contains(tab)) return;
+      haptic('toque');
+      barraActual.classList.add('editando');
+      iniciarArrastre(barraActual, tab, pointerId, inicioX, inicioY);
+    }, DEMORA_LONGPRESS_MS);
+  });
+
+  document.addEventListener('pointermove', (e) => {
+    if(arrastrando){
+      if(e.pointerId !== arrastrando.pointerId) return;
+      moverArrastre(e.clientX, e.clientY);
+      return;
+    }
+    if(!presionando || e.pointerId !== presionando.pointerId) return;
+    if(Math.abs(e.clientX - presionando.inicioX) > UMBRAL_CANCELAR_PX || Math.abs(e.clientY - presionando.inicioY) > UMBRAL_CANCELAR_PX){
+      limpiarPresion();
+    }
+  });
+
+  function terminarPuntero(e){
+    limpiarPresion();
+    if(arrastrando && e.pointerId === arrastrando.pointerId) soltarArrastre();
+  }
+  document.addEventListener('pointerup', terminarPuntero);
+  document.addEventListener('pointercancel', terminarPuntero);
+
+  document.addEventListener('click', (e) => {
+    const barra = document.getElementById('tabs-cuentas');
+    if(barra && barra.classList.contains('editando') && barra.contains(e.target)){
       e.preventDefault();
       e.stopPropagation();
     }
@@ -16271,8 +16471,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 119;
+const VERSION_APP_ACTUAL = 120;
 const CHANGELOG_APP = [
+  {
+    version: 120,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Ahora puedes reacomodar las pestañas de "Mis cuentas" (Inversión, Ingresos, Bienes, Acciones, Deudas, Traspasos) igual que las tarjetas de Inicio -- mantén presionada una, arrástrala a su nuevo lugar, y el orden en que aparecen al hacer scroll cambia junto con ella.'
+    ],
+    cambios_en: [
+      'You can now reorder the "My accounts" tabs (Investments, Income, Assets, Stocks, Debts, Transfers) just like the Home cards -- long-press one, drag it to its new spot, and the order they appear in as you scroll changes right along with it.'
+    ]
+  },
   {
     version: 119,
     fecha: '2026-09-02',
@@ -17669,6 +17879,8 @@ registrarServiceWorker();
 inicializarSwipeSheet('menu-agregar', cerrarMenuAgregar);
 inicializarSwipeSheet('menu-agregar-gasto-central', cerrarMenuAgregarGastoCentral);
 inicializarScrollspyCuentas();
+aplicarOrdenTabsCuentas();
+activarReordenTabsCuentas();
 
 // Bug real reportado por el usuario ("loop en el onboarding... cuando le
 // das volver te regresa al formulario de crear cuenta"): el navegador
