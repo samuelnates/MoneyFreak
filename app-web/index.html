@@ -2643,6 +2643,14 @@
   </div>
   <div class="aviso" data-i18n="config.apariencia_aviso">Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.</div>
 
+  <h2 data-i18n="config.moneda_principal_h2">Moneda principal</h2>
+  <div class="rango-botones selector-moneda-principal" id="selector-moneda-principal">
+    <button type="button" data-moneda="MXN" onclick="cambiarMonedaPrincipal('MXN')">MXN</button>
+    <button type="button" data-moneda="USD" onclick="cambiarMonedaPrincipal('USD')">USD</button>
+    <button type="button" data-moneda="EUR" onclick="cambiarMonedaPrincipal('EUR')">EUR</button>
+  </div>
+  <div class="aviso" data-i18n="config.moneda_principal_aviso">Tus totales (patrimonio, balance, gastos del mes, etc.) se muestran convertidos a esta moneda. Cada cuenta o gasto sigue guardado en la moneda que elegiste al capturarlo -- esto solo cambia cómo se ven los totales.</div>
+
   <div id="seccion-notificaciones" style="display:none;">
     <h2 data-i18n="notif.titulo">Notificaciones</h2>
     <div class="aviso" data-i18n="notif.aviso">Recordatorios que se quedan en tu celular, nunca se envían a ningún servidor.</div>
@@ -4536,6 +4544,8 @@ const TRADUCCIONES = {
     'amigos.vacio': 'Todavía no hay colaboraciones que mostrar aquí.',
     'config.apariencia_h2': 'Apariencia',
     'config.apariencia_aviso': 'Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.',
+    'config.moneda_principal_h2': 'Moneda principal',
+    'config.moneda_principal_aviso': 'Tus totales (patrimonio, balance, gastos del mes, etc.) se muestran convertidos a esta moneda. Cada cuenta o gasto sigue guardado en la moneda que elegiste al capturarlo -- esto solo cambia cómo se ven los totales.',
     'config.proteccion_h2': 'Cómo protegemos tu información',
     'config.proteccion_aviso1': 'Tus datos están aislados por usuario a nivel de base de datos (Row Level Security) — ni siquiera otro usuario con su propia cuenta en esta misma app puede ver tus cuentas, bienes o deudas. No es solo la pantalla la que lo oculta, es la base de datos la que lo bloquea.',
     'config.proteccion_aviso2': 'Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.',
@@ -5501,6 +5511,8 @@ const TRADUCCIONES = {
     'amigos.vacio': "No partnerships to show here yet.",
     'config.apariencia_h2': 'Appearance',
     'config.apariencia_aviso': 'Automatic follows your phone or computer setting, just like other apps.',
+    'config.moneda_principal_h2': 'Main currency',
+    'config.moneda_principal_aviso': "Your totals (net worth, balance, monthly expenses, etc.) are shown converted to this currency. Each account or expense stays saved in whatever currency you picked when you logged it -- this only changes how the totals look.",
     'config.proteccion_h2': 'How we protect your information',
     'config.proteccion_aviso1': 'Your data is isolated per user at the database level (Row Level Security) — not even another user with their own account in this same app can see your accounts, assets, or debts. It is not just the screen hiding it, it is the database blocking it.',
     'config.proteccion_aviso2': 'All connections between your device and the server are encrypted (HTTPS), just like a bank or any site with a lock icon in the browser.',
@@ -6045,6 +6057,56 @@ function cambiarIdioma(idioma){
 
 function inicializarIdioma(){
   aplicarIdioma(localStorage.getItem('pro_idioma') || (navigator.language.startsWith('en') ? 'en' : 'es'));
+}
+
+// Moneda en la que se muestran los TOTALES agregados (patrimonio, balance,
+// gastos del mes, etc.) -- no afecta la moneda de cada cuenta/gasto
+// individual, que sigue siendo la que cada quien eligió al capturarlo. A
+// diferencia de idioma/tema (device-local, ver sincronizarPreferenciaPerfil),
+// esta SÍ se lee de la base de datos al entrar -- es una preferencia
+// financiera real, debe verse igual en cualquier dispositivo, mismo patrón
+// que avatar_asesor (ver debeMostrarSelectorAsesor).
+let MONEDA_PRINCIPAL = 'MXN';
+const MONEDAS_PRINCIPAL_VALIDAS = new Set(['MXN', 'USD', 'EUR']);
+
+// Convierte un monto YA CALCULADO en MXN (así se agregan internamente todos
+// los totales, ver convertirAMXN) a MONEDA_PRINCIPAL y lo formatea -- el
+// reemplazo directo de `formatoMonto(x, 'MXN')` en cualquier total agregado.
+function formatoMontoPrincipal(montoMXN){
+  return formatoMonto(convertirEntreMonedas(montoMXN, 'MXN', MONEDA_PRINCIPAL), MONEDA_PRINCIPAL);
+}
+
+async function cargarMonedaPrincipal(){
+  if(!sb || modoDemo) return;
+  try{
+    const { data } = await sb.from('perfil_financiero').select('moneda_principal').maybeSingle();
+    if(data?.moneda_principal && MONEDAS_PRINCIPAL_VALIDAS.has(data.moneda_principal)) MONEDA_PRINCIPAL = data.moneda_principal;
+  }catch(e){
+    console.warn('No se pudo leer moneda_principal (¿ya corriste la migración?)', e);
+  }
+  actualizarSelectorMonedaPrincipal();
+}
+
+function actualizarSelectorMonedaPrincipal(){
+  document.querySelectorAll('.selector-moneda-principal button').forEach(b => b.classList.toggle('activo', b.dataset.moneda === MONEDA_PRINCIPAL));
+}
+
+function cambiarMonedaPrincipal(moneda){
+  if(!MONEDAS_PRINCIPAL_VALIDAS.has(moneda)) return;
+  MONEDA_PRINCIPAL = moneda;
+  actualizarSelectorMonedaPrincipal();
+  if(sb && !modoDemo){
+    sb.from('perfil_financiero').upsert({
+      moneda_principal: moneda,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if(error) console.warn('No se pudo guardar la moneda principal (¿ya corriste la migración?)', error);
+    });
+  }
+  // Mismo criterio que aplicarIdioma(): si Inicio está a la vista, se
+  // vuelve a pintar para que los totales cambien de moneda al toque: las
+  // demás pantallas ya la leen fresca la próxima vez que se abran.
+  if(document.getElementById('vista-inicio').classList.contains('activa')) abrirPanel();
 }
 
 function actualizarTextosSelectorTema(){
@@ -6909,6 +6971,7 @@ async function continuarTrasOnboarding(){
     abrirSelectorAsesor('login');
     return;
   }
+  await cargarMonedaPrincipal();
   abrirPanel();
   mostrarAvisoPrivacidadLogin();
   mostrarNovedadesSiHayPendientes();
@@ -9184,7 +9247,7 @@ async function abrirPanel(){
     <div class="panel-hero-fila">
       <button type="button" class="panel-hero" onclick="abrirBalance()">
         <div class="panel-hero-label">${t('balance.patrimonio_neto')}</div>
-        <div class="panel-hero-monto" id="panel-patrimonio-monto">${formatoMonto(0, 'MXN')}</div>
+        <div class="panel-hero-monto" id="panel-patrimonio-monto">${formatoMontoPrincipal(0)}</div>
       </button>
       <button type="button" class="panel-hero panel-hero-score" onclick="abrirScore()">
         <div class="panel-hero-label">${t('panel.score.titulo')}</div>
@@ -9210,19 +9273,19 @@ async function abrirPanel(){
           cuentas: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="cuentas" onclick="mostrar('vista-cuentas')">
             <div class="panel-icono">${iconoPanel('cuentas')}</div>
             <div class="panel-tarjeta-titulo">${t('panel.cuentas.titulo')}</div>
-            <div class="panel-tarjeta-dato">${formatoMonto(b.totalCuentas, 'MXN')}</div>
+            <div class="panel-tarjeta-dato">${formatoMontoPrincipal(b.totalCuentas)}</div>
             <div class="panel-tarjeta-sub">${t('panel.cuentas.sub')}</div>
           </button>`,
           flujo: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="flujo" onclick="abrirFlujoEfectivo()">
             <div class="panel-icono">${iconoPanel('flujo')}</div>
             <div class="panel-tarjeta-titulo">${t('panel.flujo.titulo')}</div>
-            <div class="panel-tarjeta-dato">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
+            <div class="panel-tarjeta-dato">${formatoMontoPrincipal(f.saldoProyectado)}</div>
             <div class="panel-tarjeta-sub">${flujoSubTxt}</div>
           </button>`,
           gastos: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="gastos" onclick="abrirGastos()">
             <div class="panel-icono">${iconoPanel('gastos')}</div>
             <div class="panel-tarjeta-titulo">${t('panel.gastos.titulo')}</div>
-            <div class="panel-tarjeta-dato ${claseGastos}">${formatoMonto(g.totalGastado, 'MXN')}</div>
+            <div class="panel-tarjeta-dato ${claseGastos}">${formatoMontoPrincipal(g.totalGastado)}</div>
             <div class="panel-tarjeta-sub">${gastosSubTxt}</div>
           </button>`,
           simulador: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="simulador" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');">
@@ -9242,7 +9305,7 @@ async function abrirPanel(){
       </div>
     ` : ''}
   `;
-  animarNumero(document.getElementById('panel-patrimonio-monto'), b.patrimonioNeto, 'MXN', 900);
+  animarNumero(document.getElementById('panel-patrimonio-monto'), convertirEntreMonedas(b.patrimonioNeto, 'MXN', MONEDA_PRINCIPAL), MONEDA_PRINCIPAL, 900);
   ajustarTamanoDatosTarjetas();
   actualizarUIDemo();
   inicializarRotacionInsights(insights);
@@ -9456,7 +9519,7 @@ function renderListaCuentas(animar){
 
   const incluidas = cuentasInversionData.filter(c => c.incluir_patrimonio !== false);
   const totalCuentas = incluidas.reduce((a, c) => a + c.montoMXN, 0);
-  document.getElementById('acordeon-total-cuentas').textContent = formatoMonto(totalCuentas, 'MXN');
+  document.getElementById('acordeon-total-cuentas').textContent = formatoMontoPrincipal(totalCuentas);
   const ranking = [...incluidas].sort((a, b) => b.montoMXN - a.montoMXN);
 
   let lista = cuentasInversionData.map(c => {
@@ -9903,7 +9966,7 @@ function renderListaAcciones(animar){
   }
   const totalAccionesMXN = accionesData.reduce((a, item) => a + (item.valorMXN || 0), 0);
   const conPrecioFaltante = accionesData.some(item => item.valorMXN === null);
-  document.getElementById('acordeon-total-acciones').innerHTML = formatoMonto(totalAccionesMXN, 'MXN')
+  document.getElementById('acordeon-total-acciones').innerHTML = formatoMontoPrincipal(totalAccionesMXN)
     + (conPrecioFaltante ? ` <span class="estado-atencion" style="font-size:12.5px;">${t('acciones.total_incompleto')}</span>` : '');
 
   const orden = document.getElementById('orden-acciones')?.value || 'creacion';
@@ -10178,7 +10241,7 @@ async function cargarBienes(){
     return;
   }
   const totalBienesMXN = data.reduce((a, b) => a + convertirAMXN(Number(b.valor), b.moneda || 'MXN'), 0);
-  document.getElementById('acordeon-total-bienes').textContent = formatoMonto(totalBienesMXN, 'MXN');
+  document.getElementById('acordeon-total-bienes').textContent = formatoMontoPrincipal(totalBienesMXN);
   cont.innerHTML = '';
   data.forEach((b, i) => {
     const btn = document.createElement('button');
@@ -10211,7 +10274,7 @@ async function cargarIngresos(){
     return;
   }
   const totalIngresosMXN = data.reduce((a, ing) => a + montoMensualIngreso(ing), 0);
-  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMonto(totalIngresosMXN, 'MXN')}${t('comun.por_mes')}`;
+  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMontoPrincipal(totalIngresosMXN)}${t('comun.por_mes')}`;
   cont.innerHTML = '';
   data.forEach((ing, i) => {
     const btn = document.createElement('button');
@@ -10249,7 +10312,7 @@ async function cargarDeudas(){
     return;
   }
   const totalDeudasMXN = data.reduce((a, d) => a + convertirAMXN(Number(d.saldo), d.moneda || 'MXN'), 0);
-  document.getElementById('acordeon-total-deudas').textContent = '-' + formatoMonto(totalDeudasMXN, 'MXN');
+  document.getElementById('acordeon-total-deudas').textContent = '-' + formatoMontoPrincipal(totalDeudasMXN);
 
   // Mini gráfica por deuda (parte 127, pedido del usuario: "que las deudas
   // también tengan su mini gráfica así como las cuentas de inversión") --
@@ -13860,23 +13923,23 @@ async function cargarGastos(){
   const presupuestoExcedeIngreso = r.totalIngreso > 0 && r.totalPresupuestado > r.totalIngreso;
 
   resumen.innerHTML = `
-    ${presupuestoExcedeIngreso ? `<div class="aviso estado-riesgo">${tf('gastos.excede_ingreso', formatoMonto(r.totalPresupuestado, 'MXN'), formatoMonto(r.totalIngreso, 'MXN'))}</div>` : ''}
+    ${presupuestoExcedeIngreso ? `<div class="aviso estado-riesgo">${tf('gastos.excede_ingreso', formatoMontoPrincipal(r.totalPresupuestado), formatoMontoPrincipal(r.totalIngreso))}</div>` : ''}
     <div class="totales-grid">
       <button type="button" class="total-caja total-caja-clic" onclick="abrirGastosMovimientos()">
         <div class="etiqueta">${t('gastos.gastado_mes')}<span class="flecha-fila">›</span></div>
-        <div class="monto">${formatoMonto(r.totalGastado, 'MXN')}</div>
-        ${r.totalPresupuestado > 0 ? `<div class="detalle-explica">${tf('gastos.de_presupuestados', formatoMonto(r.totalPresupuestado, 'MXN'))}</div>` : ''}
+        <div class="monto">${formatoMontoPrincipal(r.totalGastado)}</div>
+        ${r.totalPresupuestado > 0 ? `<div class="detalle-explica">${tf('gastos.de_presupuestados', formatoMontoPrincipal(r.totalPresupuestado))}</div>` : ''}
       </button>
       <div class="total-caja">
         <div class="etiqueta">${t('gastos.ingresos_vs_gastos')}</div>
-        <div class="monto ${claseSaldo}">${formatoMonto(saldoMes, 'MXN')}</div>
+        <div class="monto ${claseSaldo}">${formatoMontoPrincipal(saldoMes)}</div>
         <div class="detalle-explica">${t('gastos.te_queda')}</div>
       </div>
       ${r.totalPresupuestado > 0 ? `
       <div class="total-caja">
         <div class="etiqueta">${t('gastos.gastado_vs_ppt_total')}</div>
         <div class="monto ${clasePresupuestoTotal}">${pctPresupuestoTotal.toFixed(0)}%</div>
-        <div class="detalle-explica">${formatoMonto(r.totalGastado, 'MXN')} ${tf('gastos.de', formatoMonto(r.totalPresupuestado, 'MXN'))}</div>
+        <div class="detalle-explica">${formatoMontoPrincipal(r.totalGastado)} ${tf('gastos.de', formatoMontoPrincipal(r.totalPresupuestado))}</div>
       </div>` : ''}
     </div>
   `;
@@ -15190,7 +15253,7 @@ async function abrirFlujoEfectivo(){
     cont.innerHTML = `
       <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('cuentas')">
         <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
-        <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
+        <div class="monto">${formatoMontoPrincipal(f.activosLiquidos)}</div>
       </button>
       <div class="mensaje">${t('flujo.sin_movimientos')}</div>
     `;
@@ -15200,7 +15263,7 @@ async function abrirFlujoEfectivo(){
   const ingresosHtml = f.totalIngresos > 0 ? `
     <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('ingresos')">
       <div class="etiqueta">${t('flujo.ingresos_esperados')}<span class="flecha-fila">›</span></div>
-      <div class="monto">+${formatoMonto(f.totalIngresos, 'MXN')}</div>
+      <div class="monto">+${formatoMontoPrincipal(f.totalIngresos)}</div>
     </button>
   ` : '';
 
@@ -15231,7 +15294,7 @@ async function abrirFlujoEfectivo(){
           <div class="detalle ${urgente ? 'estado-riesgo' : ''}">${it.cumplidoEsteMes ? t('flujo.cumplido_este_mes') : diaTxt}${estimadoTxt}</div>
         </div>
         <div class="flujo-monto-check">
-          <div class="monto">${signo}${formatoMonto(it.monto, 'MXN')}</div>
+          <div class="monto">${signo}${formatoMontoPrincipal(it.monto)}</div>
           ${checkCumplidoHtml}
         </div>
       </button>
@@ -15242,16 +15305,16 @@ async function abrirFlujoEfectivo(){
     <div class="totales-grid">
       <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('cuentas')">
         <div class="etiqueta">${t('flujo.liquido_disponible')}<span class="flecha-fila">›</span></div>
-        <div class="monto">${formatoMonto(f.activosLiquidos, 'MXN')}</div>
+        <div class="monto">${formatoMontoPrincipal(f.activosLiquidos)}</div>
       </button>
       ${ingresosHtml}
       <button type="button" class="total-caja total-caja-clic" onclick="mostrarSeccionCuentas('deudas')">
         <div class="etiqueta">${t('flujo.total_pagar')}<span class="flecha-fila">›</span></div>
-        <div class="monto">-${formatoMonto(f.total, 'MXN')}</div>
+        <div class="monto">-${formatoMontoPrincipal(f.total)}</div>
       </button>
       <div class="total-caja">
         <div class="etiqueta">${t('flujo.saldo_proyectado')}</div>
-        <div class="monto ${claseEstado(estadoProyectado)}">${formatoMonto(f.saldoProyectado, 'MXN')}</div>
+        <div class="monto ${claseEstado(estadoProyectado)}">${formatoMontoPrincipal(f.saldoProyectado)}</div>
       </div>
     </div>
 
@@ -15390,15 +15453,15 @@ async function abrirSaludDetalle(){
     <div class="grid-2col">
       <div>
         <h2>${t('salud.cobertura_liquidez')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('salud.activos_liquidos')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(s.activosLiquidos, 'MXN')}</span></div>
-        <div class="fila-balance"><span>${t('salud.compromisos_mensuales')}</span><span class="valor negativo">${formatoMonto(s.compromisosMensuales, 'MXN')}</span></div>
-        ${s.aportacionesRecurrentes > 0 ? `<div class="detalle-explica">${tf('salud.desglose_compromisos', formatoMonto(s.compromisosDeuda, 'MXN'), formatoMonto(s.aportacionesRecurrentes, 'MXN'))}</div>` : ''}
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('salud.activos_liquidos')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMontoPrincipal(s.activosLiquidos)}</span></div>
+        <div class="fila-balance"><span>${t('salud.compromisos_mensuales')}</span><span class="valor negativo">${formatoMontoPrincipal(s.compromisosMensuales)}</span></div>
+        ${s.aportacionesRecurrentes > 0 ? `<div class="detalle-explica">${tf('salud.desglose_compromisos', formatoMontoPrincipal(s.compromisosDeuda), formatoMontoPrincipal(s.aportacionesRecurrentes))}</div>` : ''}
         <div class="aviso">${t('salud.aviso_cobertura')}</div>
       </div>
       <div>
         <h2>${t('salud.tasa_endeudamiento')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('salud.pagos_mensuales_deuda')}<span class="flecha-fila">›</span></button><span class="valor negativo">${formatoMonto(s.compromisosDeuda, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('ingresos')">${t('salud.ingreso_mensual')}<span class="flecha-fila">›</span></button><span class="valor positivo">${s.ingreso ? formatoMonto(s.ingreso, 'MXN') : t('comun.sin_definir')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('salud.pagos_mensuales_deuda')}<span class="flecha-fila">›</span></button><span class="valor negativo">${formatoMontoPrincipal(s.compromisosDeuda)}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('ingresos')">${t('salud.ingreso_mensual')}<span class="flecha-fila">›</span></button><span class="valor positivo">${s.ingreso ? formatoMontoPrincipal(s.ingreso) : t('comun.sin_definir')}</span></div>
         <div class="aviso">${t('salud.aviso_endeudamiento')}</div>
       </div>
     </div>
@@ -15659,7 +15722,7 @@ async function abrirBalance(){
   cont.innerHTML = `
     <button type="button" class="total-caja total-caja-clic total-caja-compacta" onclick="abrirBalanceGraficas()">
       <div class="etiqueta">${t('balance.patrimonio_neto')}<span class="flecha-fila">›</span></div>
-      <div class="monto" id="patrimonio-neto-monto">${formatoMonto(0, 'MXN')}</div>
+      <div class="monto" id="patrimonio-neto-monto">${formatoMontoPrincipal(0)}</div>
       ${cambioHtml}
     </button>
 
@@ -15679,23 +15742,23 @@ async function abrirBalance(){
     <div class="grid-2col-compacto">
       <div>
         <h2>${t('balance.activos')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalCuentas, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('bienes')">${t('balance.bienes')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalBienes, 'MXN')}</span></div>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('acciones')">${t('balance.acciones')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMonto(b.totalAcciones, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('cuentas')">${t('balance.cuentas_inversion')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMontoPrincipal(b.totalCuentas)}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('bienes')">${t('balance.bienes')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMontoPrincipal(b.totalBienes)}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('acciones')">${t('balance.acciones')}<span class="flecha-fila">›</span></button><span class="valor positivo">${formatoMontoPrincipal(b.totalAcciones)}</span></div>
         ${b.accionesSinPrecio.length > 0 ? `<div class="aviso estado-atencion">${tf('balance.acciones_sin_precio', b.accionesSinPrecio.join(', '))}</div>` : ''}
-        <div class="fila-balance subtotal"><span>${t('balance.total_activos')}</span><span class="valor positivo">${formatoMonto(b.totalActivos, 'MXN')}</span></div>
+        <div class="fila-balance subtotal"><span>${t('balance.total_activos')}</span><span class="valor positivo">${formatoMontoPrincipal(b.totalActivos)}</span></div>
       </div>
       <div>
         <h2>${t('balance.pasivos')}</h2>
-        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('balance.deudas')}<span class="flecha-fila">›</span></button><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
-        <div class="fila-balance subtotal"><span>${t('balance.total_pasivos')}</span><span class="valor negativo">-${formatoMonto(b.totalDeudas, 'MXN')}</span></div>
+        <div class="fila-balance"><button type="button" class="fila-balance-etiqueta" onclick="mostrarSeccionCuentas('deudas')">${t('balance.deudas')}<span class="flecha-fila">›</span></button><span class="valor negativo">-${formatoMontoPrincipal(b.totalDeudas)}</span></div>
+        <div class="fila-balance subtotal"><span>${t('balance.total_pasivos')}</span><span class="valor negativo">-${formatoMontoPrincipal(b.totalDeudas)}</span></div>
       </div>
     </div>
 
     <div id="balance-graficas-contenido"></div>
   `;
 
-  animarNumero(document.getElementById('patrimonio-neto-monto'), b.patrimonioNeto, 'MXN', 1000);
+  animarNumero(document.getElementById('patrimonio-neto-monto'), convertirEntreMonedas(b.patrimonioNeto, 'MXN', MONEDA_PRINCIPAL), MONEDA_PRINCIPAL, 1000);
   renderSaludFinancieraInline(s);
   renderBalanceGraficasInline();
   ajustarTamanoDatosTarjetas();
@@ -15720,8 +15783,8 @@ function renderBalanceGraficasInline(){
 
   cont.innerHTML = `
     <h2 style="margin-top:0;">${t('balance.liquidez_patrimonio')}</h2>
-    <div class="fila-balance"><span>${t('balance.liquido')}</span><span class="valor positivo">${formatoMonto(activosLiquidos, 'MXN')} · ${pctLiquido.toFixed(0)}%</span></div>
-    <div class="fila-balance"><span>${t('balance.no_liquido')}</span><span class="valor positivo">${formatoMonto(activosNoLiquidos, 'MXN')} · ${pctNoLiquido.toFixed(0)}%</span></div>
+    <div class="fila-balance"><span>${t('balance.liquido')}</span><span class="valor positivo">${formatoMontoPrincipal(activosLiquidos)} · ${pctLiquido.toFixed(0)}%</span></div>
+    <div class="fila-balance"><span>${t('balance.no_liquido')}</span><span class="valor positivo">${formatoMontoPrincipal(activosNoLiquidos)} · ${pctNoLiquido.toFixed(0)}%</span></div>
     <div class="aviso">${t('balance.liquidez_aviso')}</div>
 
     <div class="chart-caja" id="composicion-caja" style="display:none;">
@@ -16572,8 +16635,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 125;
+const VERSION_APP_ACTUAL = 126;
 const CHANGELOG_APP = [
+  {
+    version: 126,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Nuevo en Configuración general: "Moneda principal" -- elige MXN, USD o EUR y tus totales (patrimonio neto, balance, gastos del mes, salud financiera, flujo de efectivo) se muestran convertidos a esa moneda. Cada cuenta o gasto sigue guardado en la moneda que elegiste al capturarlo.'
+    ],
+    cambios_en: [
+      'New in General settings: "Main currency" -- pick MXN, USD or EUR and your totals (net worth, balance, monthly expenses, financial health, cash flow) show converted to that currency. Each account or expense stays saved in whatever currency you picked when you logged it.'
+    ]
+  },
   {
     version: 125,
     fecha: '2026-09-03',
