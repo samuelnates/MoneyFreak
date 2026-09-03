@@ -1870,6 +1870,22 @@
   <button class="btn-grande" onclick="guardarNuevaContrasena()" data-i18n="recuperar.guardar">Guardar contraseña</button>
 </div>
 
+<div id="vista-cambiar-contrasena" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-seguridad-privacidad')">‹</button>
+    <h1 data-i18n="cambiar_password.titulo">Cambiar contraseña</h1>
+  </div>
+  <div class="campo">
+    <label for="input-password-cambiar" data-i18n="recuperar.nueva_label">Escribe tu nueva contraseña</label>
+    <div class="campo-password">
+      <input type="password" id="input-password-cambiar" autocomplete="new-password" placeholder="Mínimo 6 caracteres" data-i18n-placeholder="registro.password_placeholder">
+      <button type="button" class="btn-ojo" id="btn-ojo-password-cambiar" onclick="toggleVerPassword('input-password-cambiar', 'btn-ojo-password-cambiar')" aria-label="Mostrar contraseña" data-i18n-aria-label="comun.mostrar_password" data-i18n="comun.ver">Ver</button>
+    </div>
+  </div>
+  <div id="cambiar-password-error" class="aviso" style="display:none;"></div>
+  <button class="btn-grande" onclick="guardarCambioContrasena()" data-i18n="recuperar.guardar">Guardar contraseña</button>
+</div>
+
 <div id="modal-privacidad-login" class="modal-overlay" style="display:none;">
   <div class="modal-caja">
     <p data-i18n="login.modal_privacidad_texto">Tus datos financieros son privados. Solo tú puedes verlos.</p>
@@ -2673,6 +2689,7 @@
   <div class="aviso" data-i18n="config.proteccion_aviso2">Toda la conexión entre tu dispositivo y el servidor va cifrada (HTTPS), igual que un banco o cualquier sitio con candado en el navegador.</div>
   <div class="aviso" data-i18n="config.proteccion_aviso3">No vendemos ni compartimos tu información financiera con nadie. Los únicos servicios externos que se consultan son cotizaciones públicas de acciones y tipos de cambio — nunca reciben tus datos personales, solo símbolos de acciones y monedas.</div>
   <div class="aviso" data-i18n="config.proteccion_aviso4">Tu sesión se cierra sola después de 15 minutos sin actividad, para proteger tu información si dejas el dispositivo abierto o lo compartes con alguien más.</div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-cambiar-contrasena')" data-i18n="config.cambiar_password_boton">Cambiar contraseña</button>
   <button class="btn-grande secundario btn-escritura" id="btn-desactivar-biometria" style="display:none;" onclick="desactivarBiometria()" data-i18n="privacidad.desactivar_biometria">Desactivar Face ID / huella</button>
 
   <h2 data-i18n="config.control_datos_h2">Control sobre tus datos</h2>
@@ -4476,9 +4493,11 @@ const TRADUCCIONES = {
     'recuperar.nueva_titulo': 'Nueva contraseña',
     'recuperar.nueva_label': 'Escribe tu nueva contraseña',
     'recuperar.guardar': 'Guardar contraseña',
+    'cambiar_password.titulo': 'Cambiar contraseña',
     'login.modal_privacidad_texto': 'Tus datos financieros son privados. Solo tú puedes verlos.',
     'config.menu_general_boton': 'Configuración general',
     'config.menu_general_desc': 'Idioma, tema, notificaciones, y cómo se comporta Freaky.',
+    'config.cambiar_password_boton': 'Cambiar contraseña',
     'config.menu_seguridad_boton': 'Seguridad y privacidad',
     'config.menu_seguridad_desc': 'Cómo protegemos tu información, Face ID/huella, y control total sobre tus datos.',
     'config.menu_reportes_boton': 'Reportes',
@@ -5433,9 +5452,11 @@ const TRADUCCIONES = {
     'recuperar.nueva_titulo': 'New password',
     'recuperar.nueva_label': 'Enter your new password',
     'recuperar.guardar': 'Save password',
+    'cambiar_password.titulo': 'Change password',
     'login.modal_privacidad_texto': 'Your financial data is private. Only you can see it.',
     'config.menu_general_boton': 'General settings',
     'config.menu_general_desc': 'Language, theme, notifications, and how Freaky behaves.',
+    'config.cambiar_password_boton': 'Change password',
     'config.menu_seguridad_boton': 'Security & privacy',
     'config.menu_seguridad_desc': 'How we protect your information, Face ID/fingerprint, and full control over your data.',
     'config.menu_reportes_boton': 'Reports',
@@ -7362,6 +7383,33 @@ async function guardarNuevaContrasena(){
   }
   await mostrarAlerta(t('recuperar.alert_password_actualizada'));
   entrarAlPanelConOnboarding();
+}
+
+// Mismo mecanismo que guardarNuevaContrasena() (sb.auth.updateUser también
+// funciona con una cuenta que nunca tuvo password, ej. entró siempre con
+// Google/Apple/magic link -- esto le pone una por primera vez), pero
+// alcanzable estando YA con sesión iniciada desde Configuración, no solo
+// forzado desde el link de recuperación por correo. Vuelve a Seguridad y
+// privacidad en vez de al panel, porque quien llega aquí ya estaba
+// navegando la app, no acaba de iniciar sesión.
+async function guardarCambioContrasena(){
+  const password = document.getElementById('input-password-cambiar').value;
+  const errDiv = document.getElementById('cambiar-password-error');
+  errDiv.style.display = 'none';
+  if(!password || password.length < 6){
+    errDiv.textContent = t('recuperar.error_min_caracteres');
+    errDiv.style.display = 'block';
+    return;
+  }
+  const { error } = await sb.auth.updateUser({ password });
+  if(error){
+    errDiv.textContent = t('recuperar.error_generico');
+    errDiv.style.display = 'block';
+    return;
+  }
+  document.getElementById('input-password-cambiar').value = '';
+  await mostrarAlerta(t('recuperar.alert_password_actualizada'));
+  mostrar('vista-seguridad-privacidad');
 }
 
 async function cerrarSesion(){
@@ -16471,8 +16519,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 120;
+const VERSION_APP_ACTUAL = 121;
 const CHANGELOG_APP = [
+  {
+    version: 121,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Nuevo en Configuración → Seguridad y privacidad: "Cambiar contraseña" -- antes solo se podía poner una contraseña nueva desde el link de "olvidé mi contraseña" del correo; ahora también se puede hacer con la sesión ya iniciada, sin depender de ningún correo.'
+    ],
+    cambios_en: [
+      'New in Settings → Security & privacy: "Change password" -- previously the only way to set a new one was through the "forgot my password" email link; now you can do it while already signed in, no email needed.'
+    ]
+  },
   {
     version: 120,
     fecha: '2026-09-03',
