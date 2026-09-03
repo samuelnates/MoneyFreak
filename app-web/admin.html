@@ -380,10 +380,6 @@
           <div class="subetiqueta">Aviso de reporte mensual</div>
           <div id="lista-notif-reporte"></div>
         </div>
-        <div style="margin-top:16px;">
-          <div class="subetiqueta">¿Freaky vuela?</div>
-          <div id="lista-freaky-vuelo"></div>
-        </div>
         <div class="stat-inline" style="margin-top:16px;">
           <div class="tarjeta-valor" id="dias-aviso-tarjeta" style="font-size:22px;">—</div>
           <div class="tarjeta-sub" id="dias-aviso-tarjeta-sub" style="margin:0;">días de aviso de tarjeta, en promedio</div>
@@ -441,6 +437,12 @@
         <div class="tarjeta-valor" id="kpi-freaky-reportes-mes">—</div>
       </div>
     </div>
+
+    <div class="caja" style="margin-bottom:8px;">
+      <div class="tarjeta-etiqueta">¿Volando o en la cárcel?</div>
+      <div id="lista-freaky-estados" style="margin-top:10px;"></div>
+    </div>
+    <div class="tarjeta-sub" style="margin:8px 0 24px;">Desde que se quitó el checkbox de "vuelo desactivado" (ahora la única forma de dejarlo quieto es arrastrarlo y aventarlo a su botón), esto mide cuánto tiempo real -- sumado entre todos los usuarios -- pasa en cada estado, para ver cuál prefiere la gente de verdad. Se registra cada vez que alguien lo guarda o lo saca; el tiempo offline con Freaky guardado sí cuenta (es justo lo que se quiere medir), tope de 20 días por racha para que quepa en la base.</div>
 
     <div class="caja" style="margin-bottom:32px;">
       <div class="tarjeta-etiqueta">Costo de OpenAI (radiografías)</div>
@@ -912,9 +914,14 @@ const TODAS_LAS_PANTALLAS = Object.keys(ETIQUETAS_PANTALLA);
 
 function formatoDuracion(ms){
   const totalSeg = Math.round(ms / 1000);
-  const horas = Math.floor(totalSeg / 3600);
+  const dias = Math.floor(totalSeg / 86400);
+  const horas = Math.floor((totalSeg % 86400) / 3600);
   const min = Math.floor((totalSeg % 3600) / 60);
   const seg = totalSeg % 60;
+  // El tier de días solo aplica a duraciones que de verdad pueden durar
+  // varios días (ej. tiempo con Freaky guardado) -- el tiempo por pantalla
+  // nunca llega ahí en la práctica, así que extender esto no le cambia nada.
+  if(dias > 0) return `${dias}d ${horas}h`;
   if(horas > 0) return `${horas}h ${min}min`;
   if(min > 0) return `${min}min ${seg}s`;
   return `${seg}s`;
@@ -1060,6 +1067,25 @@ function pintarGraficaPantallas(pantallas){
   }).join('');
 }
 
+const ETIQUETAS_FREAKY_ESTADO = { volando: 'Volando', guardado: 'En la cárcel' };
+
+function pintarFreakyEstados(estados){
+  const cont = document.getElementById('lista-freaky-estados');
+  if(!estados.length){
+    cont.innerHTML = '<div class="tarjeta-sub">Sin datos todavía -- nadie lo ha guardado ni sacado de su botón desde que existe esta métrica.</div>';
+    return;
+  }
+  const max = Math.max(...estados.map(e => e.duracionTotalMs)) || 1;
+  cont.innerHTML = estados.map(e => {
+    const pct = Math.max(2, Math.round((e.duracionTotalMs / max) * 100));
+    const etiqueta = ETIQUETAS_FREAKY_ESTADO[e.estado] || e.estado;
+    return `<div class="categoria-fila">
+      <div class="categoria-fila-etiqueta"><span>${etiqueta}</span><span>${formatoDuracion(e.duracionTotalMs)} <span style="color:var(--texto-tenue);">(prom. ${formatoDuracion(e.duracionPromedioMs)}, ${formatoNumero(e.veces)} veces)</span></span></div>
+      <div class="categoria-fila-barra-fondo"><div class="categoria-fila-barra" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
 function pintarClicsSociales(clics){
   const cont = document.getElementById('lista-clics-sociales');
   const entradas = Object.entries(clics).sort((a, b) => b[1] - a[1]);
@@ -1078,14 +1104,10 @@ function pintarClicsSociales(clics){
 }
 
 const ETIQUETAS_BOOL_SI_NO = { si: 'Sí', no: 'No', sinDato: 'Sin tocar' };
-const ETIQUETAS_FREAKY_VUELO = { vuela: 'Vuela', quieto: 'Quieto', sinDato: 'Sin tocar' };
 
 function pintarNotifOtros(cfg){
   const reporte = cfg.notifReporteMes;
   pintarDistribucion('lista-notif-reporte', { si: reporte.si, no: reporte.no, sinDato: reporte.sinDato }, ETIQUETAS_BOOL_SI_NO);
-
-  const vuelo = cfg.freakyVueloDesactivado;
-  pintarDistribucion('lista-freaky-vuelo', { vuela: vuelo.no, quieto: vuelo.si, sinDato: vuelo.sinDato }, ETIQUETAS_FREAKY_VUELO);
 
   document.getElementById('dias-aviso-tarjeta').textContent = cfg.diasAvisoTarjetaPromedio === null ? '—' : cfg.diasAvisoTarjetaPromedio.toFixed(1);
   document.getElementById('dias-aviso-tarjeta-sub').textContent = `días de aviso de tarjeta, en promedio (${formatoNumero(cfg.usuariosConDiasAvisoTarjeta)} lo cambiaron)`;
@@ -2219,6 +2241,7 @@ async function cargarPanel(){
   document.getElementById('kpi-freaky-usuarios-reporte').textContent = formatoNumero(datos.freaky.usuariosConReporte);
   document.getElementById('kpi-freaky-reportes').textContent = formatoNumero(datos.freaky.reportesGenerados);
   document.getElementById('kpi-freaky-reportes-mes').textContent = formatoNumero(datos.freaky.reportesEsteMes);
+  pintarFreakyEstados(datos.freaky.tiempoPorEstado || []);
   pintarCostoIA(datos.freaky.tokensTotal, datos.freaky.tokensMes);
 
   usuariosDetalleGlobal = datos.detalleUsuarios || [];

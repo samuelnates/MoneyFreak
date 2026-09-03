@@ -2692,10 +2692,7 @@
 
   <h2 data-i18n="config.ayuda_ia_h2">¿Cómo uso la app?</h2>
   <div class="aviso" data-i18n="config.ayuda_ia_aviso">Pregúntale a un asistente cómo hacer algo en Money Freak (no interpreta tus datos financieros, solo explica la app).</div>
-  <div class="check-fila" style="margin-top:10px;">
-    <input type="checkbox" id="check-freaky-vuelo-desactivado" onchange="toggleFreakyVuelo()">
-    <label for="check-freaky-vuelo-desactivado" data-i18n="freaky.desactivar_vuelo_label">Volver a Freaky un botón quieto (sin volar por la pantalla)</label>
-  </div>
+  <div class="aviso" style="margin-top:10px;" data-i18n="freaky.aviso_guardar_arrastrando">¿Prefieres que no vuele por la pantalla? Mantenlo presionado y aviéntalo fuera de la pantalla -- se guarda en su propio botón, listo para sacarlo cuando quieras (arrástralo de nuevo).</div>
   <button class="btn-grande secundario" style="margin-top:8px;" onclick="abrirSelectorAsesor('configuracion')" data-i18n="config.cambiar_asesor_boton">Cambiar el aspecto de Freaky</button>
 
   <div class="campo" style="margin-top:14px;">
@@ -3639,11 +3636,15 @@ let ultimaPantallaTimestamp = Date.now();
 let eventosUsoRegistradosEnEstaSesion = 0;
 const MAX_EVENTOS_USO_POR_SESION = 400;
 
-function registrarEventoUso(tipo, detalle, duracionMs){
+function registrarEventoUso(tipo, detalle, duracionMs, capMs){
   if(!sb || modoDemo || eventosUsoRegistradosEnEstaSesion >= MAX_EVENTOS_USO_POR_SESION) return;
   eventosUsoRegistradosEnEstaSesion++;
   const fila = { tipo, detalle };
-  if(duracionMs !== undefined) fila.duracion_ms = Math.min(Math.max(0, Math.round(duracionMs)), 30 * 60 * 1000);
+  // duracion_ms es `integer` en la base (máx. ~24.8 días en milisegundos) --
+  // el tope por default (30 min) es correcto para "tiempo en una pantalla",
+  // pero un llamador puede pasar uno más generoso (ver freaky_estado, que sí
+  // puede durar días de verdad) siempre y cuando quepa en ese límite.
+  if(duracionMs !== undefined) fila.duracion_ms = Math.min(Math.max(0, Math.round(duracionMs)), capMs ?? 30 * 60 * 1000);
   sb.from('eventos_uso').insert(fila).then(() => {}, () => {});
 }
 
@@ -4601,7 +4602,7 @@ const TRADUCCIONES = {
     'config.ayuda_ia_h2': 'Freaky, tu mentor financiero',
     'config.ayuda_ia_aviso': 'Pregúntale a Freaky cómo usar la app o sobre tu situación financiera — ve tus cifras reales para darte respuestas concretas.',
     'config.redes_h2': 'Síguenos',
-    'freaky.desactivar_vuelo_label': 'Volver a Freaky un botón quieto (sin volar por la pantalla)',
+    'freaky.aviso_guardar_arrastrando': '¿Prefieres que no vuele por la pantalla? Mantenlo presionado y aviéntalo fuera de la pantalla -- se guarda en su propio botón, listo para sacarlo cuando quieras (arrástralo de nuevo).',
     'freaky.aviso_ver': 'Ver',
     'freaky.aviso_cerrar': 'Luego',
     'freaky.aviso_vence_hoy': 'Oye — hoy se te vence {0}.',
@@ -5569,7 +5570,7 @@ const TRADUCCIONES = {
     'config.ayuda_ia_h2': 'Freaky, your financial mentor',
     'config.ayuda_ia_aviso': "Ask Freaky how to use the app or about your financial situation — it sees your real numbers to give you concrete answers.",
     'config.redes_h2': 'Follow us',
-    'freaky.desactivar_vuelo_label': "Turn Freaky back into a still button (no flying around)",
+    'freaky.aviso_guardar_arrastrando': "Prefer him not flying around the screen? Press and hold him, then fling him off-screen -- he'll tuck himself into his own button, ready to come back out whenever you want (just drag it out again).",
     'freaky.aviso_ver': 'View',
     'freaky.aviso_cerrar': 'Later',
     'freaky.aviso_vence_hoy': 'Hey — {0} is due today.',
@@ -9208,7 +9209,7 @@ async function abrirPanel(){
   ]);
   actualizarCacheInsightNotificacion(insights);
   asegurarAsesorCargado();
-  aplicarPreferenciaFreakyVuelo();
+  migrarPreferenciaFreakyVueloAJaula();
   iniciarVueloFreaky();
   revisarAvisoProactivoFreaky(f);
 
@@ -11592,8 +11593,39 @@ function freakyZonaSegura(){
 function freakyEstaGuardado(){
   return localStorage.getItem('freaky_guardado') === '1';
 }
-function activarFreakyGuardado(guardado){
+
+// Cuánto tiempo lleva Freaky en su estado actual (volando o guardado) --
+// para el panel de admin, que quiere ver cuánto tiempo la gente lo prefiere
+// en cada uno (parte 160, reemplaza el viejo checkbox "vuelo desactivado").
+// Un solo timestamp en localStorage, actualizado SOLO en transiciones reales
+// (arrastrar y aventar, o sacarlo del bote): al cerrar la app con Freaky
+// guardado y volver días después, ese tiempo offline sí cuenta como tiempo
+// guardado -- es justo lo que se quiere medir. Como duracion_ms es un
+// `integer` en la base (tope real ~24.8 días), se limita a 20 días para
+// nunca desbordar; una racha guardada más larga que eso solo se subestima,
+// nunca truena. Al ser un timestamp en localStorage, es por dispositivo, no
+// por usuario -- mismo alcance que freaky_guardado en sí, no es una
+// limitación nueva de esto.
+const FREAKY_ESTADO_CAP_MS = 20 * 24 * 60 * 60 * 1000;
+function freakyRegistrarTransicionEstado(estadoQueTermina){
+  const desdeStr = localStorage.getItem('freaky_estado_desde');
+  const ahora = Date.now();
+  if(desdeStr){
+    const ms = ahora - Number(desdeStr);
+    if(ms > 0) registrarEventoUso('freaky_estado', estadoQueTermina, ms, FREAKY_ESTADO_CAP_MS);
+  }
+  try{ localStorage.setItem('freaky_estado_desde', String(ahora)); }catch(e){}
+}
+
+// `esTransicionReal=false` para cuando esto solo restaura un estado ya
+// persistido de una sesión anterior (no hubo ningún cambio real ahora mismo,
+// así que no hay que registrar ninguna duración ni resetear el cronómetro).
+function activarFreakyGuardado(guardado, esTransicionReal){
+  const eraGuardado = freakyEstaGuardado();
   try{ localStorage.setItem('freaky_guardado', guardado ? '1' : '0'); }catch(e){}
+  if(esTransicionReal !== false && eraGuardado !== guardado){
+    freakyRegistrarTransicionEstado(eraGuardado ? 'guardado' : 'volando');
+  }
   const boton = document.getElementById('btn-freaky-guardado');
   if(!boton) return;
   if(guardado){
@@ -11618,10 +11650,21 @@ function iniciarVueloFreaky(){
 
   if(freakyEstaGuardado()){
     // Se quedó guardado de una sesión anterior -- no arranca ningún vuelo,
-    // su botón dedicado ya está visible con su retrato.
+    // su botón dedicado ya está visible con su retrato. No es una transición
+    // real (no acaba de pasar nada ahora mismo), así que no se registra
+    // ninguna duración aquí -- eso ya lo hizo freakyRegistrarTransicionEstado
+    // la última vez que hubo un cambio real, y el cronómetro sigue corriendo
+    // desde entonces sin tocarse.
     el.style.display = 'none';
-    activarFreakyGuardado(true);
+    activarFreakyGuardado(true, false);
     return;
+  }
+
+  // Primera vez que Freaky se muestra volando y todavía no hay cronómetro de
+  // estado -- lo arranca aquí (nunca se sabe cuánto llevaba "volando" antes
+  // de que existiera esta métrica, así que no se registra nada retroactivo).
+  if(!localStorage.getItem('freaky_estado_desde')){
+    try{ localStorage.setItem('freaky_estado_desde', String(Date.now())); }catch(e){}
   }
 
   if(typeof gsap === 'undefined'){
@@ -12205,18 +12248,23 @@ function onClickFreakyPersonaje(){
   }
 }
 
-function toggleFreakyVuelo(){
-  const desactivado = document.getElementById('check-freaky-vuelo-desactivado').checked;
-  document.body.classList.toggle('freaky-vuelo-desactivado', desactivado);
-  localStorage.setItem('freaky_vuelo_desactivado', desactivado ? '1' : '0');
-  sincronizarPreferenciaPerfil('freaky_vuelo_desactivado', desactivado);
-}
-
-function aplicarPreferenciaFreakyVuelo(){
-  const desactivado = localStorage.getItem('freaky_vuelo_desactivado') === '1';
-  document.body.classList.toggle('freaky-vuelo-desactivado', desactivado);
-  const check = document.getElementById('check-freaky-vuelo-desactivado');
-  if(check) check.checked = desactivado;
+// El checkbox "vuelo desactivado" de Configuración se quitó (parte 160):
+// redundante con arrastrar y aventar a Freaky a su botón, que ya deja
+// exactamente el mismo resultado (deja de andar volando por la pantalla) de
+// forma más natural, y ahora esa preferencia real SÍ se mide en el panel de
+// admin (freakyRegistrarTransicionEstado), cosa que este checkbox nunca
+// hizo. Quien ya la tenía activada se migra una sola vez a "guardado" para
+// no perder lo que en el fondo quería (que Freaky no ande volando) --
+// nótese que .freaky-vuelo-desactivado como CLASE sigue existiendo en CSS,
+// solo se usa ahora como respaldo técnico si GSAP no cargó (ver
+// iniciarVueloFreaky), no como preferencia de usuario.
+function migrarPreferenciaFreakyVueloAJaula(){
+  try{
+    if(localStorage.getItem('freaky_vuelo_desactivado') === '1' && localStorage.getItem('freaky_guardado') !== '1'){
+      localStorage.setItem('freaky_guardado', '1');
+    }
+    localStorage.removeItem('freaky_vuelo_desactivado');
+  }catch(e){}
 }
 
 // ===== Freaky: avisos proactivos (sin que el usuario pregunte) =====
@@ -16675,8 +16723,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 131;
+const VERSION_APP_ACTUAL = 132;
 const CHANGELOG_APP = [
+  {
+    version: 132,
+    fecha: '2026-09-03',
+    cambios_es: [
+      'Quitado el interruptor "Volver a Freaky un botón quieto" de Configuración -- ya puedes lograr lo mismo manteniéndolo presionado y aventándolo fuera de la pantalla, se guarda solo en su propio botón.'
+    ],
+    cambios_en: [
+      'Removed the "Turn Freaky back into a still button" switch from Settings -- you can already do the same thing by pressing and flinging him off-screen, he tucks himself into his own button.'
+    ]
+  },
   {
     version: 131,
     fecha: '2026-09-03',

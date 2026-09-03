@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       .select(
         "user_id, avatar_asesor, idioma_preferido, tema_preferido, origen_registro, " +
           "notif_gastos_frecuencia, notif_saldos_frecuencia, notif_reporte_mes, " +
-          "freaky_vuelo_desactivado, freaky_dias_aviso_tarjeta, " +
+          "freaky_dias_aviso_tarjeta, " +
           "sin_anuncios, influencer_codigo, ia_gratis_meses",
       );
     if (errorPreferencias) throw errorPreferencias;
@@ -218,9 +218,9 @@ Deno.serve(async (req) => {
       return conteo;
     };
 
-    // Campos booleanos (notif_reporte_mes, freaky_vuelo_desactivado): null =
-    // nunca tocó esa opción (no es lo mismo que "no", así que se cuenta aparte).
-    const contarBooleano = (campo: "notif_reporte_mes" | "freaky_vuelo_desactivado") => {
+    // Campo booleano notif_reporte_mes: null = nunca tocó esa opción (no es
+    // lo mismo que "no", así que se cuenta aparte).
+    const contarBooleano = (campo: "notif_reporte_mes") => {
       let siCount = 0, noCount = 0, sinDato = 0;
       for (const p of preferencias || []) {
         const valor = p[campo];
@@ -363,6 +363,12 @@ Deno.serve(async (req) => {
 
     const tiempoPorPantalla: Record<string, { vistas: number; duracionTotalMs: number }> = {};
     const clicsSociales: Record<string, number> = {};
+    // "volando" vs "guardado" (parte 160): reemplaza el viejo checkbox
+    // "vuelo desactivado" de Configuración -- ahora que la única forma de
+    // dejar a Freaky quieto es arrastrarlo y aventarlo a su botón, esto mide
+    // cuánto tiempo real (sumado entre todos los usuarios) pasa en cada
+    // estado, para ver cuál prefiere la gente de verdad.
+    const tiempoPorEstadoFreaky: Record<string, { veces: number; duracionTotalMs: number }> = {};
     for (const ev of eventos || []) {
       if (ev.tipo === "pantalla") {
         if (!tiempoPorPantalla[ev.detalle]) tiempoPorPantalla[ev.detalle] = { vistas: 0, duracionTotalMs: 0 };
@@ -370,6 +376,10 @@ Deno.serve(async (req) => {
         tiempoPorPantalla[ev.detalle].duracionTotalMs += Number(ev.duracion_ms || 0);
       } else if (ev.tipo === "clic_social") {
         clicsSociales[ev.detalle] = (clicsSociales[ev.detalle] || 0) + 1;
+      } else if (ev.tipo === "freaky_estado") {
+        if (!tiempoPorEstadoFreaky[ev.detalle]) tiempoPorEstadoFreaky[ev.detalle] = { veces: 0, duracionTotalMs: 0 };
+        tiempoPorEstadoFreaky[ev.detalle].veces++;
+        tiempoPorEstadoFreaky[ev.detalle].duracionTotalMs += Number(ev.duracion_ms || 0);
       }
     }
     const tiempoPorPantallaLista = Object.entries(tiempoPorPantalla)
@@ -378,6 +388,14 @@ Deno.serve(async (req) => {
         vistas: v.vistas,
         duracionTotalMs: v.duracionTotalMs,
         duracionPromedioMs: v.vistas ? Math.round(v.duracionTotalMs / v.vistas) : 0,
+      }))
+      .sort((a, b) => b.duracionTotalMs - a.duracionTotalMs);
+    const tiempoPorEstadoFreakyLista = Object.entries(tiempoPorEstadoFreaky)
+      .map(([estado, v]) => ({
+        estado,
+        veces: v.veces,
+        duracionTotalMs: v.duracionTotalMs,
+        duracionPromedioMs: v.veces ? Math.round(v.duracionTotalMs / v.veces) : 0,
       }))
       .sort((a, b) => b.duracionTotalMs - a.duracionTotalMs);
 
@@ -508,7 +526,6 @@ Deno.serve(async (req) => {
         notifGastos: contarValores("notif_gastos_frecuencia"),
         notifSaldos: contarValores("notif_saldos_frecuencia"),
         notifReporteMes: contarBooleano("notif_reporte_mes"),
-        freakyVueloDesactivado: contarBooleano("freaky_vuelo_desactivado"),
         diasAvisoTarjetaPromedio,
         usuariosConDiasAvisoTarjeta: diasAvisoTarjeta.length,
       },
@@ -527,6 +544,7 @@ Deno.serve(async (req) => {
         reportesEsteMes,
         tokensTotal,
         tokensMes,
+        tiempoPorEstado: tiempoPorEstadoFreakyLista,
       },
       detalleUsuarios,
     });
