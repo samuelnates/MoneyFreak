@@ -6421,26 +6421,18 @@ async function init(){
       manejarNotificacionTocada(accion?.notification?.extra || {});
     });
 
-    // Push real (Fase 2, parte 168) -- a diferencia de las locales, estas SÍ
-    // requieren guardar el token del dispositivo en el servidor. El listener
-    // se registra siempre (no cuesta nada quieto), pero solo dispara de
-    // verdad después de llamar PushNotifications.register() -- eso pasa
-    // cuando el usuario activa la preferencia (toggleNotifAlertaPresupuesto)
-    // o al reabrir la app si ya la tenía activada (ver abrirPanel).
-    window.Capacitor.Plugins.PushNotifications?.addListener('registration', async (token) => {
-      if(!sb || modoDemo || !token?.value) return;
-      try{
-        await sb.from('push_tokens').upsert({
-          token: token.value,
-          plataforma: window.Capacitor.getPlatform(),
-          actualizado_en: new Date().toISOString()
-        }, { onConflict: 'user_id,token' });
-      }catch(e){ console.warn('No se pudo guardar el token de push', e); }
+    // Push real (Fase 2, parte 168; migrado al plugin de Firebase en la parte
+    // 172) -- a diferencia de las locales, estas SÍ requieren guardar el
+    // token del dispositivo en el servidor. Se usa @capacitor-firebase/messaging
+    // en vez de @capacitor/push-notifications porque este último en iOS solo
+    // entrega el token crudo de APNs (no sirve para mandar por la API de FCM
+    // que usa nuestro servidor) -- el plugin de Firebase hace el puente
+    // completo por dentro (configura Firebase, pide el token de FCM real)
+    // en ambas plataformas, sin necesitar código nativo propio.
+    window.Capacitor.Plugins.FirebaseMessaging?.addListener('tokenReceived', (evento) => {
+      guardarTokenPush(evento?.token);
     });
-    window.Capacitor.Plugins.PushNotifications?.addListener('registrationError', (err) => {
-      console.warn('Error registrando el dispositivo para push', err);
-    });
-    window.Capacitor.Plugins.PushNotifications?.addListener('pushNotificationActionPerformed', (accion) => {
+    window.Capacitor.Plugins.FirebaseMessaging?.addListener('notificationActionPerformed', (accion) => {
       manejarNotificacionTocada(accion?.notification?.data || {});
     });
   }
@@ -6793,13 +6785,6 @@ async function inicializarSeccionNotificaciones(){
   document.getElementById('check-notif-reporte-mes').checked = localStorage.getItem('notif_reporte_mes') === '1';
   document.getElementById('check-notif-deudas').checked = localStorage.getItem('notif_recordatorio_deudas') === '1';
   document.getElementById('check-notif-alerta-presupuesto').checked = localStorage.getItem('notif_alerta_presupuesto') === '1';
-  // En iOS el token que entrega el plugin es el de APNs crudo, no un token de FCM
-  // (eso requeriría integrar el SDK nativo de Firebase en el proyecto de Xcode,
-  // pendiente) -- así que nuestro servidor no puede mandarle el push todavía.
-  // Se oculta la casilla en vez de mostrar algo que no funciona; en Android sí
-  // funciona porque el plugin usa el SDK de Firebase de Android internamente.
-  const bloqueAlertaPresupuesto = document.getElementById('bloque-notif-alerta-presupuesto');
-  if(bloqueAlertaPresupuesto) bloqueAlertaPresupuesto.style.display = (window.Capacitor?.getPlatform?.() === 'ios') ? 'none' : '';
 }
 
 async function elegirFrecuenciaNotif(tipo, valor){
@@ -6931,27 +6916,40 @@ async function reprogramarNotificaciones(){
   if(notifications.length > 0) await LN.schedule({ notifications });
 }
 
-// Push real (Fase 2, parte 168): a diferencia de reprogramarNotificaciones()
-// (locales, no requieren nada del servidor), esto pide permiso de push y
-// registra el dispositivo -- el listener 'registration' (ver init()) es el
-// que de verdad guarda el token en push_tokens cuando Capacitor lo entrega.
-// Se llama al activar la preferencia y, de nuevo silenciosamente, cada vez
-// que se abre el panel con la preferencia ya activada (el token puede rotar
-// entre sesiones, hace falta mantenerlo fresco).
+// Push real (Fase 2, parte 168; migrado a @capacitor-firebase/messaging en la
+// parte 172): a diferencia de reprogramarNotificaciones() (locales, no
+// requieren nada del servidor), esto pide permiso de push y pide el token de
+// FCM real directo (getToken() ya lo entrega en la misma llamada -- no hace
+// falta esperar un evento aparte como con el plugin viejo). Se llama al
+// activar la preferencia y, de nuevo silenciosamente, cada vez que se abre
+// el panel con la preferencia ya activada (el token puede rotar entre
+// sesiones, hace falta mantenerlo fresco).
 async function registrarPushSiNecesario(){
   if(!window.Capacitor?.isNativePlatform?.()) return;
-  const PN = window.Capacitor.Plugins.PushNotifications;
-  if(!PN) return;
+  const FM = window.Capacitor.Plugins.FirebaseMessaging;
+  if(!FM) return;
   try{
-    const permiso = await PN.checkPermissions();
+    const permiso = await FM.checkPermissions();
     let estado = permiso.receive;
     if(estado === 'prompt' || estado === 'prompt-with-rationale'){
-      const pedido = await PN.requestPermissions();
+      const pedido = await FM.requestPermissions();
       estado = pedido.receive;
     }
     if(estado !== 'granted') return;
-    await PN.register();
+    const { token } = await FM.getToken();
+    await guardarTokenPush(token);
   }catch(e){ console.warn('No se pudo registrar el dispositivo para push', e); }
+}
+
+async function guardarTokenPush(token){
+  if(!sb || modoDemo || !token) return;
+  try{
+    await sb.from('push_tokens').upsert({
+      token,
+      plataforma: window.Capacitor.getPlatform(),
+      actualizado_en: new Date().toISOString()
+    }, { onConflict: 'user_id,token' });
+  }catch(e){ console.warn('No se pudo guardar el token de push', e); }
 }
 
 // Antes, tocar cualquier notificación local (recordatorio de gastos, de
@@ -17192,8 +17190,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 139;
+const VERSION_APP_ACTUAL = 140;
 const CHANGELOG_APP = [
+  {
+    version: 140,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'La alerta de "voy camino a exceder mi presupuesto" ya está disponible también en iPhone -- vuelve a aparecer la casilla en Notificaciones.'
+    ],
+    cambios_en: [
+      'The "on track to exceed my budget" alert is now also available on iPhone -- the toggle is back in Notifications.'
+    ]
+  },
   {
     version: 139,
     fecha: '2026-09-04',
