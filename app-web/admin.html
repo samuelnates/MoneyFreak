@@ -881,7 +881,14 @@ function pintarCategorias(gastoPorCategoria){
   }).join('');
 }
 
-const ETIQUETAS_AVATAR = { avatar1: 'El Sabio', avatar2: 'La Estratega', avatar3: 'El Cómplice' };
+// Ojo al agregar un avatar nuevo en index.html (array ASESORES): agrégalo
+// aquí también con su nombre real, o el ranking de abajo lo va a mostrar con
+// su id crudo ("avatar7") en vez del nombre -- sigue funcionando (pintarDistribucion
+// cae al id si no encuentra etiqueta), solo se ve menos claro.
+const ETIQUETAS_AVATAR = {
+  avatar1: 'El Sabio', avatar2: 'La Estratega', avatar3: 'El Cómplice',
+  avatar4: 'Puerquito Dorado', avatar5: 'El Luchador', avatar6: 'La Catrina',
+};
 const ETIQUETAS_IDIOMA = { es: 'Español', en: 'English' };
 const ETIQUETAS_TEMA = { light: 'Claro', dark: 'Oscuro', auto: 'Automático' };
 const ETIQUETAS_SECCION = { cuentas: 'Cuentas', gastos: 'Gastos', ingresos: 'Ingresos', deudas: 'Deudas y tarjetas', bienes: 'Bienes', acciones: 'Acciones e inversiones' };
