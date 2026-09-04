@@ -16832,8 +16832,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 134;
+const VERSION_APP_ACTUAL = 135;
 const CHANGELOG_APP = [
+  {
+    version: 135,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'Corregido: los 5 avatares nuevos de Freaky (parte de la v134) se veían con un borde/fondo sucio en modo oscuro, sobre todo en el ícono del login -- el recorte se regeneró y ya no arrastra ningún resto del fondo blanco original.'
+    ],
+    cambios_en: [
+      "Fixed: the 5 new Freaky avatars (from v134) showed a dirty border/background halo in dark mode, most visible on the login icon -- the artwork was reprocessed and no longer carries any trace of the original white background."
+    ]
+  },
   {
     version: 134,
     fecha: '2026-09-04',
