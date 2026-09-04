@@ -67,14 +67,18 @@ jobs:
       - name: Archivar y exportar el .ipa firmado
         run: |
           cd app-nativa/ios/App
+          # La firma manual (identidad, perfil) ya NO se pasa aquí por línea de
+          # comandos -- vive en project.pbxproj, solo en el target real de la
+          # app (ver parte 172). Un override por línea de comandos se aplica a
+          # TODO el grafo de build, incluidos los paquetes internos que trae
+          # Firebase (GoogleUtilities, nanopb, Promises, etc.), que son
+          # bibliotecas y no aceptan que se les asigne un perfil de
+          # aprovisionamiento -- eso rompía el archive en cuanto se agregó
+          # Firebase como dependencia (SPM).
           xcodebuild -project App.xcodeproj -scheme App \
             -configuration Release \
             -archivePath $RUNNER_TEMP/App.xcarchive \
             -destination "generic/platform=iOS" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="Money Freak App Store" \
-            DEVELOPMENT_TEAM=D5GDMDV3X5 \
             archive
 
           cat > $RUNNER_TEMP/ExportOptions.plist << 'EOF'
