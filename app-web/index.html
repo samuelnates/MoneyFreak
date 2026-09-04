@@ -2722,11 +2722,13 @@
       <label for="check-notif-deudas" data-i18n="notif.deudas_label">Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas</label>
     </div>
 
-    <div class="check-fila">
-      <input type="checkbox" id="check-notif-alerta-presupuesto" onchange="toggleNotifAlertaPresupuesto()">
-      <label for="check-notif-alerta-presupuesto" data-i18n="notif.alerta_presupuesto_label">Avisarme si voy camino a exceder mi presupuesto</label>
+    <div id="bloque-notif-alerta-presupuesto">
+      <div class="check-fila">
+        <input type="checkbox" id="check-notif-alerta-presupuesto" onchange="toggleNotifAlertaPresupuesto()">
+        <label for="check-notif-alerta-presupuesto" data-i18n="notif.alerta_presupuesto_label">Avisarme si voy camino a exceder mi presupuesto</label>
+      </div>
+      <div class="aviso" data-i18n="notif.alerta_presupuesto_aviso">A diferencia de las de arriba, esta sí requiere avisar desde el servidor (no es 100% local) -- compara tu ritmo de gasto de este mes contra tu propio patrón de meses anteriores, no un promedio simple, y necesita al menos 2 meses de historial para activarse.</div>
     </div>
-    <div class="aviso" data-i18n="notif.alerta_presupuesto_aviso">A diferencia de las de arriba, esta sí requiere avisar desde el servidor (no es 100% local) -- compara tu ritmo de gasto de este mes contra tu propio patrón de meses anteriores, no un promedio simple, y necesita al menos 2 meses de historial para activarse.</div>
   </div>
 
   <h2 data-i18n="config.ayuda_ia_h2">¿Cómo uso la app?</h2>
@@ -6791,6 +6793,13 @@ async function inicializarSeccionNotificaciones(){
   document.getElementById('check-notif-reporte-mes').checked = localStorage.getItem('notif_reporte_mes') === '1';
   document.getElementById('check-notif-deudas').checked = localStorage.getItem('notif_recordatorio_deudas') === '1';
   document.getElementById('check-notif-alerta-presupuesto').checked = localStorage.getItem('notif_alerta_presupuesto') === '1';
+  // En iOS el token que entrega el plugin es el de APNs crudo, no un token de FCM
+  // (eso requeriría integrar el SDK nativo de Firebase en el proyecto de Xcode,
+  // pendiente) -- así que nuestro servidor no puede mandarle el push todavía.
+  // Se oculta la casilla en vez de mostrar algo que no funciona; en Android sí
+  // funciona porque el plugin usa el SDK de Firebase de Android internamente.
+  const bloqueAlertaPresupuesto = document.getElementById('bloque-notif-alerta-presupuesto');
+  if(bloqueAlertaPresupuesto) bloqueAlertaPresupuesto.style.display = (window.Capacitor?.getPlatform?.() === 'ios') ? 'none' : '';
 }
 
 async function elegirFrecuenciaNotif(tipo, valor){
@@ -17183,8 +17192,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 138;
+const VERSION_APP_ACTUAL = 139;
 const CHANGELOG_APP = [
+  {
+    version: 139,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'En iPhone, la casilla de "avisarme si voy camino a exceder mi presupuesto" se oculta temporalmente mientras terminamos de conectarla del todo -- en Android ya funciona.'
+    ],
+    cambios_en: [
+      'On iPhone, the "warn me if I\'m on track to exceed my budget" toggle is temporarily hidden while we finish wiring it up fully -- it already works on Android.'
+    ]
+  },
   {
     version: 138,
     fecha: '2026-09-04',
