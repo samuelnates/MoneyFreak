@@ -2704,6 +2704,11 @@
       <input type="checkbox" id="check-notif-reporte-mes" onchange="toggleNotifReporteMes()">
       <label for="check-notif-reporte-mes" data-i18n="notif.reporte_mes_label">Avisarme a fin de mes para sacar mi reporte</label>
     </div>
+
+    <div class="check-fila">
+      <input type="checkbox" id="check-notif-deudas" onchange="toggleNotifRecordatorioDeudas()">
+      <label for="check-notif-deudas" data-i18n="notif.deudas_label">Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas</label>
+    </div>
   </div>
 
   <h2 data-i18n="config.ayuda_ia_h2">¿Cómo uso la app?</h2>
@@ -4122,6 +4127,7 @@ const TRADUCCIONES = {
     'notif.gastos_label': 'Recordarme registrar gastos',
     'notif.saldos_label': 'Recordarme actualizar saldos',
     'notif.reporte_mes_label': 'Avisarme a fin de mes para sacar mi reporte',
+    'notif.deudas_label': 'Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas',
     'notif.nunca': 'Nunca',
     'notif.cada_dia': 'Cada día',
     'notif.cada_semana': 'Cada semana',
@@ -4135,6 +4141,10 @@ const TRADUCCIONES = {
     'notif.recordatorio_reporte_texto': 'Ya cerró el mes — entra a Balance general y saca tu PDF del periodo.',
     'notif.recordatorio_recurrente_titulo': 'Pago recurrente',
     'notif.recordatorio_recurrente_texto': 'Es como de {0} ({1}) — ¿ya lo registraste este mes?',
+    'notif.recordatorio_deuda_titulo': 'Se acerca tu fecha de pago',
+    'notif.recordatorio_deuda_texto': '{0} vence el día {1} de este mes — revísalo para no pagar intereses.',
+    'notif.avatar_desbloqueado_titulo': '¡Desbloqueaste un avatar nuevo!',
+    'notif.avatar_desbloqueado_texto': 'Subiste tu Score Money Freak lo suficiente para desbloquear a {0}. Ve a cambiar el aspecto de Freaky para lucirlo.',
     'gastos.recurrente_sugerencia': 'Parece que pagas {0} de {1} cada mes cerca del día {2}. ¿Quieres que te recuerde?',
     'gastos.recurrente_si': 'Sí, recuérdame',
     'gastos.recurrente_no': 'No, gracias',
@@ -5109,6 +5119,7 @@ const TRADUCCIONES = {
     'notif.gastos_label': 'Remind me to log expenses',
     'notif.saldos_label': 'Remind me to update balances',
     'notif.reporte_mes_label': 'Remind me at month-end to get my report',
+    'notif.deudas_label': "Remind me a few days before my debts and cards are due",
     'notif.nunca': 'Never',
     'notif.cada_dia': 'Every day',
     'notif.cada_semana': 'Every week',
@@ -5122,6 +5133,10 @@ const TRADUCCIONES = {
     'notif.recordatorio_reporte_texto': 'The month just closed — open Balance general and get your period PDF.',
     'notif.recordatorio_recurrente_titulo': 'Recurring payment',
     'notif.recordatorio_recurrente_texto': "It's about {0} ({1}) — did you already log it this month?",
+    'notif.recordatorio_deuda_titulo': 'Your payment date is coming up',
+    'notif.recordatorio_deuda_texto': '{0} is due on day {1} of this month — check it so you avoid interest.',
+    'notif.avatar_desbloqueado_titulo': 'You unlocked a new avatar!',
+    'notif.avatar_desbloqueado_texto': 'Your Money Freak Score went up enough to unlock {0}. Go change Freaky\'s look to show it off.',
     'gastos.recurrente_sugerencia': "Looks like you pay {0} for {1} every month around day {2}. Want a reminder?",
     'gastos.recurrente_si': 'Yes, remind me',
     'gastos.recurrente_no': 'No thanks',
@@ -6688,6 +6703,31 @@ async function desactivarBiometria(){
 
 const NOTIF_ID_GASTOS = 1001, NOTIF_ID_SALDOS = 1002, NOTIF_ID_REPORTE = 1003;
 const NOTIF_ID_RECURRENTE_BASE = 2000;
+// Rango reservado para recordatorios de fecha de pago de deudas/tarjetas
+// (parte 167) -- un id por deuda, derivado de su uuid real con
+// idNumericoDesdeTexto() en vez de un contador como el de "recurrentes"
+// (arriba), porque aquí no hay un momento único de "se creó este
+// recordatorio" que registrar: cualquier deuda con día de pago capturado
+// entra o sale de la lista sola según reprogramarNotificaciones() la
+// encuentre, y necesita el MISMO id cada vez para poder cancelarla y
+// reemplazarla sin duplicar ni dejar huérfanas.
+const NOTIF_ID_DEUDA_BASE = 3000, NOTIF_ID_DEUDA_RANGO = 999;
+// Rango para el aviso de "desbloqueaste un avatar nuevo" (parte 167) -- como
+// mucho hay unos cuantos avatares con requiereScore, así que un id fijo por
+// posición alcanza sin necesitar hash.
+const NOTIF_ID_AVATAR_BASE = 4000;
+// Hash determinístico (djb2) para convertir un uuid real en un id numérico
+// estable dentro de un rango -- Capacitor LocalNotifications exige ids
+// enteros, y aquí hace falta que el MISMO registro (deuda) siempre caiga en
+// el mismo id entre una llamada y la siguiente, sin guardar un mapeo aparte.
+function idNumericoDesdeTexto(texto, base, rango){
+  let hash = 5381;
+  for(let i = 0; i < texto.length; i++){
+    hash = ((hash << 5) + hash) + texto.charCodeAt(i);
+    hash |= 0;
+  }
+  return base + (Math.abs(hash) % rango);
+}
 
 async function inicializarSeccionNotificaciones(){
   const seccion = document.getElementById('seccion-notificaciones');
@@ -6699,6 +6739,7 @@ async function inicializarSeccionNotificaciones(){
   document.querySelectorAll('#rango-notif-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.valor === freqGastos));
   document.querySelectorAll('#rango-notif-saldos button').forEach(b => b.classList.toggle('activo', b.dataset.valor === freqSaldos));
   document.getElementById('check-notif-reporte-mes').checked = localStorage.getItem('notif_reporte_mes') === '1';
+  document.getElementById('check-notif-deudas').checked = localStorage.getItem('notif_recordatorio_deudas') === '1';
 }
 
 async function elegirFrecuenciaNotif(tipo, valor){
@@ -6715,6 +6756,13 @@ async function toggleNotifReporteMes(){
   await reprogramarNotificaciones();
 }
 
+async function toggleNotifRecordatorioDeudas(){
+  const activo = document.getElementById('check-notif-deudas').checked;
+  localStorage.setItem('notif_recordatorio_deudas', activo ? '1' : '0');
+  sincronizarPreferenciaPerfil('notif_recordatorio_deudas', activo);
+  await reprogramarNotificaciones();
+}
+
 async function reprogramarNotificaciones(){
   if(!window.Capacitor?.isNativePlatform?.()) return;
   const LN = window.Capacitor.Plugins.LocalNotifications;
@@ -6727,9 +6775,26 @@ async function reprogramarNotificaciones(){
   }catch(e){ return; }
 
   const recordatoriosRecurrentes = JSON.parse(localStorage.getItem('recordatorios_gasto_recurrente') || '[]');
+  // Todas las deudas con día límite capturado, tengan o no la notificación
+  // activada -- hace falta conocerlas TODAS para poder cancelar el id
+  // derivado de cada una (si el usuario apagó la preferencia después de
+  // tenerla prendida, o borró una deuda, su notificación vieja quedaría
+  // huérfana si solo canceláramos las que sí se van a re-programar).
+  let deudasConDia = [];
+  if(!modoDemo){
+    try{
+      const { data } = await sb.from('deudas').select('id, nombre, tipo, dia_limite_pago').not('dia_limite_pago', 'is', null);
+      // Filtro client-side además del .not() de la consulta -- defensa extra
+      // por si algún mock/entorno de prueba no aplica el filtro del lado del
+      // servidor, nunca se quiere una notificación con "día 0" a partir de
+      // un dia_limite_pago null.
+      deudasConDia = (data || []).filter(d => d.dia_limite_pago != null);
+    }catch(e){ console.warn('No se pudieron leer las deudas para programar sus recordatorios de pago', e); }
+  }
   await LN.cancel({ notifications: [
     { id: NOTIF_ID_GASTOS }, { id: NOTIF_ID_SALDOS }, { id: NOTIF_ID_REPORTE },
-    ...recordatoriosRecurrentes.map(r => ({ id: r.id }))
+    ...recordatoriosRecurrentes.map(r => ({ id: r.id })),
+    ...deudasConDia.map(d => ({ id: idNumericoDesdeTexto(d.id, NOTIF_ID_DEUDA_BASE, NOTIF_ID_DEUDA_RANGO) }))
   ] }).catch(() => {});
 
   const notifications = [];
@@ -6767,6 +6832,31 @@ async function reprogramarNotificaciones(){
     });
   });
 
+  // Mismo umbral que ya usa el aviso proactivo de Freaky en el panel
+  // (revisarAvisoProactivoFreaky): tarjetas de crédito usan los días que el
+  // usuario configuró (default 5), el resto de las deudas usa 3 días fijos
+  // -- así esta notificación real y el aviso dentro de la app nunca se
+  // contradicen sobre "cuándo es pronto".
+  if(localStorage.getItem('notif_recordatorio_deudas') === '1'){
+    const diasAvisoTarjeta = obtenerDiasAvisoTarjeta();
+    deudasConDia.forEach(d => {
+      const dia = Number(d.dia_limite_pago);
+      const diasAntes = d.tipo === 'Tarjeta de crédito' ? diasAvisoTarjeta : 3;
+      // Restar días sin cruzar a un día inválido (ej. día 2 - 5 = -3): se
+      // recorta a 1 en vez de calcular el mes anterior -- mismo nivel de
+      // simplicidad que ya usa el resto de esta función con "day" fijo
+      // (recordatoriosRecurrentes tampoco resuelve meses de 28/30/31 días).
+      const diaAviso = Math.max(1, dia - diasAntes);
+      notifications.push({
+        id: idNumericoDesdeTexto(d.id, NOTIF_ID_DEUDA_BASE, NOTIF_ID_DEUDA_RANGO),
+        title: t('notif.recordatorio_deuda_titulo'),
+        body: tf('notif.recordatorio_deuda_texto', d.nombre, dia),
+        schedule: { on: { day: diaAviso, hour: 9, minute: 0 }, every: 'month' },
+        extra: { destino: 'deuda' }
+      });
+    });
+  }
+
   if(notifications.length > 0) await LN.schedule({ notifications });
 }
 
@@ -6795,6 +6885,10 @@ async function manejarNotificacionTocada(extra){
       monto_sugerido: extra.monto,
       fecha_sugerida: new Date().toISOString().slice(0, 10),
     });
+  } else if(destino === 'deuda'){
+    mostrarSeccionCuentas('deudas');
+  } else if(destino === 'aspecto'){
+    await abrirSelectorAsesor('configuracion');
   }
 }
 
@@ -9294,6 +9388,10 @@ async function abrirPanel(){
 
   if(score.general !== null && !modoDemo){
     const hoyISO = hoy.toISOString().slice(0, 10);
+    // Se lee el mejor histórico ANTES de guardar el de hoy -- si no, el
+    // upsert de abajo ya habría subido el máximo y avisarDesbloqueosPorScore
+    // nunca vería una diferencia que notificar.
+    await avisarAvataresDesbloqueadosPorScore(score.general);
     await sb.from('score_historico').upsert({
       fecha: hoyISO,
       score: score.general,
@@ -11763,6 +11861,44 @@ async function construirGamificacionParaChat(){
     console.warn('No se pudo construir el contexto de gamificación para el chat', e);
     return null;
   }
+}
+
+// Notificación real (push local) cuando el score de hoy cruza el umbral de
+// un avatar nuevo -- antes esto no avisaba de ninguna forma, había que
+// entrar al selector para descubrirlo por tu cuenta (parte 167). Se llama
+// desde abrirPanel() ANTES de guardar el score de hoy en score_historico,
+// para poder comparar contra el mejor histórico previo a hoy.
+async function avisarAvataresDesbloqueadosPorScore(scoreHoy){
+  if(modoDemo || scoreHoy == null || !window.Capacitor?.isNativePlatform?.()) return;
+  const avataresConScore = ASESORES.filter(a => a.requiereScore != null);
+  if(avataresConScore.length === 0) return;
+  let previoMax = 0;
+  try{
+    const { data } = await sb.from('score_historico').select('score').order('score', { ascending: false }).limit(1).maybeSingle();
+    previoMax = data?.score ?? 0;
+  }catch(e){ console.warn('No se pudo leer el score histórico previo para avisar de avatares desbloqueados', e); return; }
+  if(scoreHoy <= previoMax) return; // el máximo histórico no subió, nada nuevo que desbloquear
+
+  const yaNotificados = new Set(JSON.parse(localStorage.getItem('avatares_notificados_desbloqueo') || '[]'));
+  const nuevos = avataresConScore.filter(a => a.requiereScore > previoMax && a.requiereScore <= scoreHoy && !yaNotificados.has(a.id));
+  if(nuevos.length === 0) return;
+
+  const LN = window.Capacitor.Plugins.LocalNotifications;
+  try{
+    // No se pide permiso aquí -- si el usuario nunca activó ninguna otra
+    // notificación, este no es el momento de interrumpirlo pidiéndolo solo
+    // por esto. Si ya lo dio (activó cualquier otro tipo), se aprovecha.
+    const permiso = await LN.checkPermissions();
+    if(permiso.display !== 'granted') return;
+    await LN.schedule({ notifications: nuevos.map((a, i) => ({
+      id: NOTIF_ID_AVATAR_BASE + i,
+      title: t('notif.avatar_desbloqueado_titulo'),
+      body: tf('notif.avatar_desbloqueado_texto', t('asesor.' + a.id + '.nombre')),
+      schedule: { at: new Date(Date.now() + 800 + i * 300) },
+      extra: { destino: 'aspecto' }
+    })) });
+    localStorage.setItem('avatares_notificados_desbloqueo', JSON.stringify([...yaNotificados, ...nuevos.map(a => a.id)]));
+  }catch(e){ console.warn('No se pudo mandar la notificación de avatar desbloqueado', e); }
 }
 
 // ===== Freaky: personaje volador (GSAP) =====
@@ -16956,8 +17092,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 136;
+const VERSION_APP_ACTUAL = 137;
 const CHANGELOG_APP = [
+  {
+    version: 137,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'Nuevo aviso en Notificaciones: te avisamos unos días antes de la fecha de pago de cada deuda/tarjeta, con el mismo margen que ya configuras para Freaky.',
+      'Te avisamos cuando desbloqueas un avatar nuevo de Freaky por subir tu Score Money Freak.'
+    ],
+    cambios_en: [
+      "New notification: we now remind you a few days before each debt/card's due date, using the same heads-up window you already set for Freaky.",
+      'We now notify you when you unlock a new Freaky avatar by raising your Money Freak Score.'
+    ]
+  },
   {
     version: 136,
     fecha: '2026-09-04',
