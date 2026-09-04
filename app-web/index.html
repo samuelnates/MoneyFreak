@@ -230,6 +230,7 @@
   }
   .chat-accion-gasto-monto{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--texto);}
   .chat-accion-gasto-detalle{font-family:var(--sans);font-size:13.5px;color:var(--texto-tenue);margin-top:2px;line-height:1.5;}
+  .chat-accion-avatar-preview{width:48px;height:48px;object-fit:contain;display:block;}
   .chat-accion-presupuesto-lista{margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);}
   .chat-accion-presupuesto-fila{display:flex;justify-content:space-between;gap:10px;font-family:var(--sans);font-size:13.5px;color:var(--texto);padding:3px 0;}
   .chat-accion-presupuesto-monto{font-family:var(--mono);color:var(--texto-tenue);white-space:nowrap;}
@@ -4722,6 +4723,9 @@ const TRADUCCIONES = {
     'ayuda_ia.accion_guardada': '{0} agregada a tu portafolio',
     'ayuda_ia.accion_no_encontrada': 'No encontré ese símbolo — búscalo tú mismo en el formulario para elegir el correcto.',
     'ayuda_ia.accion_ambigua': 'Encontré varios resultados posibles para eso — búscalo tú mismo en el formulario para elegir el correcto.',
+    'ayuda_ia.confirmar_avatar': 'Cambiar',
+    'ayuda_ia.cambiar_aspecto_a': 'Cambiar tu aspecto a',
+    'ayuda_ia.avatar_cambiado': 'Listo, ahora me veo como {0}',
     'radiografia.regenerar_boton': 'Generar de nuevo',
     'radiografia.pedir_palabra_clave': 'Para regenerar el reporte de este mes (esto vuelve a llamar a la IA) escribe la palabra clave:',
     'radiografia.palabra_clave_incorrecta': 'Palabra clave incorrecta. No se generó un reporte nuevo.',
@@ -5705,6 +5709,9 @@ const TRADUCCIONES = {
     'ayuda_ia.accion_guardada': '{0} added to your portfolio',
     'ayuda_ia.accion_no_encontrada': "Couldn't find that symbol — search for it yourself in the form to pick the right one.",
     'ayuda_ia.accion_ambigua': 'Found several possible matches for that — search for it yourself in the form to pick the right one.',
+    'ayuda_ia.confirmar_avatar': 'Change',
+    'ayuda_ia.cambiar_aspecto_a': 'Change your look to',
+    'ayuda_ia.avatar_cambiado': 'Done, I now look like {0}',
     'ayuda_ia.gasto_abierto_formulario': 'Opened the form so you can adjust it',
     'radiografia.regenerar_boton': 'Generate again',
     'radiografia.pedir_palabra_clave': 'To regenerate this month\'s report (this calls the AI again), type the keyword:',
@@ -7725,6 +7732,17 @@ async function construirSnapshotFinanciero(){
   try{ comparativoHistorico = await calcularHistoricoGastosPresupuesto(6); }
   catch(e){ console.warn('No se pudo calcular el comparativo histórico para el snapshot', e); }
 
+  // Se incluye el Score Money Freak ya desglosado (no solo el "general") para
+  // que Freaky pueda explicar CÓMO se calcula con los números reales del
+  // usuario en vez de hablar solo en abstracto -- pedido explícito del
+  // usuario tras notar que Freaky no sabía guiarlo bien sobre su propio
+  // score ni sobre cómo subirlo. Se manda también la meta/techo configurados
+  // (no son fijos, el usuario los puede ajustar) para que el cálculo que
+  // explique cuadre exactamente con el suyo, no con los valores recomendados.
+  let scoreMoneyFreak = null;
+  try{ scoreMoneyFreak = await calcularScoreMoneyFreak(balance, salud, gastosMes); }
+  catch(e){ console.warn('No se pudo calcular el Score Money Freak para el snapshot', e); }
+
   const cashflowScenarios = calcularEscenariosFlujo(flujo);
   const possibleAnomalies = await detectarAnomaliasBasicas(gastosMes);
 
@@ -7773,7 +7791,18 @@ async function construirSnapshotFinanciero(){
     saldo_liquido_proyectado: flujo.saldoProyectado,
     escenarios_flujo: cashflowScenarios,
     posibles_anomalias: possibleAnomalies,
-    comparativo_historico_6m: comparativoHistoricoConContexto
+    comparativo_historico_6m: comparativoHistoricoConContexto,
+    score_money_freak: scoreMoneyFreak ? {
+      general: scoreMoneyFreak.general,
+      liquidez: scoreMoneyFreak.liquidez,
+      endeudamiento: scoreMoneyFreak.endeudamiento,
+      presupuesto: scoreMoneyFreak.presupuesto,
+      tendencia: scoreMoneyFreak.tendencia,
+      constancia: scoreMoneyFreak.constancia,
+      meta_meses_cobertura_configurada: perfilFinanciero.meses_cobertura_objetivo || MESES_COBERTURA_RECOMENDADO,
+      techo_tasa_endeudamiento_pct_configurado: perfilFinanciero.umbral_rojo || UMBRAL_ROJO_RECOMENDADO,
+      nota: 'Cada sub-score va de 0 a 100; null significa que todavía no hay suficiente información para calcularlo (no cuenta como 0 en el promedio). "general" es el promedio simple de los sub-scores que sí tienen valor. liquidez = qué tan cerca están meses_cobertura de metricas_calculadas de la meta_meses_cobertura_configurada (100 si ya la alcanzó o superó). endeudamiento = qué tan lejos está tasa_endeudamiento_pct del techo_tasa_endeudamiento_pct_configurado (100 = deuda en 0, 0 = ya llegó o pasó el techo). presupuesto = 100 si, proyectando el gasto_mensual actual al ritmo del día del mes hasta completarlo, no rebasaría presupuesto_mensual; baja si se proyecta que sí lo rebasa. tendencia = 50 +/-10 por cada uno de hasta 5 meses seguidos que el patrimonio neto lleve subiendo o bajando sin cortar la racha. constancia = 60% qué tan seguido (de las últimas 4 semanas) hubo al menos un gasto/actualización de saldo/pago a deuda, + 40% qué % de cuentas que cuentan para el patrimonio tienen saldo actualizado en los últimos 28 días.'
+    } : null
   };
 }
 
@@ -11198,6 +11227,7 @@ const accionesCuentaNuevaChat = {};
 const accionesDeudaNuevaChat = {};
 const accionesBienNuevoChat = {};
 const accionesAccionNuevaChat = {};
+const accionesCambiarAvatarChat = {};
 const sugerenciasChatTexto = {};
 let idAccionGastoChatSiguiente = 1;
 
@@ -11244,6 +11274,8 @@ const DESTINOS_CHAT = {
   agregar_deuda: { fn: () => mostrar('vista-agregar-deuda'), etiqueta: 'Nueva deuda' },
   agregar_bien: { fn: () => mostrar('vista-agregar-bien'), etiqueta: 'Nuevo bien' },
   agregar_accion: { fn: () => mostrar('vista-agregar-accion'), etiqueta: 'Nueva acción' },
+  aspecto: { fn: () => abrirSelectorAsesor('configuracion'), etiqueta: 'Elegir aspecto de Freaky' },
+  score: { fn: () => abrirScore(), etiqueta: 'Score Money Freak' },
 };
 
 function irADestinoChat(clave){
@@ -11251,7 +11283,7 @@ function irADestinoChat(clave){
   if(destino) destino.fn();
 }
 
-function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva, sugerenciasRespuesta){
+function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva, accionCambiarAvatar, sugerenciasRespuesta){
   const cont = document.getElementById('ayuda-ia-conversacion');
   document.getElementById('ayuda-ia-vacio').style.display = 'none';
 
@@ -11412,13 +11444,29 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     </div>`;
   }
 
+  let accionCambiarAvatarHtml = '';
+  if(accionCambiarAvatar){
+    const idCambiarAvatar = idAccionGastoChatSiguiente++;
+    accionesCambiarAvatarChat[idCambiarAvatar] = accionCambiarAvatar;
+    const asesorPropuesto = obtenerAsesorPorId(accionCambiarAvatar.avatar_id);
+    const nombreAsesorPropuesto = asesorPropuesto ? t('asesor.' + asesorPropuesto.id + '.nombre') : accionCambiarAvatar.avatar_id;
+    accionCambiarAvatarHtml = `<div class="chat-accion-gasto" id="chat-accion-cambiar-avatar-${idCambiarAvatar}">
+      ${asesorPropuesto ? `<img class="chat-accion-avatar-preview" src="${asesorPropuesto.carpeta}/avatar.png" alt="">` : ''}
+      <div class="chat-accion-gasto-detalle">${escapeHtml(t('ayuda_ia.cambiar_aspecto_a'))} ${escapeHtml(nombreAsesorPropuesto)}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-cambiar-avatar-confirmar-${idCambiarAvatar}" class="chat-accion-confirmar" onclick="confirmarCambioAvatarChat(${idCambiarAvatar})">${t('ayuda_ia.confirmar_avatar')}</button>
+        <button type="button" id="chat-cambiar-avatar-cancelar-${idCambiarAvatar}" class="chat-accion-editar" onclick="cancelarAccionChat('cambiarAvatar', ${idCambiarAvatar})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
   // Botones de respuesta rápida (ej. "Sí"/"No") — solo tiene sentido cuando
   // Freaky no trae ya una propuesta con sus propios botones de confirmar en
   // esta misma burbuja, para no duplicar la decisión de dos formas distintas.
   // El texto real se guarda en un mapa y el botón solo lleva un id numérico
   // (nunca el texto directo en el onclick) — el texto viene de la IA y puede
   // traer comillas u otros caracteres que romperían el atributo HTML.
-  const hayPropuesta = accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva;
+  const hayPropuesta = accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva || accionCambiarAvatar;
   const sugerenciasHtml = (sugerenciasRespuesta && sugerenciasRespuesta.length && !hayPropuesta)
     ? `<div class="chat-sugerencias">${sugerenciasRespuesta.map(s => {
         const idSugerencia = idAccionGastoChatSiguiente++;
@@ -11427,13 +11475,13 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
       }).join('')}</div>`
     : '';
 
-  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${linkHtml}${sugerenciasHtml}${horaHtml}</div>`;
+  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${accionCambiarAvatarHtml}${linkHtml}${sugerenciasHtml}${horaHtml}</div>`;
   div.innerHTML = rol === 'asistente'
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
   cont.appendChild(div);
   desplazarChatHaciaAbajo(div);
-  if(accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva){
+  if(hayPropuesta){
     freakyTrigger('point'); // "encontré algo para ti" — hay una propuesta en esta burbuja
   }
   return div;
@@ -11604,13 +11652,22 @@ async function obtenerMejorScoreHistorico(){
   return mejorScoreHistorico;
 }
 
-async function abrirSelectorAsesor(origen){
-  asesorSelectorOrigen = origen || 'login';
+// Compartido entre abrirSelectorAsesor() y construirGamificacionParaChat()
+// (Freaky necesita saber qué avatares están desbloqueados para poder
+// proponer "cambiar_avatar" u explicar qué le falta al usuario) -- ambos
+// dejan el resultado en las mismas variables de módulo, así que después de
+// la primera carga es gratis (cacheado) para quien lo llame después.
+async function precargarDesbloqueosAsesores(){
   if(!modoDemo && avataresDesbloqueadosPorReferidos === null){
     const datos = await llamarReferidos({});
     avataresDesbloqueadosPorReferidos = datos.avataresDesbloqueados || [];
   }
   await obtenerMejorScoreHistorico();
+}
+
+async function abrirSelectorAsesor(origen){
+  asesorSelectorOrigen = origen || 'login';
+  await precargarDesbloqueosAsesores();
   renderSelectorAsesor();
   mostrar('vista-elegir-asesor');
 }
@@ -11646,10 +11703,15 @@ function renderSelectorAsesor(){
   }).join('');
 }
 
-async function elegirAsesor(id){
+// Núcleo compartido de "elegir un avatar" (aplicarlo al personaje + guardarlo
+// en la base) -- usado tanto por el selector real (elegirAsesor, que además
+// navega según de dónde vino) como por la confirmación de "cambiar_avatar"
+// propuesta por Freaky en el chat (que se queda en la conversación, no
+// navega a ningún lado). Regresa false sin hacer nada si el id no existe o
+// sigue bloqueado -- nunca aplica un avatar a medias.
+async function aplicarYGuardarAsesor(id){
   const asesor = obtenerAsesorPorId(id);
-  if(!asesor) return;
-  if(asesorEstaBloqueado(asesor)) return;
+  if(!asesor || asesorEstaBloqueado(asesor)) return false;
   asesorActual = asesor;
   localStorage.setItem('asesor_actual_id', id);
   aplicarAsesorAlPersonaje();
@@ -11663,10 +11725,43 @@ async function elegirAsesor(id){
       console.warn('No se pudo guardar el avatar elegido (¿ya corriste la migración?)', e);
     }
   }
+  return true;
+}
+
+async function elegirAsesor(id){
+  const ok = await aplicarYGuardarAsesor(id);
+  if(!ok) return;
   if(asesorSelectorOrigen === 'configuracion'){
     mostrar('vista-config-general');
   } else {
     await continuarTrasOnboarding();
+  }
+}
+
+// Se manda a Freaky en cada pregunta del chat, junto al snapshot financiero,
+// para que sepa qué avatar tiene puesto el usuario ahora, cuáles ya
+// desbloqueó y qué le falta a cada uno de los que no -- así puede proponer
+// "cambiar_avatar" de verdad (en vez de mandar siempre a Configuración) o
+// explicar con números reales qué le falta al que sea que pida.
+async function construirGamificacionParaChat(){
+  try{
+    await precargarDesbloqueosAsesores();
+    const idActual = (asesorActual || obtenerAsesorPorId(localStorage.getItem('asesor_actual_id')) || ASESORES[0]).id;
+    return {
+      avatar_actual_id: idActual,
+      avatar_actual_nombre: t('asesor.' + idActual + '.nombre'),
+      mejor_score_historico: mejorScoreHistorico ?? 0,
+      avatares: ASESORES.map(a => ({
+        id: a.id,
+        nombre: t('asesor.' + a.id + '.nombre'),
+        desbloqueado: !asesorEstaBloqueado(a),
+        requiere_score: a.requiereScore ?? null,
+        requiere_referidos: a.requiereReferidos ?? null
+      }))
+    };
+  }catch(e){
+    console.warn('No se pudo construir el contexto de gamificación para el chat', e);
+    return null;
   }
 }
 
@@ -12606,15 +12701,15 @@ async function preguntarSobreApp(){
     }
     const opcionesPago = await obtenerOpcionesMedioPago();
     const medios_pago_disponibles = opcionesPago.todas.map(o => ({ valor: o.valor || 'efectivo', etiqueta: o.etiqueta }));
-    const [cuentasChat, deudasChat, ingresosChat] = await Promise.all([
-      obtenerCuentasParaChat(), obtenerDeudasParaChat(), obtenerIngresosParaChat()
+    const [cuentasChat, deudasChat, ingresosChat, gamificacion] = await Promise.all([
+      obtenerCuentasParaChat(), obtenerDeudasParaChat(), obtenerIngresosParaChat(), construirGamificacionParaChat()
     ]);
     const cuentas_disponibles = cuentasChat.map(c => ({ id: c.id, nombre: c.nombre }));
     const deudas_disponibles = deudasChat.map(d => ({ id: d.id, nombre: d.nombre, saldo: Number(d.saldo) }));
     const ingresos_existentes = ingresosChat.map(i => ({ id: i.id, nombre: i.nombre, monto: Number(i.monto) }));
 
     const resultado = await llamarConAccesoIA('preguntar-sobre-app',
-      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
+      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, gamificacion, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
       { sinAcceso: 'ayuda_ia.sin_acceso', codigoInvalido: 'ayuda_ia.codigo_invalido' });
     escribiendo.remove();
     if(!resultado.ok || !resultado.data || !resultado.data.respuesta){
@@ -12629,7 +12724,7 @@ async function preguntarSobreApp(){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.sugerencias_respuesta);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error preguntando sobre la app', e);
     escribiendo.remove();
@@ -12659,15 +12754,15 @@ async function procesarNotaDeVozChat(blob, mimeType){
     }
     const opcionesPago = await obtenerOpcionesMedioPago();
     const medios_pago_disponibles = opcionesPago.todas.map(o => ({ valor: o.valor || 'efectivo', etiqueta: o.etiqueta }));
-    const [cuentasChat, deudasChat, ingresosChat] = await Promise.all([
-      obtenerCuentasParaChat(), obtenerDeudasParaChat(), obtenerIngresosParaChat()
+    const [cuentasChat, deudasChat, ingresosChat, gamificacion] = await Promise.all([
+      obtenerCuentasParaChat(), obtenerDeudasParaChat(), obtenerIngresosParaChat(), construirGamificacionParaChat()
     ]);
     const cuentas_disponibles = cuentasChat.map(c => ({ id: c.id, nombre: c.nombre }));
     const deudas_disponibles = deudasChat.map(d => ({ id: d.id, nombre: d.nombre, saldo: Number(d.saldo) }));
     const ingresos_existentes = ingresosChat.map(i => ({ id: i.id, nombre: i.nombre, monto: Number(i.monto) }));
 
     const resultado = await llamarConAccesoIA('preguntar-sobre-app',
-      { audio_base64: datos_base64, mime_type: mimeType, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
+      { audio_base64: datos_base64, mime_type: mimeType, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, gamificacion, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
       { sinAcceso: 'ayuda_ia.sin_acceso', codigoInvalido: 'ayuda_ia.codigo_invalido' });
     escribiendo.remove();
     if(!resultado.ok || !resultado.data || !resultado.data.respuesta){
@@ -12686,7 +12781,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.sugerencias_respuesta);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error procesando nota de voz para Freaky', e);
     escribiendo.remove();
@@ -12864,11 +12959,13 @@ function ajustarPresupuestoManual(idAccion){
 function cancelarAccionChat(tipo, idAccion){
   const mapas = {
     saldo: accionesSaldoChat, ingreso: accionesIngresoChat, pagoDeuda: accionesPagoDeudaChat,
-    cuentaNueva: accionesCuentaNuevaChat, deudaNueva: accionesDeudaNuevaChat, bienNuevo: accionesBienNuevoChat, accionNueva: accionesAccionNuevaChat
+    cuentaNueva: accionesCuentaNuevaChat, deudaNueva: accionesDeudaNuevaChat, bienNuevo: accionesBienNuevoChat, accionNueva: accionesAccionNuevaChat,
+    cambiarAvatar: accionesCambiarAvatarChat
   };
   const prefijos = {
     saldo: 'chat-accion-saldo-', ingreso: 'chat-accion-ingreso-', pagoDeuda: 'chat-accion-pago-deuda-',
-    cuentaNueva: 'chat-accion-cuenta-nueva-', deudaNueva: 'chat-accion-deuda-nueva-', bienNuevo: 'chat-accion-bien-nuevo-', accionNueva: 'chat-accion-accion-nueva-'
+    cuentaNueva: 'chat-accion-cuenta-nueva-', deudaNueva: 'chat-accion-deuda-nueva-', bienNuevo: 'chat-accion-bien-nuevo-', accionNueva: 'chat-accion-accion-nueva-',
+    cambiarAvatar: 'chat-accion-cambiar-avatar-'
   };
   const mapa = mapas[tipo];
   if(mapa) delete mapa[idAccion];
@@ -12876,6 +12973,33 @@ function cancelarAccionChat(tipo, idAccion){
   if(contenedor){
     contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">${escapeHtml(t('ayuda_ia.accion_cancelada'))}</div>`;
   }
+}
+
+async function confirmarCambioAvatarChat(idAccion){
+  const accion = accionesCambiarAvatarChat[idAccion];
+  if(!accion) return;
+  const btnConfirmar = document.getElementById(`chat-cambiar-avatar-confirmar-${idAccion}`);
+  const btnCancelar = document.getElementById(`chat-cambiar-avatar-cancelar-${idAccion}`);
+  if(btnConfirmar) btnConfirmar.disabled = true;
+  if(btnCancelar) btnCancelar.disabled = true;
+
+  // Revalidación defensiva: el servidor ya solo propone avatares
+  // desbloqueados, pero aquí se vuelve a checar con el estado más fresco
+  // posible (por si el usuario tardó en tocar "Cambiar" y algo cambió).
+  const ok = await aplicarYGuardarAsesor(accion.avatar_id);
+  if(!ok){
+    if(btnConfirmar) btnConfirmar.disabled = false;
+    if(btnCancelar) btnCancelar.disabled = false;
+    await mostrarAlerta(t('ayuda_ia.accion_incompleta'));
+    return;
+  }
+
+  const contenedor = document.getElementById(`chat-accion-cambiar-avatar-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(tf('ayuda_ia.avatar_cambiado', t('asesor.' + accion.avatar_id + '.nombre')))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesCambiarAvatarChat[idAccion];
 }
 
 async function confirmarSaldoChat(idAccion){
@@ -16832,8 +16956,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 135;
+const VERSION_APP_ACTUAL = 136;
 const CHANGELOG_APP = [
+  {
+    version: 136,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'Freaky ahora sabe de verdad cómo se calcula tu Score Money Freak (con tus números reales) y puede cambiar su propio aspecto por ti si se lo pides y ya lo desbloqueaste -- si no, te explica exactamente qué te falta en vez de mandarte siempre a Configuración.'
+    ],
+    cambios_en: [
+      "Freaky now really knows how your Money Freak Score is calculated (with your real numbers) and can change his own look for you if you ask and you've already unlocked it -- if not, he explains exactly what you're missing instead of always sending you to Settings."
+    ]
+  },
   {
     version: 135,
     fecha: '2026-09-04',

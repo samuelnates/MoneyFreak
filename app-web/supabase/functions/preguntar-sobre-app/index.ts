@@ -43,12 +43,27 @@ const DESTINOS: Record<string, string> = {
   agregar_deuda: "Nueva deuda o tarjeta de crédito",
   agregar_bien: "Nuevo bien",
   agregar_accion: "Nueva acción",
+  aspecto: "Elegir el aspecto de Freaky (selector de avatares)",
+  score: "Score Money Freak (desglose completo con gráfica histórica)",
 };
 const DESTINO_KEYS = Object.keys(DESTINOS);
 
 type CuentaDisponible = { id: string; nombre: string };
 type DeudaDisponible = { id: string; nombre: string; saldo: number };
 type IngresoExistente = { id: string; nombre: string; monto: number };
+type AvatarDisponible = {
+  id: string;
+  nombre: string;
+  desbloqueado: boolean;
+  requiere_score: number | null;
+  requiere_referidos: number | null;
+};
+type Gamificacion = {
+  avatar_actual_id: string;
+  avatar_actual_nombre: string;
+  mejor_score_historico: number;
+  avatares: AvatarDisponible[];
+};
 
 const AccionPropuestaSchema = z.object({
   tipo: z.literal("proponer_gasto"),
@@ -138,6 +153,11 @@ const AccionAccionNuevaSchema = z.object({
   cantidad: z.number().positive(),
 });
 
+const AccionCambiarAvatarSchema = z.object({
+  tipo: z.literal("cambiar_avatar"),
+  avatar_id: z.string(),
+});
+
 const RespuestaFreakySchema = z.object({
   respuesta: z.string(),
   sugerencias_respuesta: z.array(z.string().max(40)).max(4).nullable(),
@@ -151,6 +171,7 @@ const RespuestaFreakySchema = z.object({
   accion_deuda_nueva: AccionDeudaNuevaSchema.nullable(),
   accion_bien_nuevo: AccionBienNuevoSchema.nullable(),
   accion_accion_nueva: AccionAccionNuevaSchema.nullable(),
+  accion_cambiar_avatar: AccionCambiarAvatarSchema.nullable(),
 });
 
 function construirSystemPrompt(
@@ -158,7 +179,8 @@ function construirSystemPrompt(
   cuentas: CuentaDisponible[],
   deudas: DeudaDisponible[],
   ingresos: IngresoExistente[],
-  idioma: string
+  idioma: string,
+  gamificacion: Gamificacion | null
 ): string {
   const listaMediosPago = mediosPago.length
     ? mediosPago.map((m) => `- "${m.valor}" = ${m.etiqueta}`).join("\n")
@@ -298,7 +320,30 @@ Si el usuario describe una compra de acciones/inversión en bolsa que quiere reg
 - Recuérdale, en tu "respuesta", que esto no cubre símbolos directos del BMV (solo EUA y ADRs mexicanos como AMX/FMX/CX) si el nombre suena a una empresa que probablemente cotiza solo ahí.
 - Si no está describiendo una compra real de acciones que quiere registrar, "accion_accion_nueva" debe ser null.
 
-REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
+TU PROPIO ASPECTO (campo "accion_cambiar_avatar" y avatares de Freaky):
+Tú (Freaky) tienes varios diseños/avatares posibles entre los que el usuario puede elegir cómo te ves en toda la app — no cambia tu personalidad ni tu forma de responder, solo el dibujo. Cada avatar se desbloquea de una de dos formas: activando N amigos referidos, o llegando alguna vez a un Score Money Freak igual o mayor a cierto número (una vez llegado, ese avatar queda desbloqueado PARA SIEMPRE aunque el score baje después).
+${gamificacion ? `Tu estado real ahora mismo:
+- Avatar actual: "${gamificacion.avatar_actual_nombre}" (id "${gamificacion.avatar_actual_id}").
+- Mejor Score Money Freak histórico del usuario: ${gamificacion.mejor_score_historico}.
+- Lista completa de avatares:
+${gamificacion.avatares.map((a) => `  - "${a.nombre}" (id "${a.id}") — ${a.desbloqueado ? "YA DESBLOQUEADO" : a.requiere_score != null ? `bloqueado, requiere Score Money Freak ≥ ${a.requiere_score} (le faltan ${Math.max(0, a.requiere_score - gamificacion.mejor_score_historico)} puntos respecto a su mejor histórico de ${gamificacion.mejor_score_historico})` : `bloqueado, requiere ${a.requiere_referidos} amigo(s) referido(s) activado(s)`}`).join("\n")}` : "(no se pudo cargar tu estado de avatares en este turno — si te preguntan por esto, dilo y sugiere intentar de nuevo en un momento, sin inventar datos)"}
+
+QUÉ HACER cuando te pidan cambiar tu aspecto/apariencia/cómo te ves:
+- Si piden un avatar EN CONCRETO (por nombre o descripción clara, ej. "ponte de perrito", "cámbiate al robot") y ese avatar está YA DESBLOQUEADO: propón "accion_cambiar_avatar" con tipo "cambiar_avatar" y "avatar_id" el id exacto de ese avatar (de la lista de arriba, nunca inventes un id) — el usuario confirma con un botón, tú nunca lo cambias directamente. "destino" debe ser null en ese turno.
+- Si piden un avatar EN CONCRETO que está BLOQUEADO: nunca propongas "accion_cambiar_avatar". En tu "respuesta", explica exactamente qué le falta usando los números reales de arriba (cuántos puntos de Score o cuántos referidos) y cómo conseguirlo (ver sección de Score más abajo para consejos concretos de cómo subirlo, o recuérdale la pantalla de "Amigos de Money Freak" si es por referidos).
+- Si preguntan de forma GENERAL cómo cambiar tu apariencia sin nombrar un avatar específico (ej. "¿cómo te cambio de aspecto?", "quiero que te veas distinto"), NUNCA los mandes a Configuración general — responde brevemente y pon "destino" en "aspecto" (el selector real de avatares), nunca "configuracion" para esto.
+- Nunca actives "accion_cambiar_avatar" junto con "destino" en el mismo turno.
+
+CÓMO SE CALCULA EL SCORE MONEY FREAK (para explicarlo y dar consejos concretos de cómo subirlo):
+Va de 0 a 100 y es el promedio simple de hasta 5 sub-scores (cada uno también de 0 a 100) — los que todavía no se pueden calcular por falta de datos cuentan como null y se ignoran en el promedio (NO cuentan como 0):
+1. Liquidez: qué tan cerca estás de tu meta de "meses de cobertura" (tus activos líquidos entre tus compromisos mensuales, contra la meta que tiene configurada el usuario). 100 si ya la alcanzaste o la superaste.
+2. Endeudamiento: qué tan lejos estás de tu techo de tasa de endeudamiento configurado (100 = deuda en $0 respecto a ese techo, 0 = ya llegaste o pasaste el techo).
+3. Presupuesto: proyecta tu gasto del mes completo con tu ritmo de gasto actual (gasto acumulado ÷ día del mes × días totales del mes) contra tu presupuesto total. 100 si esa proyección no rebasa el presupuesto; baja rápido si se proyecta que sí lo rebasa.
+4. Tendencia: si tu patrimonio neto lleva varios meses seguidos subiendo o bajando (racha), sube o baja 10 puntos por cada mes de racha (hasta 5 meses), desde una base de 50 si no hay racha clara.
+5. Constancia: 60% qué tan seguido (por semana, de las últimas 4) registraste al menos un gasto, actualizaste un saldo o abonaste a una deuda; 40% qué % de tus cuentas (las que cuentan para tu patrimonio) tienen su saldo actualizado en los últimos 28 días.
+Cuando el "Contexto financiero actual del usuario" traiga un bloque "score_money_freak", esos son los sub-scores YA CALCULADOS de verdad para este usuario en este momento (junto con las metas/techos configurados que se usaron para calcularlos) — úsalos para responder con sus números reales en vez de hablar solo en abstracto, y para dar consejos concretos y accionables de cuál sub-score conviene subir primero para llegar a la meta que busca (ej. si pregunta cuánto le falta para desbloquear un avatar). Si ese bloque no viene, explica el concepto general y aclara que no tienes sus números a la mano en este momento. Puedes mandarlo con "destino" en "score" para que vea el desglose completo con su gráfica histórica.
+
+REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva", "accion_cambiar_avatar" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
 
 Pantallas válidas a las que puedes mandar un link (usa exactamente una de estas claves en "destino", o null si ninguna aplica):
 ${DESTINO_KEYS.map((k) => `- "${k}" = ${DESTINOS[k]}`).join("\n")}
@@ -388,6 +433,7 @@ Deno.serve(async (req) => {
     audio_base64?: string;
     mime_type?: string;
     idioma?: string;
+    gamificacion?: Gamificacion;
   };
   try {
     body = await req.json();
@@ -407,6 +453,7 @@ Deno.serve(async (req) => {
   const deudas = Array.isArray(body.deudas_disponibles) ? body.deudas_disponibles : [];
   const ingresos = Array.isArray(body.ingresos_existentes) ? body.ingresos_existentes : [];
   const idioma = body.idioma === "en" ? "en" : "es";
+  const gamificacion = body.gamificacion && Array.isArray(body.gamificacion.avatares) ? body.gamificacion : null;
 
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
@@ -446,7 +493,7 @@ Deno.serve(async (req) => {
       openai.responses.parse({
         model: MODEL,
         store: false,
-        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos, idioma),
+        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos, idioma, gamificacion),
         input: inputTexto,
         text: { format: zodTextFormat(RespuestaFreakySchema, "respuesta_freaky") },
       }),
@@ -517,6 +564,17 @@ Deno.serve(async (req) => {
     const accionBienNuevo = parsed.accion_bien_nuevo;
     const accionAccionNueva = parsed.accion_accion_nueva;
 
+    // Nunca confiar en que el modelo respetó "solo avatares desbloqueados" --
+    // se valida contra la lista real que mandó el cliente (misma lógica que
+    // ya aplica ahí `asesorEstaBloqueado()`).
+    let accionCambiarAvatar = parsed.accion_cambiar_avatar;
+    if (accionCambiarAvatar) {
+      const avatarValido = gamificacion?.avatares.find(
+        (a) => a.id === accionCambiarAvatar!.avatar_id && a.desbloqueado
+      );
+      accionCambiarAvatar = avatarValido ? accionCambiarAvatar : null;
+    }
+
     return jsonResponse({
       respuesta: parsed.respuesta,
       sugerencias_respuesta: parsed.sugerencias_respuesta,
@@ -530,6 +588,7 @@ Deno.serve(async (req) => {
       accion_deuda_nueva: accionDeudaNueva,
       accion_bien_nuevo: accionBienNuevo,
       accion_accion_nueva: accionAccionNueva,
+      accion_cambiar_avatar: accionCambiarAvatar,
       transcripcion,
     });
   } catch (e) {
