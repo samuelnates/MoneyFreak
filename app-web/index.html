@@ -7323,7 +7323,9 @@ const RANGOS_ONB_CHAT = [
   { desde: 5000, hasta: 10000, valor: 7500 },
   { desde: 10000, hasta: 20000, valor: 15000 },
   { desde: 20000, hasta: 40000, valor: 30000 },
-  { desde: 40000, valor: 50000 },
+  { desde: 40000, hasta: 80000, valor: 60000 },
+  { desde: 80000, hasta: 150000, valor: 115000 },
+  { desde: 150000, valor: 200000 },
 ];
 
 function etiquetaRangoOnboarding(rango){
@@ -17190,8 +17192,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 140;
+const VERSION_APP_ACTUAL = 141;
 const CHANGELOG_APP = [
+  {
+    version: 141,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'Onboarding rápido: se agregaron rangos más altos para ingreso y otras cifras -- antes el tope era "Más de $40,000", ahora llega hasta "Más de $150,000" en escalones intermedios.'
+    ],
+    cambios_en: [
+      'Quick onboarding: added higher ranges for income and other figures -- the old ceiling was "More than $40,000", now it goes up to "More than $150,000" in intermediate steps.'
+    ]
+  },
   {
     version: 140,
     fecha: '2026-09-04',
