@@ -4647,6 +4647,21 @@ const TRADUCCIONES = {
     'asesor.avatar6.nombre': 'La Catrina',
     'asesor.avatar6.desc': 'Elegante y sin miedo — te recuerda que el dinero se disfruta con cabeza.',
     'asesor.avatar6.habilidad': '<b>Habilidad especial:</b> convierte cualquier gasto hormiga en una lección con estilo.',
+    'asesor.avatar7.nombre': 'La Abuela Inversionista',
+    'asesor.avatar7.desc': 'Nadie la ve venir -- teje mientras la bolsa sube, y siempre le atina.',
+    'asesor.avatar7.habilidad': '<b>Habilidad especial:</b> nunca subestimes a quien más sabe de números.',
+    'asesor.avatar9.nombre': 'El Perro con Suerte',
+    'asesor.avatar9.desc': 'Callejero, leal, y con un ojo que vale su peso en oro -- literal.',
+    'asesor.avatar9.habilidad': '<b>Habilidad especial:</b> siempre encuentra el camino de vuelta al ahorro.',
+    'asesor.avatar10.nombre': 'El Contador',
+    'asesor.avatar10.desc': 'Ensamblado con piezas viejas de contaduría -- nunca se equivoca en una suma.',
+    'asesor.avatar10.habilidad': '<b>Habilidad especial:</b> guarda cada moneda con precisión de reloj suizo.',
+    'asesor.avatar11.nombre': 'El Alien Dorado',
+    'asesor.avatar11.desc': 'Su grieta se reparó con oro -- lo que se rompe puede volver más valioso.',
+    'asesor.avatar11.habilidad': '<b>Habilidad especial:</b> te recuerda que unas finanzas rotas también se reconstruyen.',
+    'asesor.avatar8.nombre': 'El Millonario Secreto',
+    'asesor.avatar8.desc': 'Se ve como cualquiera en la calle -- pero su patrimonio dice otra cosa.',
+    'asesor.avatar8.habilidad': '<b>Habilidad especial:</b> te recuerda que el verdadero dinero no se nota a simple vista.',
     'config.cambiar_asesor_boton': 'Cambiar el aspecto de Freaky',
     'freaky.dias_aviso_tarjeta_label': 'Avisarme de un pago de tarjeta con cuántos días de anticipación',
     'ayuda_ia.subtitulo': 'Tu mentor financiero',
@@ -5616,6 +5631,21 @@ const TRADUCCIONES = {
     'asesor.avatar6.nombre': 'La Catrina',
     'asesor.avatar6.desc': 'Elegant and fearless — reminds you money is meant to be enjoyed wisely.',
     'asesor.avatar6.habilidad': '<b>Special ability:</b> turns any impulse buy into a stylish lesson.',
+    'asesor.avatar7.nombre': 'The Investor Grandma',
+    'asesor.avatar7.desc': "Nobody sees her coming -- she knits while the market climbs, and she's always right.",
+    'asesor.avatar7.habilidad': '<b>Special ability:</b> never underestimate the one who knows the numbers best.',
+    'asesor.avatar9.nombre': 'The Lucky Dog',
+    'asesor.avatar9.desc': 'Street-smart, loyal, and with one eye worth its weight in gold -- literally.',
+    'asesor.avatar9.habilidad': '<b>Special ability:</b> always finds his way back to saving.',
+    'asesor.avatar10.nombre': 'The Accountant',
+    'asesor.avatar10.desc': 'Built from old accounting parts -- never gets a sum wrong.',
+    'asesor.avatar10.habilidad': '<b>Special ability:</b> keeps every coin with Swiss-watch precision.',
+    'asesor.avatar11.nombre': 'The Golden Alien',
+    'asesor.avatar11.desc': 'His crack was repaired with gold -- what breaks can come back more valuable.',
+    'asesor.avatar11.habilidad': '<b>Special ability:</b> reminds you broken finances can be rebuilt too.',
+    'asesor.avatar8.nombre': 'The Secret Millionaire',
+    'asesor.avatar8.desc': 'Looks like anyone on the street -- but his net worth says otherwise.',
+    'asesor.avatar8.habilidad': "<b>Special ability:</b> reminds you real wealth doesn't show at first glance.",
     'config.cambiar_asesor_boton': "Change Freaky's look",
     'freaky.dias_aviso_tarjeta_label': 'Warn me about a card payment how many days in advance',
     'ayuda_ia.subtitulo': 'Your financial mentor',
@@ -11417,14 +11447,14 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
 //   - `requiereReferidos: N` -- N amigos activados (ver referidos.js).
 //   - `requiereScore: N` -- tu MEJOR Score Money Freak histórico (0-100)
 //     llegó a N algún día, para siempre (ver asesorEstaBloqueado() /
-//     obtenerMejorScoreHistorico() más abajo). Pendiente de usar todavía:
-//     los 4 personajes nuevos (millonario secreto/perro/robot/alien, parte
-//     162) van aquí una vez que exista el arte real -- quedaron escalonados
-//     40/60/75/90 en la conversación con el usuario, ej.
-//     { id: 'avatar7', carpeta: 'assets/asesores/avatar7', requiereScore: 40 }.
-//     Necesitan además: su carpeta con las 7 poses + encarcelado.png, y sus
-//     3 llaves de i18n (asesor.avatarN.nombre/desc/habilidad, ES y EN) --
-//     mismo patrón que avatar4/5/6 más abajo.
+//     obtenerMejorScoreHistorico() más abajo).
+// avatar7-11 (parte 163): los 5 personajes nuevos -- 4 propuestos por el
+// usuario (millonario secreto/perro/robot/alien) más "la abuela
+// inversionista" (propuesta propia, a petición del usuario de agregar un
+// personaje femenino icónico). Escalonados 35/50/65/80/95 -- orden propio
+// (el usuario solo confirmó "escalonados, ej. 40/60/75/90" para 4
+// personajes; al llegar el arte real resultaron 5, así que se ajustaron los
+// números y el orden -- fácil de recalibrar después si no convence).
 const ASESORES = [
   { id: 'avatar1', carpeta: 'assets/asesores/avatar1' },
   { id: 'avatar2', carpeta: 'assets/asesores/avatar2' },
@@ -11432,6 +11462,11 @@ const ASESORES = [
   { id: 'avatar4', carpeta: 'assets/asesores/avatar4', requiereReferidos: 1 },
   { id: 'avatar5', carpeta: 'assets/asesores/avatar5', requiereReferidos: 3 },
   { id: 'avatar6', carpeta: 'assets/asesores/avatar6', requiereReferidos: 5 },
+  { id: 'avatar7', carpeta: 'assets/asesores/avatar7', requiereScore: 35 },   // La abuela inversionista
+  { id: 'avatar9', carpeta: 'assets/asesores/avatar9', requiereScore: 50 },   // El perro con suerte
+  { id: 'avatar10', carpeta: 'assets/asesores/avatar10', requiereScore: 65 }, // El contador (robot)
+  { id: 'avatar11', carpeta: 'assets/asesores/avatar11', requiereScore: 80 }, // El alien dorado
+  { id: 'avatar8', carpeta: 'assets/asesores/avatar8', requiereScore: 95 },   // El millonario secreto
 ];
 let asesorActual = null; // {id, carpeta} — null hasta que se aplica uno (elegido o cacheado)
 let asesorSelectorOrigen = 'login'; // 'login' = sigue el flujo normal de entrada; 'configuracion' = solo cambia y regresa
@@ -11550,7 +11585,14 @@ let avataresDesbloqueadosPorReferidos = null;
 // de hoy sí lo haga.
 let mejorScoreHistorico = null; // null = todavía no se sabe
 async function obtenerMejorScoreHistorico(){
-  if(modoDemo) return 100; // demo siempre "desbloqueado", mismo criterio que otros flujos demo
+  // Nada de atajo especial para modoDemo aquí -- score_historico ya lee bien
+  // en modo demo sin necesitarlo (misma cuenta de muestra real, con su
+  // propia política RLS "muestra pública" de lectura, igual que ya usan
+  // calcularScoreMoneyFreak()/la pantalla de Score de constancia): un atajo
+  // que regresara siempre un número fijo aquí se habría desincronizado de
+  // ese patrón y dejado esta función sin nunca escribir `mejorScoreHistorico`
+  // en demo, rompiendo asesorEstaBloqueado() (bug real encontrado probando
+  // con Playwright antes de dar esto por terminado).
   if(mejorScoreHistorico !== null) return mejorScoreHistorico;
   try{
     const { data } = await sb.from('score_historico').select('score').order('score', { ascending: false }).limit(1).maybeSingle();
@@ -16790,8 +16832,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 133;
+const VERSION_APP_ACTUAL = 134;
 const CHANGELOG_APP = [
+  {
+    version: 134,
+    fecha: '2026-09-04',
+    cambios_es: [
+      '5 avatares nuevos para Freaky, desbloqueables subiendo tu Score Money Freak: La Abuela Inversionista, El Perro con Suerte, El Contador, El Alien Dorado y El Millonario Secreto -- cámbialos desde Configuración una vez que los desbloquees.'
+    ],
+    cambios_en: [
+      "5 new Freaky avatars, unlockable by raising your Money Freak Score: The Investor Grandma, The Lucky Dog, The Accountant, The Golden Alien, and The Secret Millionaire -- switch to them from Settings once unlocked."
+    ]
+  },
   {
     version: 133,
     fecha: '2026-09-03',
