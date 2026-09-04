@@ -4565,6 +4565,7 @@ const TRADUCCIONES = {
     'referidos.progreso_completo': '¡Ya desbloqueaste todo! Gracias por correr la voz.',
     'referidos.desbloqueado': 'Desbloqueado',
     'referidos.requiere_n': 'Requiere {0} referido(s)',
+    'score.requiere_n': 'Requiere Score arriba de {0}',
     'referidos.sin_anuncios_corto': 'sin anuncios',
     'referidos.copiado': 'Código copiado.',
     'referidos.texto_compartir': 'Estoy usando Money Freak para controlar mis finanzas — regístrate con mi código {0} y prueba la app.',
@@ -5533,6 +5534,7 @@ const TRADUCCIONES = {
     'referidos.progreso_completo': "You've unlocked everything! Thanks for spreading the word.",
     'referidos.desbloqueado': 'Unlocked',
     'referidos.requiere_n': 'Requires {0} referral(s)',
+    'score.requiere_n': 'Requires a Score above {0}',
     'referidos.sin_anuncios_corto': 'no ads',
     'referidos.copiado': 'Code copied.',
     'referidos.texto_compartir': "I'm using Money Freak to manage my finances — sign up with my code {0} and give it a try.",
@@ -11408,8 +11410,21 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
 }
 
 // ===== Freaky: avatares seleccionables (mismo mentor/IA, solo cambia el diseño) =====
-// Los 3 "asesores" son puramente visuales — misma personalidad, mismo backend
+// Los "asesores" son puramente visuales — misma personalidad, mismo backend
 // (preguntar-sobre-app no sabe ni le importa cuál está eligiendo el usuario).
+// Dos formas de desbloquear uno (mutuamente excluyentes en un mismo avatar,
+// aunque el mecanismo lo soportaría si algún día hiciera falta combinarlas):
+//   - `requiereReferidos: N` -- N amigos activados (ver referidos.js).
+//   - `requiereScore: N` -- tu MEJOR Score Money Freak histórico (0-100)
+//     llegó a N algún día, para siempre (ver asesorEstaBloqueado() /
+//     obtenerMejorScoreHistorico() más abajo). Pendiente de usar todavía:
+//     los 4 personajes nuevos (millonario secreto/perro/robot/alien, parte
+//     162) van aquí una vez que exista el arte real -- quedaron escalonados
+//     40/60/75/90 en la conversación con el usuario, ej.
+//     { id: 'avatar7', carpeta: 'assets/asesores/avatar7', requiereScore: 40 }.
+//     Necesitan además: su carpeta con las 7 poses + encarcelado.png, y sus
+//     3 llaves de i18n (asesor.avatarN.nombre/desc/habilidad, ES y EN) --
+//     mismo patrón que avatar4/5/6 más abajo.
 const ASESORES = [
   { id: 'avatar1', carpeta: 'assets/asesores/avatar1' },
   { id: 'avatar2', carpeta: 'assets/asesores/avatar2' },
@@ -11522,25 +11537,62 @@ async function debeMostrarSelectorAsesor(){
 // sesión (no cambia seguido) y se reusa; null = todavía no se sabe.
 let avataresDesbloqueadosPorReferidos = null;
 
+// Segundo mecanismo de desbloqueo, en paralelo al de referidos (parte 162,
+// pedido explícito del usuario para premiar personajes con el Score Money
+// Freak en vez de solo con referidos): un avatar con `requiereScore: N` se
+// desbloquea PARA SIEMPRE en cuanto tu MEJOR score histórico algún día llega
+// a N -- no depende de tu score de HOY, que puede bajar y subir; una vez
+// alcanzado, se queda tuyo (igual que los premios de referidos, nunca se
+// vuelve a bloquear). `score_historico` ya guarda una fila por día desde
+// antes (ver calcularScoreMoneyFreak()/abrirPanel()), así que el máximo de
+// esa tabla ES literalmente "el mejor score que has tenido", sin necesidad
+// de una tabla ni una columna nueva -- MAX(score) nunca baja aunque el score
+// de hoy sí lo haga.
+let mejorScoreHistorico = null; // null = todavía no se sabe
+async function obtenerMejorScoreHistorico(){
+  if(modoDemo) return 100; // demo siempre "desbloqueado", mismo criterio que otros flujos demo
+  if(mejorScoreHistorico !== null) return mejorScoreHistorico;
+  try{
+    const { data } = await sb.from('score_historico').select('score').order('score', { ascending: false }).limit(1).maybeSingle();
+    mejorScoreHistorico = data?.score ?? 0;
+  }catch(e){
+    console.warn('No se pudo leer el mejor score histórico para el selector de avatares', e);
+    mejorScoreHistorico = 0;
+  }
+  return mejorScoreHistorico;
+}
+
 async function abrirSelectorAsesor(origen){
   asesorSelectorOrigen = origen || 'login';
   if(!modoDemo && avataresDesbloqueadosPorReferidos === null){
     const datos = await llamarReferidos({});
     avataresDesbloqueadosPorReferidos = datos.avataresDesbloqueados || [];
   }
+  await obtenerMejorScoreHistorico();
   renderSelectorAsesor();
   mostrar('vista-elegir-asesor');
+}
+
+function asesorEstaBloqueado(a){
+  const desbloqueados = avataresDesbloqueadosPorReferidos || [];
+  if(a.requiereReferidos && !desbloqueados.includes(a.id)) return true;
+  if(a.requiereScore && (mejorScoreHistorico ?? 0) < a.requiereScore) return true;
+  return false;
 }
 
 function renderSelectorAsesor(){
   const cont = document.getElementById('asesor-grid');
   if(!cont) return;
-  const desbloqueados = avataresDesbloqueadosPorReferidos || [];
   cont.innerHTML = ASESORES.map(a => {
-    const bloqueado = a.requiereReferidos && !desbloqueados.includes(a.id);
-    const accion = bloqueado
-      ? `<div class="asesor-tarjeta-candado">${tf('referidos.requiere_n', a.requiereReferidos)}</div>`
-      : `<button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>`;
+    const bloqueado = asesorEstaBloqueado(a);
+    let accion;
+    if(!bloqueado){
+      accion = `<button type="button" class="btn-grande" onclick="elegirAsesor('${a.id}')">${t('asesor.elegir')}</button>`;
+    } else if(a.requiereScore){
+      accion = `<div class="asesor-tarjeta-candado">${tf('score.requiere_n', a.requiereScore)}</div>`;
+    } else {
+      accion = `<div class="asesor-tarjeta-candado">${tf('referidos.requiere_n', a.requiereReferidos)}</div>`;
+    }
     return `
     <div class="asesor-tarjeta ${bloqueado ? 'bloqueada' : ''}">
       <img src="${a.carpeta}/avatar.png" alt="">
@@ -11555,7 +11607,7 @@ function renderSelectorAsesor(){
 async function elegirAsesor(id){
   const asesor = obtenerAsesorPorId(id);
   if(!asesor) return;
-  if(asesor.requiereReferidos && !(avataresDesbloqueadosPorReferidos || []).includes(id)) return;
+  if(asesorEstaBloqueado(asesor)) return;
   asesorActual = asesor;
   localStorage.setItem('asesor_actual_id', id);
   aplicarAsesorAlPersonaje();
