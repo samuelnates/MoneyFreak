@@ -2709,6 +2709,12 @@
       <input type="checkbox" id="check-notif-deudas" onchange="toggleNotifRecordatorioDeudas()">
       <label for="check-notif-deudas" data-i18n="notif.deudas_label">Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas</label>
     </div>
+
+    <div class="check-fila">
+      <input type="checkbox" id="check-notif-alerta-presupuesto" onchange="toggleNotifAlertaPresupuesto()">
+      <label for="check-notif-alerta-presupuesto" data-i18n="notif.alerta_presupuesto_label">Avisarme si voy camino a exceder mi presupuesto</label>
+    </div>
+    <div class="aviso" data-i18n="notif.alerta_presupuesto_aviso">A diferencia de las de arriba, esta sí requiere avisar desde el servidor (no es 100% local) -- compara tu ritmo de gasto de este mes contra tu propio patrón de meses anteriores, no un promedio simple, y necesita al menos 2 meses de historial para activarse.</div>
   </div>
 
   <h2 data-i18n="config.ayuda_ia_h2">¿Cómo uso la app?</h2>
@@ -4128,6 +4134,8 @@ const TRADUCCIONES = {
     'notif.saldos_label': 'Recordarme actualizar saldos',
     'notif.reporte_mes_label': 'Avisarme a fin de mes para sacar mi reporte',
     'notif.deudas_label': 'Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas',
+    'notif.alerta_presupuesto_label': 'Avisarme si voy camino a exceder mi presupuesto',
+    'notif.alerta_presupuesto_aviso': 'A diferencia de las de arriba, esta sí requiere avisar desde el servidor (no es 100% local) -- compara tu ritmo de gasto de este mes contra tu propio patrón de meses anteriores, no un promedio simple, y necesita al menos 2 meses de historial para activarse.',
     'notif.nunca': 'Nunca',
     'notif.cada_dia': 'Cada día',
     'notif.cada_semana': 'Cada semana',
@@ -5120,6 +5128,8 @@ const TRADUCCIONES = {
     'notif.saldos_label': 'Remind me to update balances',
     'notif.reporte_mes_label': 'Remind me at month-end to get my report',
     'notif.deudas_label': "Remind me a few days before my debts and cards are due",
+    'notif.alerta_presupuesto_label': "Alert me if I'm on track to exceed my budget",
+    'notif.alerta_presupuesto_aviso': "Unlike the ones above, this one does need to alert from the server (it's not 100% local) -- it compares this month's spending pace against your own pattern from previous months, not a plain average, and needs at least 2 months of history to turn on.",
     'notif.nunca': 'Never',
     'notif.cada_dia': 'Every day',
     'notif.cada_semana': 'Every week',
@@ -6391,6 +6401,29 @@ async function init(){
     window.Capacitor.Plugins.LocalNotifications.addListener('localNotificationActionPerformed', (accion) => {
       manejarNotificacionTocada(accion?.notification?.extra || {});
     });
+
+    // Push real (Fase 2, parte 168) -- a diferencia de las locales, estas SÍ
+    // requieren guardar el token del dispositivo en el servidor. El listener
+    // se registra siempre (no cuesta nada quieto), pero solo dispara de
+    // verdad después de llamar PushNotifications.register() -- eso pasa
+    // cuando el usuario activa la preferencia (toggleNotifAlertaPresupuesto)
+    // o al reabrir la app si ya la tenía activada (ver abrirPanel).
+    window.Capacitor.Plugins.PushNotifications?.addListener('registration', async (token) => {
+      if(!sb || modoDemo || !token?.value) return;
+      try{
+        await sb.from('push_tokens').upsert({
+          token: token.value,
+          plataforma: window.Capacitor.getPlatform(),
+          actualizado_en: new Date().toISOString()
+        }, { onConflict: 'user_id,token' });
+      }catch(e){ console.warn('No se pudo guardar el token de push', e); }
+    });
+    window.Capacitor.Plugins.PushNotifications?.addListener('registrationError', (err) => {
+      console.warn('Error registrando el dispositivo para push', err);
+    });
+    window.Capacitor.Plugins.PushNotifications?.addListener('pushNotificationActionPerformed', (accion) => {
+      manejarNotificacionTocada(accion?.notification?.data || {});
+    });
   }
 
   // Bug real reportado por el usuario ("loop en el onboarding, primera
@@ -6740,6 +6773,7 @@ async function inicializarSeccionNotificaciones(){
   document.querySelectorAll('#rango-notif-saldos button').forEach(b => b.classList.toggle('activo', b.dataset.valor === freqSaldos));
   document.getElementById('check-notif-reporte-mes').checked = localStorage.getItem('notif_reporte_mes') === '1';
   document.getElementById('check-notif-deudas').checked = localStorage.getItem('notif_recordatorio_deudas') === '1';
+  document.getElementById('check-notif-alerta-presupuesto').checked = localStorage.getItem('notif_alerta_presupuesto') === '1';
 }
 
 async function elegirFrecuenciaNotif(tipo, valor){
@@ -6761,6 +6795,17 @@ async function toggleNotifRecordatorioDeudas(){
   localStorage.setItem('notif_recordatorio_deudas', activo ? '1' : '0');
   sincronizarPreferenciaPerfil('notif_recordatorio_deudas', activo);
   await reprogramarNotificaciones();
+}
+
+// A diferencia de las demás casillas de esta sección, esta SÍ necesita
+// registrar el dispositivo para push real (ver registrarPushSiNecesario) --
+// la evaluación de la proyección la hace la Edge Function
+// revisar-alertas-presupuesto por cron, no nada local.
+async function toggleNotifAlertaPresupuesto(){
+  const activo = document.getElementById('check-notif-alerta-presupuesto').checked;
+  if(activo) await registrarPushSiNecesario();
+  localStorage.setItem('notif_alerta_presupuesto', activo ? '1' : '0');
+  sincronizarPreferenciaPerfil('notif_alerta_presupuesto', activo);
 }
 
 async function reprogramarNotificaciones(){
@@ -6860,6 +6905,29 @@ async function reprogramarNotificaciones(){
   if(notifications.length > 0) await LN.schedule({ notifications });
 }
 
+// Push real (Fase 2, parte 168): a diferencia de reprogramarNotificaciones()
+// (locales, no requieren nada del servidor), esto pide permiso de push y
+// registra el dispositivo -- el listener 'registration' (ver init()) es el
+// que de verdad guarda el token en push_tokens cuando Capacitor lo entrega.
+// Se llama al activar la preferencia y, de nuevo silenciosamente, cada vez
+// que se abre el panel con la preferencia ya activada (el token puede rotar
+// entre sesiones, hace falta mantenerlo fresco).
+async function registrarPushSiNecesario(){
+  if(!window.Capacitor?.isNativePlatform?.()) return;
+  const PN = window.Capacitor.Plugins.PushNotifications;
+  if(!PN) return;
+  try{
+    const permiso = await PN.checkPermissions();
+    let estado = permiso.receive;
+    if(estado === 'prompt' || estado === 'prompt-with-rationale'){
+      const pedido = await PN.requestPermissions();
+      estado = pedido.receive;
+    }
+    if(estado !== 'granted') return;
+    await PN.register();
+  }catch(e){ console.warn('No se pudo registrar el dispositivo para push', e); }
+}
+
 // Antes, tocar cualquier notificación local (recordatorio de gastos, de
 // saldos, de reporte mensual, de un gasto recurrente) solo abría la app en
 // Inicio -- había que buscar a mano la pantalla que el aviso mencionaba.
@@ -6889,6 +6957,8 @@ async function manejarNotificacionTocada(extra){
     mostrarSeccionCuentas('deudas');
   } else if(destino === 'aspecto'){
     await abrirSelectorAsesor('configuracion');
+  } else if(destino === 'presupuesto_alerta'){
+    abrirPresupuesto();
   }
 }
 
@@ -9382,6 +9452,10 @@ async function abrirPanel(){
   migrarPreferenciaFreakyVueloAJaula();
   iniciarVueloFreaky();
   revisarAvisoProactivoFreaky(f);
+  // El token de push puede rotar entre sesiones -- si ya tenía la
+  // preferencia activada, nos aseguramos de mantenerlo fresco en cada
+  // apertura real del panel (no solo al prender la casilla la primera vez).
+  if(!modoDemo && localStorage.getItem('notif_alerta_presupuesto') === '1') registrarPushSiNecesario();
 
   const etiquetasSalud = { saludable: t('comun.saludable'), atencion: t('comun.atencion'), riesgo: t('comun.riesgo') };
   const claseEstado = estado => estado === 'riesgo' ? 'estado-riesgo' : (estado === 'atencion' ? 'estado-atencion' : 'estado-saludable');
@@ -17092,8 +17166,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 137;
+const VERSION_APP_ACTUAL = 138;
 const CHANGELOG_APP = [
+  {
+    version: 138,
+    fecha: '2026-09-04',
+    cambios_es: [
+      'Nueva alerta real (push) en Notificaciones: te avisamos si vas camino a exceder tu presupuesto -- comparando tu propio ritmo de gasto contra tus meses anteriores, no un promedio ingenuo, para no darte falsas alarmas si tus pagos fuertes caen al inicio del mes.'
+    ],
+    cambios_en: [
+      "New real (push) alert in Notifications: we now warn you if you're on track to exceed your budget -- by comparing your own spending pace against previous months, not a naive average, so you don't get false alarms if your big payments land early in the month."
+    ]
+  },
   {
     version: 137,
     fecha: '2026-09-04',
