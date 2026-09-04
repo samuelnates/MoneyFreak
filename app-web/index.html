@@ -1363,6 +1363,15 @@
     margin:0;letter-spacing:.03em;
   }
   .login-subtitulo-privacidad svg{flex-shrink:0;opacity:.7;}
+  .login-badge-app-store{
+    display:inline-flex;align-items:center;justify-content:center;
+    margin:14px auto 4px;padding:6px 10px;
+    background:#fff;border-radius:8px;
+    box-shadow:0 1px 3px rgba(0,0,0,.18);
+    transition:transform 160ms var(--ease-suave, ease-out);
+  }
+  .login-badge-app-store:active{transform:scale(.96);}
+  .login-badge-app-store img{display:block;height:26px;width:auto;}
   .login-features{
     list-style:none;margin:28px 0 20px;padding:0;text-align:left;
     display:flex;flex-direction:column;gap:8px;
@@ -1727,6 +1736,9 @@
       <p class="login-subtitulo-principal" data-i18n="login.subtitulo">Cuentas, bienes, deudas y salud financiera</p>
       <p class="login-subtitulo-privacidad"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span data-i18n="login.subtitulo_privacidad">Tu información siempre privada y segura</span></p>
     </div>
+    <a href="https://apps.apple.com/mx/app/id6805201423" target="_blank" rel="noopener" class="login-badge-app-store" id="login-badge-app-store" aria-label="Descárgala en App Store" onclick="registrarEventoUso('clic_social', 'app_store_badge')">
+      <img src="assets/badges/app-store-badge.svg" alt="Download on the App Store">
+    </a>
     <button type="button" class="btn-grande" id="btn-login-biometrico" style="display:none;margin-bottom:14px;" onclick="iniciarSesionBiometrico()" data-i18n="login.entrar_face_id">Entrar con Face ID</button>
     <form onsubmit="event.preventDefault(); iniciarSesion();">
       <div class="campo">
@@ -3458,6 +3470,11 @@ if(window.APPLE_APP_STORE_ID && !window.Capacitor?.isNativePlatform?.()){
   metaSmartBanner.name = 'apple-itunes-app';
   metaSmartBanner.content = 'app-id=' + window.APPLE_APP_STORE_ID;
   document.head.appendChild(metaSmartBanner);
+}
+// El badge de "Descárgala en App Store" del login no tiene sentido dentro de
+// la app nativa (ya la tienes) -- se oculta ahí, igual que el Smart Banner.
+if(!window.APPLE_APP_STORE_ID || window.Capacitor?.isNativePlatform?.()){
+  document.getElementById('login-badge-app-store')?.style.setProperty('display', 'none');
 }
 </script>
 <script>
