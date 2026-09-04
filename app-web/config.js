@@ -8,5 +8,4 @@ window.TURNSTILE_SITE_KEY = "0x4AAAAAAEFmAf0pGeGNeRV_";
 window.TIKTOK_URL = "https://www.tiktok.com/@moneyfreak.app";
 window.INSTAGRAM_URL = "https://www.instagram.com/moneyfreak.app/";
 // Apple ID numérico de la app en App Store Connect (App Information), para el Smart Banner de Safari.
-// Déjalo vacío hasta que la app esté aprobada y tengas ese número.
-window.APPLE_APP_STORE_ID = "";
+window.APPLE_APP_STORE_ID = "6805201423";
