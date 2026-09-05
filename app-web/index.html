@@ -1987,6 +1987,10 @@
     <button type="button" class="btn-grande" onclick="continuarDesdeConfigInicialOnboarding()" data-i18n="comun.continuar">Continuar</button>
   </div>
 
+  <div id="onb-video-wrap" style="display:none;">
+    <video id="video-intro-onb" playsinline webkit-playsinline preload="auto" style="width:100%;border-radius:16px;background:#000;display:block;"></video>
+  </div>
+
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
   <button type="button" class="btn-grande" id="btn-onb-continuar" onclick="finalizarIntroOnboarding()" style="display:none;" data-i18n="onboarding_rapido.empezar">Vamos a armarlo juntos</button>
@@ -7195,9 +7199,46 @@ const MENSAJES_INTRO_ONB = [
   'onboarding_rapido.chat_intro_7',
 ];
 
+// Video real de Freaky narrando la bienvenida (pedido explícito del usuario:
+// "quiero que la app muestre el video según mi idioma desde el principio como
+// onboarding sin tener que poner play ni nada"). Se hospeda dentro de la
+// propia app (nunca YouTube -- pedido explícito) en assets/onboarding-video/,
+// un archivo por idioma. Mismo criterio de idioma que usa t(): lang==='en' ->
+// en, cualquier otra cosa -> es. Si el archivo todavía no existe (404) o el
+// navegador bloquea el autoplay con sonido (política de gesto del usuario),
+// cae automáticamente al texto de burbujas -- nunca deja al usuario viendo
+// una pantalla rota ni le pide que toque un botón de play.
+function rutaVideoIntroOnboarding(){
+  const idioma = document.documentElement.lang === 'en' ? 'en' : 'es';
+  return `assets/onboarding-video/freaky-intro-${idioma}.mp4`;
+}
+
 function iniciarOnboardingChat(){
   const cont = document.getElementById('onb-chat-conversacion');
-  if(!cont || cont.childElementCount > 0) return; // ya se inició (ej. re-entradas a la vista)
+  if(!cont || cont.childElementCount > 0 || document.getElementById('onb-video-wrap').style.display !== 'none') return; // ya se inició (ej. re-entradas a la vista)
+  intentarVideoIntroOnboarding();
+}
+
+function intentarVideoIntroOnboarding(){
+  const wrap = document.getElementById('onb-video-wrap');
+  const video = document.getElementById('video-intro-onb');
+  let yaCayoATexto = false;
+  const caerATexto = () => {
+    if(yaCayoATexto) return;
+    yaCayoATexto = true;
+    wrap.style.display = 'none';
+    mostrarIntroOnboardingTexto();
+  };
+  video.onerror = caerATexto;
+  video.onended = () => finalizarIntroOnboarding();
+  video.src = rutaVideoIntroOnboarding();
+  wrap.style.display = 'block';
+  const promesaPlay = video.play();
+  if(promesaPlay && typeof promesaPlay.catch === 'function') promesaPlay.catch(caerATexto);
+}
+
+function mostrarIntroOnboardingTexto(){
+  if(document.getElementById('onb-chat-conversacion').childElementCount > 0) return;
   MENSAJES_INTRO_ONB.forEach(clave => agregarBurbujaOnboarding('asistente', escapeHtml(t(clave))));
   document.getElementById('btn-onb-continuar').style.display = 'block';
 }
