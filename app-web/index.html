@@ -4605,8 +4605,8 @@ const TRADUCCIONES = {
     'referidos.requiere_n': 'Requiere {0} referido(s)',
     'score.requiere_n': 'Requiere Score arriba de {0}',
     'referidos.sin_anuncios_corto': 'sin anuncios',
-    'referidos.copiado': 'Código copiado.',
-    'referidos.texto_compartir': 'Estoy usando Money Freak para controlar mis finanzas — regístrate con mi código {0} y prueba la app.',
+    'referidos.copiado': 'Link y código copiados.',
+    'referidos.texto_compartir': 'Estoy usando Money Freak para controlar mis finanzas — descárgala en {1} y regístrate con mi código {0}.',
     'referidos.premio_puerquito': 'Puerquito dorado',
     'referidos.premio_luchador': 'Luchador',
     'referidos.premio_catrina': 'Catrina',
@@ -5599,8 +5599,8 @@ const TRADUCCIONES = {
     'referidos.requiere_n': 'Requires {0} referral(s)',
     'score.requiere_n': 'Requires a Score above {0}',
     'referidos.sin_anuncios_corto': 'no ads',
-    'referidos.copiado': 'Code copied.',
-    'referidos.texto_compartir': "I'm using Money Freak to manage my finances — sign up with my code {0} and give it a try.",
+    'referidos.copiado': 'Link and code copied.',
+    'referidos.texto_compartir': "I'm using Money Freak to manage my finances — download it at {1} and sign up with my code {0}.",
     'referidos.premio_puerquito': 'Golden piggy',
     'referidos.premio_luchador': 'Luchador',
     'referidos.premio_catrina': 'Catrina',
@@ -7092,20 +7092,25 @@ function pintarReferidos(datos){
   }).join('');
 }
 
+const URL_APP_MONEYFREAK = 'https://www.moneyfreak.app/';
+
 function copiarCodigoReferido(){
   if(!referidosCodigoActual) return;
-  navigator.clipboard?.writeText(referidosCodigoActual).then(() => {
+  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_APP_MONEYFREAK);
+  navigator.clipboard?.writeText(texto).then(() => {
     mostrarAlerta(t('referidos.copiado'));
   }).catch(() => {});
 }
 
 async function compartirCodigoReferido(){
   if(!referidosCodigoActual) return;
-  const texto = tf('referidos.texto_compartir', referidosCodigoActual);
+  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_APP_MONEYFREAK);
   if(navigator.share){
     try{ await navigator.share({ text: texto }); return; }catch(e){ return; }
   }
-  copiarCodigoReferido();
+  navigator.clipboard?.writeText(texto).then(() => {
+    mostrarAlerta(t('referidos.copiado'));
+  }).catch(() => {});
 }
 
 // Todavía no hay colaboraciones reales -- se deja el arreglo vacío a
@@ -17192,8 +17197,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 141;
+const VERSION_APP_ACTUAL = 142;
 const CHANGELOG_APP = [
+  {
+    version: 142,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'Invita a un amigo: "Copiar" y "Compartir" ahora incluyen el link de descarga de la app junto con tu código -- antes solo se copiaba el código, sin decir dónde descargarla.'
+    ],
+    cambios_en: [
+      'Invite a friend: "Copy" and "Share" now include the app\'s download link along with your code -- before, only the code was copied, without saying where to download the app.'
+    ]
+  },
   {
     version: 141,
     fecha: '2026-09-04',
