@@ -8466,7 +8466,25 @@ async function calcularInsightsPanel(b, s, g){
 
   if(g.totalPresupuestado > 0 && hoy.getDate() >= 5){
     const diasEnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
-    const proyeccion = (g.totalGastado / hoy.getDate()) * diasEnMes;
+    // Bug real reportado por el usuario: la proyección lineal simple
+    // (gastado-hasta-hoy ÷ día-del-mes × días-en-el-mes) se disparaba
+    // muchísimo apenas había un gasto grande de una sola vez (renta, seguro
+    // anual, etc.) cerca del inicio del mes -- ese gasto se multiplicaba por
+    // (días-en-mes ÷ día-actual) como si se fuera a repetir a diario, dando
+    // proyecciones absurdas (ej. "vas a cerrar en $260,260" con presupuesto
+    // de $64,320). Ahora se separan los gastos "grandes" (más del 20% del
+    // presupuesto mensual total) del resto: cuentan completos en lo ya
+    // gastado, pero NO entran al promedio diario que se extrapola hacia
+    // adelante -- solo el gasto regular del día a día se proyecta para los
+    // días que faltan.
+    const umbralGastoGrande = g.totalPresupuestado * 0.2;
+    let gastoRegular = 0;
+    (g.gastos || []).forEach(gasto => {
+      const montoMXN = convertirAMXN(Number(gasto.monto), gasto.moneda || 'MXN');
+      if(montoMXN <= umbralGastoGrande) gastoRegular += montoMXN;
+    });
+    const diasRestantes = diasEnMes - hoy.getDate();
+    const proyeccion = g.totalGastado + (gastoRegular / hoy.getDate()) * diasRestantes;
     if(proyeccion > g.totalPresupuestado){
       const pct = (proyeccion / g.totalPresupuestado) * 100;
       candidatos.push({
@@ -16929,8 +16947,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 145;
+const VERSION_APP_ACTUAL = 146;
 const CHANGELOG_APP = [
+  {
+    version: 146,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'Se corrigió el aviso "A este ritmo vas a cerrar el mes en..." -- un gasto grande de una sola vez (renta, seguro anual) cerca del inicio del mes disparaba proyecciones absurdas. Ahora los gastos grandes cuentan en lo ya gastado pero no se multiplican como si se repitieran a diario.'
+    ],
+    cambios_en: [
+      'Fixed the "At this pace you\'ll close the month at..." alert -- a single large one-time expense (rent, annual insurance) near the start of the month triggered absurd projections. Large expenses now count toward what you\'ve already spent but no longer get multiplied as if they repeated daily.'
+    ]
+  },
   {
     version: 145,
     fecha: '2026-09-05',
