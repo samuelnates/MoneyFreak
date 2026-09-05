@@ -9366,7 +9366,7 @@ async function abrirPanel(){
       })()}
     </div>
 
-    ${(window.Capacitor?.isNativePlatform?.() && localStorage.getItem('widget_tip_descartado') !== '1') ? `
+    ${(window.Capacitor?.getPlatform?.() === 'android' && localStorage.getItem('widget_tip_descartado') !== '1') ? `
       <div class="aviso" id="panel-tip-widget" style="margin-top:14px;">
         ${t('panel.tip_widget_texto')}
         <button type="button" class="btn-link-tenue" onclick="descartarTipWidget()" style="display:block;margin-top:6px;">${t('panel.tip_widget_descartar')}</button>
@@ -16947,8 +16947,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 146;
+const VERSION_APP_ACTUAL = 147;
 const CHANGELOG_APP = [
+  {
+    version: 147,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'El tip de "agrega el widget Registrar gasto" ya no se muestra en iPhone -- ese widget solo existe en Android por ahora, y decirle a alguien en iPhone que lo busque era engañoso.'
+    ],
+    cambios_en: [
+      'The "add the Log expense widget" tip no longer shows on iPhone -- that widget only exists on Android for now, and telling iPhone users to look for it was misleading.'
+    ]
+  },
   {
     version: 146,
     fecha: '2026-09-05',
