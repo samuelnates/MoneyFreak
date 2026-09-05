@@ -6994,11 +6994,11 @@ function pintarReferidos(datos){
   }).join('');
 }
 
-const URL_APP_MONEYFREAK = 'https://www.moneyfreak.app/';
+const URL_DESCARGA_APP = 'https://apps.apple.com/mx/app/id6805201423';
 
 function copiarCodigoReferido(){
   if(!referidosCodigoActual) return;
-  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_APP_MONEYFREAK);
+  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_DESCARGA_APP);
   navigator.clipboard?.writeText(texto).then(() => {
     mostrarAlerta(t('referidos.copiado'));
   }).catch(() => {});
@@ -7006,7 +7006,7 @@ function copiarCodigoReferido(){
 
 async function compartirCodigoReferido(){
   if(!referidosCodigoActual) return;
-  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_APP_MONEYFREAK);
+  const texto = tf('referidos.texto_compartir', referidosCodigoActual, URL_DESCARGA_APP);
   if(navigator.share){
     try{ await navigator.share({ text: texto }); return; }catch(e){ return; }
   }
@@ -16885,8 +16885,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 143;
+const VERSION_APP_ACTUAL = 144;
 const CHANGELOG_APP = [
+  {
+    version: 144,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'Invita a un amigo: el link que se copia/comparte junto con tu código ahora apunta directo a la ficha de descarga en App Store, no al sitio web.'
+    ],
+    cambios_en: [
+      "Invite a friend: the link copied/shared with your code now points straight to the App Store download page, not the website."
+    ]
+  },
   {
     version: 143,
     fecha: '2026-09-05',
