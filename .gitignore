@@ -3,6 +3,10 @@
 .DS_Store
 Thumbs.db
 
+# Caché local del CLI de Cloudflare Wrangler (creado al correr
+# `wrangler pages deploy`) -- credenciales/estado de sesión, no código.
+.wrangler/
+
 # Herramientas de HyperFrames (prototipos de video/animación para redes
 # sociales) instaladas por accidente en la raíz del repo en vez de en un
 # directorio aparte — no son código de la app, no deben versionarse aquí.
