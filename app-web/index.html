@@ -276,8 +276,6 @@
     cursor:pointer;transition:border-color 150ms ease, transform 120ms var(--ease-out);
   }
   .chat-vacio-chips button:active{transform:scale(0.98);}
-  .onb-chat-input{display:flex;gap:8px;align-items:center;margin-bottom:16px;}
-  .onb-chat-input input{flex:1;margin:0;}
   @media (hover:hover) and (pointer:fine){
     .chat-vacio-chips button:hover{border-color:var(--borde-fuerte);}
   }
@@ -592,14 +590,6 @@
   .panel-insight-atencion{border-left-color:var(--color-atencion);}
   .panel-insight-saludable{border-left-color:var(--color-saludable);}
   .panel-insight-nota{font-family:var(--sans);font-size:12.5px;color:var(--texto-tenue-2);line-height:1.4;margin:8px 0 16px;}
-
-  .onb-resultado-titular{
-    font-family:var(--sans);font-weight:800;font-size:24px;line-height:1.2;
-    margin:4px 0 16px;text-wrap:balance;
-  }
-  .onb-resultado-titular.riesgo{color:var(--color-riesgo);}
-  .onb-resultado-titular.atencion{color:var(--color-atencion);}
-  .onb-resultado-titular.saludable{color:var(--color-saludable);}
 
   .rango-botones{display:flex;border:1px solid var(--borde-fuerte);border-radius:3px;overflow:hidden;margin-bottom:14px;width:fit-content;}
   .rango-botones button{
@@ -1973,7 +1963,7 @@
 <div id="vista-onboarding-rapido" class="pantalla">
   <div class="encabezado">
     <h1 data-i18n="onboarding_rapido.titulo">Antes de empezar</h1>
-    <p class="subtitulo" data-i18n="onboarding_rapido.subtitulo">5 números para darte una primera evaluación en menos de un minuto. Después puedes afinar todo con detalle.</p>
+    <p class="subtitulo" data-i18n="onboarding_rapido.subtitulo">Freaky te cuenta cómo funciona esto — un minuto y entras.</p>
   </div>
 
   <div id="onb-config-inicial" style="display:none;">
@@ -1997,39 +1987,9 @@
     <button type="button" class="btn-grande" onclick="continuarDesdeConfigInicialOnboarding()" data-i18n="comun.continuar">Continuar</button>
   </div>
 
-  <div id="onb-chat-progreso" class="paso-progreso" style="display:none;"></div>
-
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
-  <div id="onb-chat-input-area" class="onb-chat-input" style="display:none;">
-    <input type="text" id="input-onb-chat-respuesta" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="0.00" onkeydown="if(event.key==='Enter') avanzarOnboardingChat()">
-    <button type="button" class="chat-btn-enviar" onclick="avanzarOnboardingChat()" aria-label="Siguiente" data-i18n-aria-label="onboarding_rapido.chat_siguiente">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
-    </button>
-  </div>
-  <div id="onb-chat-rangos" class="chat-sugerencias" style="display:none;"></div>
-  <div id="onb-chat-nose" class="chat-sugerencias" style="display:none;">
-    <button type="button" onclick="noSePreguntaOnboarding()" data-i18n="onboarding_rapido.chat_no_se">No sé — calcúlalo tú</button>
-  </div>
-
-  <div style="display:none;">
-    <input type="text" id="input-onb-ingreso" inputmode="decimal" oninput="manejarInputMonto(this, event)">
-    <input type="text" id="input-onb-liquido" inputmode="decimal" oninput="manejarInputMonto(this, event)">
-    <input type="text" id="input-onb-deuda" inputmode="decimal" oninput="manejarInputMonto(this, event)">
-    <input type="text" id="input-onb-gastos" inputmode="decimal" oninput="manejarInputMonto(this, event)">
-    <input type="text" id="input-onb-ahorro" inputmode="decimal" oninput="manejarInputMonto(this, event)">
-  </div>
-
-  <button type="button" class="btn-grande" id="btn-onb-evaluar" onclick="verEvaluacionRapida()" style="display:none;" data-i18n="onboarding_rapido.ver_evaluacion">Ver mi primera evaluación</button>
-
-  <div id="onb-resultado" style="display:none;">
-    <div id="onb-resultado-titular" class="onb-resultado-titular"></div>
-    <div class="panel-insights" id="onb-insights"></div>
-    <button type="button" class="btn-grande" onclick="guardarOnboardingRapido()" data-i18n="onboarding_rapido.guardar_continuar">Guardar y continuar</button>
-    <button type="button" class="btn-grande secundario" onclick="omitirOnboardingRapido()" data-i18n="onboarding_rapido.omitir">Prefiero configurar todo yo mismo</button>
-  </div>
-
-  <button type="button" class="btn-link-tenue" id="btn-onb-omitir-inicial" onclick="omitirOnboardingRapido()" data-i18n="onboarding_rapido.omitir_ahora">Omitir por ahora</button>
+  <button type="button" class="btn-grande" id="btn-onb-continuar" onclick="finalizarIntroOnboarding()" style="display:none;" data-i18n="onboarding_rapido.empezar">Vamos a armarlo juntos</button>
 </div>
 
 <div id="vista-inicio" class="pantalla">
@@ -4256,44 +4216,15 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Hoy corta tu tarjeta {0} — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'panel.insight_corte_proximo': 'Tu tarjeta {0} corta en {1} días — revisa tu estado de cuenta y registra tu próximo pago para no generar intereses.',
     'onboarding_rapido.titulo': 'Antes de empezar',
-    'onboarding_rapido.subtitulo': '5 números para saber cómo vas, en menos de un minuto. Luego afinas todo con calma.',
+    'onboarding_rapido.subtitulo': 'Freaky te cuenta cómo funciona esto — un minuto y entras.',
     'onboarding_rapido.aviso_config_inicial': 'Confirma esto antes de seguir.',
-    'onboarding_rapido.ingreso_label': 'Ingreso mensual aproximado',
-    'onboarding_rapido.liquido_label': 'Dinero líquido (cuentas, efectivo)',
-    'onboarding_rapido.deuda_label': 'Deuda total (lo que debes en todo)',
-    'onboarding_rapido.gastos_label': 'Gastos mensuales aproximados',
-    'onboarding_rapido.ahorro_label': 'Ahorro e inversión (lo que ya tienes guardado)',
-    'onboarding_rapido.ver_evaluacion': 'Ver mi primera evaluación',
-    'onboarding_rapido.chat_intro_1': 'Hola, soy Freaky. De aquí en adelante te echo la mano con tu dinero: te aviso si te alcanza el mes, anoto tus gastos nomás contándomelos, y si te pierdes en la app, aquí ando.',
-    'onboarding_rapido.chat_intro_2': 'Para arrancar te voy a pedir 5 números — nada exacto, nomás un estimado. Vamos.',
-    'onboarding_rapido.chat_p_ingreso': '¿Cuánto es tu ingreso mensual aproximado?',
-    'onboarding_rapido.chat_p_liquido': '¿Cuánto dinero líquido tienes hoy (cuentas, efectivo)?',
-    'onboarding_rapido.chat_p_deuda': '¿Cuánto debes en total, sumando todo?',
-    'onboarding_rapido.chat_p_gastos': '¿Cuánto gastas al mes, aproximadamente?',
-    'onboarding_rapido.chat_p_ahorro': 'Y por último, ¿cuánto ya tienes ahorrado o invertido?',
-    'onboarding_rapido.chat_siguiente': 'Siguiente',
-    'onboarding_rapido.chat_paso': 'Paso {0} de {1}',
-    'onboarding_rapido.chat_rango_mas_de': 'Más de {0}',
-    'onboarding_rapido.chat_no_se': 'No sé — calcúlalo tú',
-    'onboarding_rapido.chat_no_se_burbuja': 'No sé, calcúlalo tú',
-    'onboarding_rapido.guardar_continuar': 'Guardar y continuar',
-    'onboarding_rapido.omitir': 'Prefiero configurar todo yo mismo',
-    'onboarding_rapido.omitir_ahora': 'Omitir por ahora',
-    'onboarding_rapido.eval_cobertura': 'Con tu dinero líquido cubres {0} meses de tus gastos aproximados.',
-    'onboarding_rapido.eval_deuda': 'Tu deuda total equivale a {0} meses de tu ingreso.',
-    'onboarding_rapido.eval_deuda_sin_ingreso': 'Reportaste {0} de deuda total.',
-    'onboarding_rapido.eval_sin_deuda': 'No reportaste deuda. Buen punto de partida.',
-    'onboarding_rapido.eval_ahorro': 'Tu ahorro e inversión equivale a {0} meses de tu ingreso.',
-    'onboarding_rapido.eval_ahorro_sin_ingreso': 'Reportaste {0} en ahorro e inversión.',
-    'onboarding_rapido.eval_sin_ahorro': 'Aún no reportas ahorro o inversión acumulados.',
-    'onboarding_rapido.eval_nota': 'Esta es una primera evaluación aproximada con los números que compartiste — se irá afinando conforme registres tus cuentas, deudas y gastos reales.',
-    'onboarding_rapido.titular_riesgo': 'Ojo — hay algo que conviene arreglar pronto',
-    'onboarding_rapido.titular_atencion': 'Vas bien, con un par de focos amarillos',
-    'onboarding_rapido.titular_saludable': '¡Vas muy bien! Tu situación se ve saludable',
-    'onboarding_rapido.nombre_ingreso': 'Ingreso mensual',
-    'onboarding_rapido.nombre_liquido': 'Dinero disponible',
-    'onboarding_rapido.nombre_deuda': 'Deudas totales',
-    'onboarding_rapido.nombre_ahorro': 'Ahorro e inversión',
+    'onboarding_rapido.chat_intro_1': '¡Hola! Soy Freaky 👋 A partir de ahora te voy a acompañar a poner en orden tu dinero.',
+    'onboarding_rapido.chat_intro_2': 'No necesitas traer toda tu información ahorita. Vamos a ir agregando todo poco a poco: primero tus bienes (lo que tienes: cuentas, inversiones, propiedades, autos), después tus gastos (en qué se te va el dinero) y tus ingresos (lo que ganas).',
+    'onboarding_rapido.chat_intro_3': 'Al principio seguramente empecemos por tus cuentas de inversión. En cuanto tenga tu información voy a entender tu perfil completo y podré aconsejarte con detalle, recordarte cosas importantes y tomar juntos las mejores decisiones.',
+    'onboarding_rapido.chat_intro_4': 'Si en algún momento no sabes cómo hacer algo, solo pregúntame — incluso puedo registrarlo yo por ti si me lo cuentas por chat.',
+    'onboarding_rapido.chat_intro_5': 'En poco tiempo vas a tener todo esto seguro, y vas a poder ver tu avance en el tiempo: tu score, cómo crece tu patrimonio, tus cuentas, cómo te vas liberando de tus deudas.',
+    'onboarding_rapido.chat_intro_6': 'Pero lo más importante: vas a saber en todo momento cuál es tu realidad, para trazar el camino que quieras tomar.',
+    'onboarding_rapido.empezar': 'Vamos a armarlo juntos',
     'panel.tip_widget_texto': 'Agrega el widget "Registrar gasto" a tu pantalla de inicio para capturar gastos en un toque: mantén presionada tu pantalla de inicio → Widgets → Money Freak.',
     'panel.tip_widget_descartar': 'Entendido, no mostrar de nuevo',
     'navinf.inicio': 'Inicio',
@@ -5250,44 +5181,15 @@ const TRADUCCIONES = {
     'panel.insight_corte_hoy': 'Your {0} card closes today — check your statement and log your next payment to avoid interest.',
     'panel.insight_corte_proximo': 'Your {0} card closes in {1} days — check your statement and log your next payment to avoid interest.',
     'onboarding_rapido.titulo': 'Before you start',
-    'onboarding_rapido.subtitulo': "5 numbers to see where you stand, in under a minute. Fine-tune everything later, no rush.",
+    'onboarding_rapido.subtitulo': "Freaky walks you through how this works — one minute and you're in.",
     'onboarding_rapido.aviso_config_inicial': 'Confirm this before continuing.',
-    'onboarding_rapido.ingreso_label': 'Approximate monthly income',
-    'onboarding_rapido.liquido_label': 'Liquid money (accounts, cash)',
-    'onboarding_rapido.deuda_label': 'Total debt (everything you owe)',
-    'onboarding_rapido.gastos_label': 'Approximate monthly expenses',
-    'onboarding_rapido.ahorro_label': 'Savings & investments (what you already have saved)',
-    'onboarding_rapido.ver_evaluacion': 'See my first evaluation',
-    'onboarding_rapido.chat_intro_1': "Hi, I'm Freaky. From here on I've got your back with your money: I'll give you a heads-up if your month's tight, log expenses just by you telling me about them, and if you ever get lost in the app, I'm right here.",
-    'onboarding_rapido.chat_intro_2': "To kick things off I'll ask you for 5 numbers — nothing exact, just a rough guess. Let's go.",
-    'onboarding_rapido.chat_p_ingreso': "What's your approximate monthly income?",
-    'onboarding_rapido.chat_p_liquido': 'How much liquid money do you have today (accounts, cash)?',
-    'onboarding_rapido.chat_p_deuda': 'How much do you owe in total, adding everything up?',
-    'onboarding_rapido.chat_p_gastos': 'About how much do you spend per month?',
-    'onboarding_rapido.chat_p_ahorro': 'Last one — how much do you already have saved or invested?',
-    'onboarding_rapido.chat_siguiente': 'Next',
-    'onboarding_rapido.chat_paso': 'Step {0} of {1}',
-    'onboarding_rapido.chat_rango_mas_de': 'More than {0}',
-    'onboarding_rapido.chat_no_se': "I don't know — estimate it",
-    'onboarding_rapido.chat_no_se_burbuja': "I don't know, estimate it",
-    'onboarding_rapido.guardar_continuar': 'Save and continue',
-    'onboarding_rapido.omitir': "I'd rather set everything up myself",
-    'onboarding_rapido.omitir_ahora': 'Skip for now',
-    'onboarding_rapido.eval_cobertura': 'Your liquid money covers {0} months of your approximate expenses.',
-    'onboarding_rapido.eval_deuda': 'Your total debt equals {0} months of your income.',
-    'onboarding_rapido.eval_deuda_sin_ingreso': 'You reported {0} in total debt.',
-    'onboarding_rapido.eval_sin_deuda': "You didn't report any debt. Good starting point.",
-    'onboarding_rapido.eval_ahorro': 'Your savings & investments equal {0} months of your income.',
-    'onboarding_rapido.eval_ahorro_sin_ingreso': 'You reported {0} in savings & investments.',
-    'onboarding_rapido.eval_sin_ahorro': "You haven't reported any savings or investments yet.",
-    'onboarding_rapido.eval_nota': "This is a rough first evaluation based on the numbers you shared — it'll get more precise as you log your real accounts, debts, and expenses.",
-    'onboarding_rapido.titular_riesgo': "Heads up — there's something worth fixing soon",
-    'onboarding_rapido.titular_atencion': "You're doing okay, with a couple of yellow flags",
-    'onboarding_rapido.titular_saludable': "You're doing great! Your situation looks healthy",
-    'onboarding_rapido.nombre_ingreso': 'Monthly income',
-    'onboarding_rapido.nombre_liquido': 'Available money',
-    'onboarding_rapido.nombre_deuda': 'Total debts',
-    'onboarding_rapido.nombre_ahorro': 'Savings & investments',
+    'onboarding_rapido.chat_intro_1': "Hi! I'm Freaky 👋 From now on I'm going to help you get your money in order.",
+    'onboarding_rapido.chat_intro_2': "You don't need to bring all your info right now. We'll add everything little by little: first your assets (what you have: accounts, investments, properties, cars), then your expenses (where your money goes), and your income (what you earn).",
+    'onboarding_rapido.chat_intro_3': "At the start we'll probably begin with your investment accounts. Once I have your information I'll understand your full profile and be able to advise you in detail, remind you of important things, and make the best decisions together.",
+    'onboarding_rapido.chat_intro_4': "If you're ever not sure how to do something, just ask me — I can even log it for you myself if you tell me about it in chat.",
+    'onboarding_rapido.chat_intro_5': "Soon you'll have all of this set up securely, and you'll be able to see your progress over time: your score, how your net worth grows, your accounts, how you're paying down your debts.",
+    'onboarding_rapido.chat_intro_6': "But most importantly: you'll always know exactly where you stand, so you can map out the path you want to take.",
+    'onboarding_rapido.empezar': "Let's set it up together",
     'panel.tip_widget_texto': 'Add the "Log expense" widget to your home screen to capture expenses in one tap: press and hold your home screen → Widgets → Money Freak.',
     'panel.tip_widget_descartar': "Got it, don't show again",
     'navinf.inicio': 'Home',
@@ -7203,16 +7105,15 @@ async function entrarAlPanelConOnboarding(){
       // Bug real reportado por el usuario ("después de la entrevista con
       // Freaky no le aparece ningún botón para avanzar"): esta función
       // arrancaba el chat de inmediato aunque todavía faltara aceptar el
-      // aviso de privacidad -- la persona contestaba las 5 preguntas del
-      // chat (que sí funcionan sin haber aceptado nada) y solo AL FINAL,
-      // al intentar avanzar, se topaba con que verEvaluacionRapida() y
-      // omitirOnboardingRapido() rechazan seguir si el check no está
-      // marcado (validarConfigInicialOnboarding) -- pero para entonces ya
-      // había hecho scroll varias pantallas hacia abajo por el chat, así
-      // que el bloque con el checkbox (arriba de todo) quedaba fuera de
-      // vista, sin ningún indicio de que ahí estaba el bloqueo. Reproducido
-      // y confirmado con Playwright antes de este arreglo. Ahora el chat
-      // NO arranca hasta que se resuelva este bloque -- ver
+      // aviso de privacidad -- la persona leía los mensajes de Freaky (que sí
+      // se muestran sin haber aceptado nada) y solo AL FINAL, al intentar
+      // avanzar, se topaba con que finalizarIntroOnboarding() rechaza seguir
+      // si el check no está marcado (validarConfigInicialOnboarding) -- pero
+      // para entonces ya había hecho scroll varias pantallas hacia abajo por
+      // el chat, así que el bloque con el checkbox (arriba de todo) quedaba
+      // fuera de vista, sin ningún indicio de que ahí estaba el bloqueo.
+      // Reproducido y confirmado con Playwright antes de este arreglo. Ahora
+      // el chat NO arranca hasta que se resuelva este bloque -- ver
       // continuarDesdeConfigInicialOnboarding().
       return;
     }
@@ -7256,28 +7157,12 @@ function validarConfigInicialOnboarding(){
 // Botón "Continuar" del bloque de idioma/tema/privacidad -- solo existe
 // para el caso en que entrarAlPanelConOnboarding() no pudo arrancar el chat
 // de inmediato (faltaba aceptar privacidad). Reusa la misma validación que
-// ya usan verEvaluacionRapida()/omitirOnboardingRapido() -- si pasa, recién
-// ahí arranca el chat (nunca antes).
+// ya usa finalizarIntroOnboarding() -- si pasa, recién ahí arranca el chat
+// (nunca antes).
 function continuarDesdeConfigInicialOnboarding(){
   if(!validarConfigInicialOnboarding()) return;
   iniciarOnboardingChat();
 }
-
-let onbUltimosValores = null;
-
-// Conversación guionada de onboarding — nunca llama a la IA (un usuario nuevo
-// todavía no tiene código de acceso). El diálogo está escrito de antemano,
-// solo el layout es de chat. Escribe en los mismos input-onb-* que ya lee
-// verEvaluacionRapida(), así que esa función y guardarOnboardingRapido()/
-// omitirOnboardingRapido() no necesitan ningún cambio.
-const PASOS_ONB_CHAT = [
-  { campo: 'ingreso', pregunta: 'onboarding_rapido.chat_p_ingreso' },
-  { campo: 'liquido', pregunta: 'onboarding_rapido.chat_p_liquido' },
-  { campo: 'deuda', pregunta: 'onboarding_rapido.chat_p_deuda' },
-  { campo: 'gastos', pregunta: 'onboarding_rapido.chat_p_gastos' },
-  { campo: 'ahorro', pregunta: 'onboarding_rapido.chat_p_ahorro' },
-];
-let onbPasoActual = 0;
 
 function agregarBurbujaOnboarding(rol, textoEscapado){
   const cont = document.getElementById('onb-chat-conversacion');
@@ -7292,228 +7177,31 @@ function agregarBurbujaOnboarding(rol, textoEscapado){
   return div;
 }
 
+// Pedido real del suegro del usuario probando la app: el wizard de 5
+// preguntas numéricas "no sirve de nada" -- se reemplaza por completo. Ya no
+// se le pide ningún número aquí ni se crean registros de relleno (ingresos/
+// cuentas/deudas falsos); Freaky solo explica qué va a pasar y el usuario
+// entra a la app vacía para ir cargando sus cosas reales cuando quiera, con
+// Freaky disponible para ayudarle a hacerlo (incluso registrar por chat).
+const MENSAJES_INTRO_ONB = [
+  'onboarding_rapido.chat_intro_1',
+  'onboarding_rapido.chat_intro_2',
+  'onboarding_rapido.chat_intro_3',
+  'onboarding_rapido.chat_intro_4',
+  'onboarding_rapido.chat_intro_5',
+  'onboarding_rapido.chat_intro_6',
+];
+
 function iniciarOnboardingChat(){
   const cont = document.getElementById('onb-chat-conversacion');
   if(!cont || cont.childElementCount > 0) return; // ya se inició (ej. re-entradas a la vista)
-  onbPasoActual = 0;
-  agregarBurbujaOnboarding('asistente', escapeHtml(t('onboarding_rapido.chat_intro_1')));
-  agregarBurbujaOnboarding('asistente', escapeHtml(t('onboarding_rapido.chat_intro_2')));
-  mostrarPreguntaOnboarding();
+  MENSAJES_INTRO_ONB.forEach(clave => agregarBurbujaOnboarding('asistente', escapeHtml(t(clave))));
+  document.getElementById('btn-onb-continuar').style.display = 'block';
 }
 
-// Pedido del usuario: que se sienta menos como un formulario sin fin. Una
-// barra de progreso simple ("Paso 2 de 5") le pone un límite visible a algo
-// que antes solo se sentía como una conversación que no se sabía qué tan
-// larga era.
-function actualizarProgresoOnboarding(){
-  const el = document.getElementById('onb-chat-progreso');
-  if(!el) return;
-  const total = PASOS_ONB_CHAT.length;
-  const actual = Math.min(onbPasoActual + 1, total);
-  el.style.display = 'flex';
-  el.innerHTML = `
-    <span>${tf('onboarding_rapido.chat_paso', actual, total)}</span>
-    <div class="paso-progreso-barra"><div class="paso-progreso-relleno" style="width:${(actual / total) * 100}%;"></div></div>
-  `;
-}
-
-// Pedido del usuario: chips de rango en vez de forzar a escribir el número
-// exacto — la mayoría no trae la cifra exacta en la cabeza, pero sí sabe en
-// qué rango cae. El valor que se guarda es el punto medio del rango elegido
-// (editable después con calma en la app real, igual que el estimado de "no
-// sé"); el rango en sí solo decide qué se muestra en la burbuja del chat.
-const RANGOS_ONB_CHAT = [
-  { hasta: 0, valor: 0 },
-  { desde: 1000, hasta: 5000, valor: 3000 },
-  { desde: 5000, hasta: 10000, valor: 7500 },
-  { desde: 10000, hasta: 20000, valor: 15000 },
-  { desde: 20000, hasta: 40000, valor: 30000 },
-  { desde: 40000, hasta: 80000, valor: 60000 },
-  { desde: 80000, hasta: 150000, valor: 115000 },
-  { desde: 150000, valor: 200000 },
-];
-
-function etiquetaRangoOnboarding(rango){
-  if(rango.hasta === 0 && !rango.desde) return formatoMonto(0, 'MXN');
-  if(rango.desde && !rango.hasta) return tf('onboarding_rapido.chat_rango_mas_de', formatoMonto(rango.desde, 'MXN'));
-  return `${formatoMonto(rango.desde, 'MXN')} – ${formatoMonto(rango.hasta, 'MXN')}`;
-}
-
-function mostrarRangosOnboarding(){
-  const cont = document.getElementById('onb-chat-rangos');
-  cont.innerHTML = RANGOS_ONB_CHAT.map((rango, i) => {
-    const etiqueta = escapeHtml(etiquetaRangoOnboarding(rango));
-    return `<button type="button" onclick="elegirRangoOnboarding(${i})">${etiqueta}</button>`;
-  }).join('');
-  cont.style.display = 'flex';
-}
-
-function elegirRangoOnboarding(indice){
-  const rango = RANGOS_ONB_CHAT[indice];
-  registrarRespuestaOnboarding(rango.valor, etiquetaRangoOnboarding(rango));
-}
-
-function mostrarPreguntaOnboarding(){
-  const paso = PASOS_ONB_CHAT[onbPasoActual];
-  actualizarProgresoOnboarding();
-  agregarBurbujaOnboarding('asistente', escapeHtml(t(paso.pregunta)));
-  const input = document.getElementById('input-onb-chat-respuesta');
-  input.value = '';
-  document.getElementById('onb-chat-input-area').style.display = 'flex';
-  mostrarRangosOnboarding();
-  document.getElementById('onb-chat-nose').style.display = 'flex';
-  // Sin autofocus: la mayoría responde tocando un chip de rango, no
-  // escribiendo -- forzar el teclado en cada pregunta lo abre y cierra sin
-  // necesidad y estorba al elegir un chip. El teclado solo debe salir si el
-  // usuario de verdad toca el campo de texto para escribir su propia cifra.
-}
-
-function registrarRespuestaOnboarding(valor, textoBurbuja){
-  const paso = PASOS_ONB_CHAT[onbPasoActual];
-  establecerValorMonto(document.getElementById(`input-onb-${paso.campo}`), valor);
-  agregarBurbujaOnboarding('usuario', escapeHtml(textoBurbuja ?? formatoMonto(valor, 'MXN')));
-  onbPasoActual++;
-  if(onbPasoActual < PASOS_ONB_CHAT.length){
-    mostrarPreguntaOnboarding();
-  } else {
-    document.getElementById('onb-chat-input-area').style.display = 'none';
-    document.getElementById('onb-chat-rangos').style.display = 'none';
-    document.getElementById('onb-chat-nose').style.display = 'none';
-    document.getElementById('onb-chat-progreso').style.display = 'none';
-    verEvaluacionRapida();
-  }
-}
-
-function avanzarOnboardingChat(){
-  const input = document.getElementById('input-onb-chat-respuesta');
-  const valor = input.value === '' ? 0 : valorNumericoMonto(input);
-  if(Number.isNaN(valor) || valor < 0) return;
-  registrarRespuestaOnboarding(valor);
-}
-
-// Pedido del usuario: mucha gente no trae el número exacto en la cabeza y
-// eso frena el onboarding a medio camino. "No sé" no lo deja atorado —
-// calcula un estimado razonable (editable después con calma en la app real)
-// en vez de forzar a adivinar un número o abandonar aquí mismo.
-function noSePreguntaOnboarding(){
-  const campo = PASOS_ONB_CHAT[onbPasoActual].campo;
-  const ingresoActual = Number(limpiarValorMonto(document.getElementById('input-onb-ingreso').value)) || 0;
-  let valor = 0;
-  if(campo === 'ingreso'){
-    valor = 12000; // referencia aproximada de ingreso mensual en México
-  } else if(campo === 'gastos' && ingresoActual > 0){
-    valor = Math.round(ingresoActual * 0.7); // estimado típico: ~70% del ingreso en gastos
-  }
-  // liquido/deuda/ahorro sin pista de ingreso: 0 es una respuesta real válida
-  // ("todavía no tengo"), no solo un relleno — se completa después en la app.
-  registrarRespuestaOnboarding(valor, t('onboarding_rapido.chat_no_se_burbuja'));
-}
-
-function calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro){
-  const resultado = [];
-
-  if(gastos > 0){
-    const meses = liquido / gastos;
-    const estado = meses >= perfilFinanciero.meses_cobertura_objetivo ? 'saludable' : (meses >= 1 ? 'atencion' : 'riesgo');
-    resultado.push({ severidad: estado, texto: tf('onboarding_rapido.eval_cobertura', meses.toFixed(1)) });
-  }
-
-  if(deuda > 0 && ingreso > 0){
-    const meses = deuda / ingreso;
-    const estado = meses <= 3 ? 'saludable' : (meses <= 8 ? 'atencion' : 'riesgo');
-    resultado.push({ severidad: estado, texto: tf('onboarding_rapido.eval_deuda', meses.toFixed(1)) });
-  } else if(deuda > 0){
-    resultado.push({ severidad: 'atencion', texto: tf('onboarding_rapido.eval_deuda_sin_ingreso', formatoMonto(deuda, 'MXN')) });
-  } else {
-    resultado.push({ severidad: 'saludable', texto: t('onboarding_rapido.eval_sin_deuda') });
-  }
-
-  if(ahorro > 0 && ingreso > 0){
-    const meses = ahorro / ingreso;
-    const estado = meses >= perfilFinanciero.meses_cobertura_objetivo ? 'saludable' : 'atencion';
-    resultado.push({ severidad: estado, texto: tf('onboarding_rapido.eval_ahorro', meses.toFixed(1)) });
-  } else if(ahorro > 0){
-    resultado.push({ severidad: 'saludable', texto: tf('onboarding_rapido.eval_ahorro_sin_ingreso', formatoMonto(ahorro, 'MXN')) });
-  } else {
-    resultado.push({ severidad: 'atencion', texto: t('onboarding_rapido.eval_sin_ahorro') });
-  }
-
-  const orden = { riesgo: 0, atencion: 1, saludable: 2 };
-  resultado.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
-  return resultado;
-}
-
-function renderEvaluacionRapida(items){
-  return `
-    ${items.map(i => `<div class="panel-insight panel-insight-${i.severidad}">${i.texto}</div>`).join('')}
-    <div class="panel-insight-nota">${t('onboarding_rapido.eval_nota')}</div>
-  `;
-}
-
-// Pedido del usuario: que el primer resultado se sienta como un logro, no
-// solo una lista de texto — un titular grande arriba, con el tono del
-// hallazgo más urgente (los items ya vienen ordenados riesgo→atención→
-// saludable), en vez de que el usuario tenga que leer todo para saber si
-// va bien o mal.
-function titularEvaluacionRapida(items){
-  const peor = items[0]?.severidad || 'saludable';
-  const claveTitular = { riesgo: 'onboarding_rapido.titular_riesgo', atencion: 'onboarding_rapido.titular_atencion', saludable: 'onboarding_rapido.titular_saludable' }[peor];
-  return { texto: t(claveTitular), severidad: peor };
-}
-
-function verEvaluacionRapida(){
-  if(!validarConfigInicialOnboarding()) return;
-  const ingreso = Number(limpiarValorMonto(document.getElementById('input-onb-ingreso').value)) || 0;
-  const liquido = Number(limpiarValorMonto(document.getElementById('input-onb-liquido').value)) || 0;
-  const deuda = Number(limpiarValorMonto(document.getElementById('input-onb-deuda').value)) || 0;
-  const gastos = Number(limpiarValorMonto(document.getElementById('input-onb-gastos').value)) || 0;
-  const ahorro = Number(limpiarValorMonto(document.getElementById('input-onb-ahorro').value)) || 0;
-  onbUltimosValores = { ingreso, liquido, deuda, gastos, ahorro };
-
-  const items = calcularEvaluacionRapidaOnboarding(ingreso, liquido, deuda, gastos, ahorro);
-  const titular = titularEvaluacionRapida(items);
-  const elTitular = document.getElementById('onb-resultado-titular');
-  elTitular.textContent = titular.texto;
-  elTitular.className = `onb-resultado-titular ${titular.severidad}`;
-  document.getElementById('onb-insights').innerHTML = renderEvaluacionRapida(items);
-  document.getElementById('onb-resultado').style.display = 'block';
-  document.getElementById('btn-onb-evaluar').style.display = 'none';
-  document.getElementById('btn-onb-omitir-inicial').style.display = 'none';
-}
-
-async function guardarOnboardingRapido(){
-  if(!onbUltimosValores) return;
-  const { ingreso, liquido, deuda, ahorro } = onbUltimosValores;
-  const hoyISO = new Date().toISOString().slice(0, 10);
-
-  if(ingreso > 0){
-    await sb.from('ingresos').insert({ nombre: t('onboarding_rapido.nombre_ingreso'), monto: ingreso, moneda: 'MXN', dia_del_mes: null, periodicidad: 'mensual', mes_pago: null });
-  }
-  if(liquido > 0){
-    const { data: cuenta } = await sb.from('cuentas').insert({
-      nombre: t('onboarding_rapido.nombre_liquido'), tipo: 'Efectivo', moneda: 'MXN', es_liquida: true, incluir_patrimonio: true
-    }).select().single();
-    if(cuenta) await sb.from('saldos').upsert({ cuenta_id: cuenta.id, fecha: hoyISO, monto: liquido }, { onConflict: 'cuenta_id,fecha' });
-  }
-  if(deuda > 0){
-    await sb.from('deudas').insert({ nombre: t('onboarding_rapido.nombre_deuda'), tipo: 'Otro', saldo: deuda, moneda: 'MXN' });
-  }
-  if(ahorro > 0){
-    const { data: cuenta } = await sb.from('cuentas').insert({
-      nombre: t('onboarding_rapido.nombre_ahorro'), tipo: 'Ahorro', moneda: 'MXN', es_liquida: true, incluir_patrimonio: true
-    }).select().single();
-    if(cuenta) await sb.from('saldos').upsert({ cuenta_id: cuenta.id, fecha: hoyISO, monto: ahorro }, { onConflict: 'cuenta_id,fecha' });
-  }
-
-  marcarOnboardingRapidoHecho();
-  onbUltimosValores = null;
-  await continuarTrasOnboarding();
-}
-
-async function omitirOnboardingRapido(){
+async function finalizarIntroOnboarding(){
   if(!validarConfigInicialOnboarding()) return;
   marcarOnboardingRapidoHecho();
-  onbUltimosValores = null;
   await continuarTrasOnboarding();
 }
 
@@ -17197,8 +16885,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 142;
+const VERSION_APP_ACTUAL = 143;
 const CHANGELOG_APP = [
+  {
+    version: 143,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'Se reemplazó el onboarding de 5 preguntas numéricas por una bienvenida de Freaky que explica cómo funciona la app y cómo ir agregando tus bienes, gastos e ingresos poco a poco -- ya no se pide ningún número al entrar ni se crean registros de relleno.'
+    ],
+    cambios_en: [
+      'The 5-question numeric onboarding was replaced with a welcome from Freaky explaining how the app works and how to gradually add your assets, expenses, and income -- no numbers are asked upfront anymore and no placeholder records are created.'
+    ]
+  },
   {
     version: 142,
     fecha: '2026-09-05',
