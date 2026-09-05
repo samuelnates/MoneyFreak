@@ -4218,12 +4218,13 @@ const TRADUCCIONES = {
     'onboarding_rapido.titulo': 'Antes de empezar',
     'onboarding_rapido.subtitulo': 'Freaky te cuenta cómo funciona esto — un minuto y entras.',
     'onboarding_rapido.aviso_config_inicial': 'Confirma esto antes de seguir.',
-    'onboarding_rapido.chat_intro_1': '¡Hola! Soy Freaky 👋 A partir de ahora te voy a acompañar a poner en orden tu dinero.',
-    'onboarding_rapido.chat_intro_2': 'No necesitas traer toda tu información ahorita. Vamos a ir agregando todo poco a poco: primero tus bienes (lo que tienes: cuentas, inversiones, propiedades, autos), después tus gastos (en qué se te va el dinero) y tus ingresos (lo que ganas).',
-    'onboarding_rapido.chat_intro_3': 'Al principio seguramente empecemos por tus cuentas de inversión. En cuanto tenga tu información voy a entender tu perfil completo y podré aconsejarte con detalle, recordarte cosas importantes y tomar juntos las mejores decisiones.',
-    'onboarding_rapido.chat_intro_4': 'Si en algún momento no sabes cómo hacer algo, solo pregúntame — incluso puedo registrarlo yo por ti si me lo cuentas por chat.',
-    'onboarding_rapido.chat_intro_5': 'En poco tiempo vas a tener todo esto seguro, y vas a poder ver tu avance en el tiempo: tu score, cómo crece tu patrimonio, tus cuentas, cómo te vas liberando de tus deudas.',
-    'onboarding_rapido.chat_intro_6': 'Pero lo más importante: vas a saber en todo momento cuál es tu realidad, para trazar el camino que quieras tomar.',
+    'onboarding_rapido.chat_intro_1': '¡Hola, soy Freaky!',
+    'onboarding_rapido.chat_intro_2': '¡Relájate!',
+    'onboarding_rapido.chat_intro_3': 'No necesitas tener toda tu información ahorita, podemos ir agregándola poco a poco.',
+    'onboarding_rapido.chat_intro_4': 'Mientras vayas usando la app, mejor voy a entender tu situación y podré aconsejarte, recordarte cosas importantes y tomar juntos las mejores decisiones.',
+    'onboarding_rapido.chat_intro_5': 'Si en algún momento no sabes cómo hacer algo, solo pregúntame. Incluso puedo registrarlo yo por ti si me lo cuentas por chat.',
+    'onboarding_rapido.chat_intro_6': 'En poco tiempo vas a poder ver tu realidad, gráficas y hasta te daré una calificación y beneficios conforme vayas mejorando.',
+    'onboarding_rapido.chat_intro_7': '¡Vamos!',
     'onboarding_rapido.empezar': 'Vamos a armarlo juntos',
     'panel.tip_widget_texto': 'Agrega el widget "Registrar gasto" a tu pantalla de inicio para capturar gastos en un toque: mantén presionada tu pantalla de inicio → Widgets → Money Freak.',
     'panel.tip_widget_descartar': 'Entendido, no mostrar de nuevo',
@@ -5183,12 +5184,13 @@ const TRADUCCIONES = {
     'onboarding_rapido.titulo': 'Before you start',
     'onboarding_rapido.subtitulo': "Freaky walks you through how this works — one minute and you're in.",
     'onboarding_rapido.aviso_config_inicial': 'Confirm this before continuing.',
-    'onboarding_rapido.chat_intro_1': "Hi! I'm Freaky 👋 From now on I'm going to help you get your money in order.",
-    'onboarding_rapido.chat_intro_2': "You don't need to bring all your info right now. We'll add everything little by little: first your assets (what you have: accounts, investments, properties, cars), then your expenses (where your money goes), and your income (what you earn).",
-    'onboarding_rapido.chat_intro_3': "At the start we'll probably begin with your investment accounts. Once I have your information I'll understand your full profile and be able to advise you in detail, remind you of important things, and make the best decisions together.",
-    'onboarding_rapido.chat_intro_4': "If you're ever not sure how to do something, just ask me — I can even log it for you myself if you tell me about it in chat.",
-    'onboarding_rapido.chat_intro_5': "Soon you'll have all of this set up securely, and you'll be able to see your progress over time: your score, how your net worth grows, your accounts, how you're paying down your debts.",
-    'onboarding_rapido.chat_intro_6': "But most importantly: you'll always know exactly where you stand, so you can map out the path you want to take.",
+    'onboarding_rapido.chat_intro_1': "Hi, I'm Freaky!",
+    'onboarding_rapido.chat_intro_2': "Relax!",
+    'onboarding_rapido.chat_intro_3': "You don't need to have all your info right now — we can add it little by little.",
+    'onboarding_rapido.chat_intro_4': "As you use the app, I'll get to know your situation better and be able to advise you, remind you of important things, and make the best decisions together.",
+    'onboarding_rapido.chat_intro_5': "If you're ever not sure how to do something, just ask me. I can even log it for you myself if you tell me about it in chat.",
+    'onboarding_rapido.chat_intro_6': "In no time you'll be able to see your reality, charts, and I'll even give you a score and rewards as you keep improving.",
+    'onboarding_rapido.chat_intro_7': "Let's go!",
     'onboarding_rapido.empezar': "Let's set it up together",
     'panel.tip_widget_texto': 'Add the "Log expense" widget to your home screen to capture expenses in one tap: press and hold your home screen → Widgets → Money Freak.',
     'panel.tip_widget_descartar': "Got it, don't show again",
@@ -7190,6 +7192,7 @@ const MENSAJES_INTRO_ONB = [
   'onboarding_rapido.chat_intro_4',
   'onboarding_rapido.chat_intro_5',
   'onboarding_rapido.chat_intro_6',
+  'onboarding_rapido.chat_intro_7',
 ];
 
 function iniciarOnboardingChat(){
@@ -16885,8 +16888,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 144;
+const VERSION_APP_ACTUAL = 145;
 const CHANGELOG_APP = [
+  {
+    version: 145,
+    fecha: '2026-09-05',
+    cambios_es: [
+      'Se afinó el texto de bienvenida de Freaky en el onboarding -- guion final más corto y directo, escrito por el usuario.'
+    ],
+    cambios_en: [
+      "Fine-tuned Freaky's onboarding welcome text -- final shorter, more direct script, written by the app's creator."
+    ]
+  },
   {
     version: 144,
     fecha: '2026-09-05',
