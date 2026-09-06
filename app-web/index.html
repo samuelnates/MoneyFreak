@@ -15435,7 +15435,18 @@ async function calcularSaludFinanciera(){
   let ingreso = 0;
   (ingresos || []).forEach(ing => { ingreso += montoMensualIngreso(ing); });
   ingreso = ingreso > 0 ? ingreso : null;
-  const tasaEndeudamiento = (ingreso && ingreso > 0) ? (compromisosDeuda / ingreso) * 100 : null;
+  // Bug real reportado por un usuario (parte 190): capturar SOLO un ingreso
+  // (sin ninguna cuenta, deuda, ni nada más) ya volvía tasaEndeudamiento un
+  // 0 válido (compromisosDeuda=0 ÷ ingreso) en vez de null -- eso disparaba
+  // un score de endeudamiento de 100 "gratis" (y con él, desbloqueaba
+  // avatares que requieren score) sin que la persona hubiera confirmado de
+  // verdad que no tiene deudas, solo porque nunca había llegado a esa
+  // sección. "Cero deudas capturadas" no es lo mismo que "cero deudas de
+  // verdad" hasta que hay al menos una cuenta registrada también -- mismo
+  // criterio que ya usa hayCuentaLiquidaRegistrada un poco arriba para
+  // liquidez, aplicado aquí a endeudamiento.
+  const hayCuentaRegistrada = (cuentas || []).length > 0;
+  const tasaEndeudamiento = (ingreso && ingreso > 0 && hayCuentaRegistrada) ? (compromisosDeuda / ingreso) * 100 : null;
   let estadoEndeudamiento = null;
   if(tasaEndeudamiento !== null){
     if(tasaEndeudamiento <= perfilFinanciero.umbral_amarillo) estadoEndeudamiento = 'saludable';
@@ -17201,8 +17212,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 153;
+const VERSION_APP_ACTUAL = 154;
 const CHANGELOG_APP = [
+  {
+    version: 154,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'Se corrigió un bug real de puntaje: capturar solo un ingreso, sin ninguna cuenta ni nada más, disparaba un Score Money Freak de 100 (¡y hasta desbloqueaba avatares que requieren score alto!) -- "cero deudas capturadas" se estaba tratando como "confirmado sin deudas" con solo tener un ingreso. Ahora hace falta al menos una cuenta registrada además del ingreso para que ese cálculo cuente.'
+    ],
+    cambios_en: [
+      'Fixed a real scoring bug: entering just one income, with no accounts or anything else, triggered a Money Freak Score of 100 (and even unlocked score-gated avatars!) -- "zero debts entered" was being treated as "confirmed debt-free" the moment there was an income to divide by. Now at least one account needs to be registered too for that calculation to count.'
+    ]
+  },
   {
     version: 153,
     fecha: '2026-09-06',
