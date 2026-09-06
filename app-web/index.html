@@ -6117,26 +6117,6 @@ function formatoMontoPrincipal(montoMXN){
   return formatoMonto(convertirEntreMonedas(montoMXN, 'MXN', MONEDA_PRINCIPAL), MONEDA_PRINCIPAL);
 }
 
-// Igual que formatoMontoPrincipal(), pero SIEMPRE antepone el código de la
-// moneda (ej. "MXN 16,899.10"), incluso cuando MONEDA_PRINCIPAL es MXN --
-// Intl.NumberFormat en es-MX solo antepone el código cuando la moneda NO es
-// la nativa del locale (ej. "USD 1,000.00" sí sale así solo, pero "MXN
-// 16,899.10" sale como "$16,899.10" sin ninguna pista de que es pesos).
-// Reportado por un usuario real (parte 188): con "moneda principal" en MXN,
-// un ingreso capturado en USD se veía en su fila como "USD 1,000.00" pero el
-// total de arriba salía "$16,899.10" -- parecía un error de conversión
-// cuando en realidad solo faltaba la etiqueta. Se usa nada más en los 4
-// totales de las pestañas de Cuentas (cuentas/ingresos/bienes/acciones/
-// deudas), que siempre conviven en la misma pantalla con filas de renglones
-// que sí muestran su propia moneda -- en los números grandes de Inicio/
-// Balance (una sola cifra, sin nada de otra moneda al lado) se deja
-// formatoMontoPrincipal() tal cual para no meterle ruido visual a la
-// inmensa mayoría de usuarios que solo usan pesos.
-function formatoMontoPrincipalConCodigo(montoMXN){
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: MONEDA_PRINCIPAL, currencyDisplay: 'code' })
-    .format(convertirEntreMonedas(montoMXN, 'MXN', MONEDA_PRINCIPAL));
-}
-
 async function cargarMonedaPrincipal(){
   if(!sb || modoDemo) return;
   try{
@@ -9778,7 +9758,7 @@ function renderListaCuentas(animar){
 
   const incluidas = cuentasInversionData.filter(c => c.incluir_patrimonio !== false);
   const totalCuentas = incluidas.reduce((a, c) => a + c.montoMXN, 0);
-  document.getElementById('acordeon-total-cuentas').textContent = formatoMontoPrincipalConCodigo(totalCuentas);
+  document.getElementById('acordeon-total-cuentas').textContent = formatoMontoPrincipal(totalCuentas);
   const ranking = [...incluidas].sort((a, b) => b.montoMXN - a.montoMXN);
 
   let lista = cuentasInversionData.map(c => {
@@ -10225,7 +10205,7 @@ function renderListaAcciones(animar){
   }
   const totalAccionesMXN = accionesData.reduce((a, item) => a + (item.valorMXN || 0), 0);
   const conPrecioFaltante = accionesData.some(item => item.valorMXN === null);
-  document.getElementById('acordeon-total-acciones').innerHTML = formatoMontoPrincipalConCodigo(totalAccionesMXN)
+  document.getElementById('acordeon-total-acciones').innerHTML = formatoMontoPrincipal(totalAccionesMXN)
     + (conPrecioFaltante ? ` <span class="estado-atencion" style="font-size:12.5px;">${t('acciones.total_incompleto')}</span>` : '');
 
   const orden = document.getElementById('orden-acciones')?.value || 'creacion';
@@ -10500,7 +10480,7 @@ async function cargarBienes(){
     return;
   }
   const totalBienesMXN = data.reduce((a, b) => a + convertirAMXN(Number(b.valor), b.moneda || 'MXN'), 0);
-  document.getElementById('acordeon-total-bienes').textContent = formatoMontoPrincipalConCodigo(totalBienesMXN);
+  document.getElementById('acordeon-total-bienes').textContent = formatoMontoPrincipal(totalBienesMXN);
   cont.innerHTML = '';
   data.forEach((b, i) => {
     const btn = document.createElement('button');
@@ -10533,7 +10513,7 @@ async function cargarIngresos(){
     return;
   }
   const totalIngresosMXN = data.reduce((a, ing) => a + montoMensualIngreso(ing), 0);
-  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMontoPrincipalConCodigo(totalIngresosMXN)}${t('comun.por_mes')}`;
+  document.getElementById('acordeon-total-ingresos').textContent = `${formatoMontoPrincipal(totalIngresosMXN)}${t('comun.por_mes')}`;
   cont.innerHTML = '';
   data.forEach((ing, i) => {
     const btn = document.createElement('button');
@@ -10571,7 +10551,7 @@ async function cargarDeudas(){
     return;
   }
   const totalDeudasMXN = data.reduce((a, d) => a + convertirAMXN(Number(d.saldo), d.moneda || 'MXN'), 0);
-  document.getElementById('acordeon-total-deudas').textContent = '-' + formatoMontoPrincipalConCodigo(totalDeudasMXN);
+  document.getElementById('acordeon-total-deudas').textContent = '-' + formatoMontoPrincipal(totalDeudasMXN);
 
   // Mini gráfica por deuda (parte 127, pedido del usuario: "que las deudas
   // también tengan su mini gráfica así como las cuentas de inversión") --
@@ -17212,8 +17192,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 154;
+const VERSION_APP_ACTUAL = 155;
 const CHANGELOG_APP = [
+  {
+    version: 155,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'Se quitó el prefijo de moneda ("MXN") de los totales de Cuentas -- si tu moneda principal es pesos, no aportaba nada y era puro ruido visual.'
+    ],
+    cambios_en: [
+      'Removed the currency prefix ("MXN") from the Accounts totals -- if your main currency is pesos, it wasn\'t adding anything, just visual noise.'
+    ]
+  },
   {
     version: 154,
     fecha: '2026-09-06',
