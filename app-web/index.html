@@ -4700,6 +4700,12 @@ const TRADUCCIONES = {
     'ayuda_ia.confirmar_avatar': 'Cambiar',
     'ayuda_ia.cambiar_aspecto_a': 'Cambiar tu aspecto a',
     'ayuda_ia.avatar_cambiado': 'Listo, ahora me veo como {0}',
+    'ayuda_ia.confirmar_moneda': 'Cambiar',
+    'ayuda_ia.cambiar_moneda_a': 'Cambiar tu moneda principal a',
+    'ayuda_ia.moneda_cambiada': 'Listo, tus totales ahora se ven en {0}',
+    'ayuda_ia.confirmar_idioma': 'Cambiar',
+    'ayuda_ia.cambiar_idioma_a': 'Cambiar el idioma de la app a',
+    'ayuda_ia.idioma_cambiado': 'Listo, la app ahora está en {0}',
     'radiografia.regenerar_boton': 'Generar de nuevo',
     'radiografia.pedir_palabra_clave': 'Para regenerar el reporte de este mes (esto vuelve a llamar a la IA) escribe la palabra clave:',
     'radiografia.palabra_clave_incorrecta': 'Palabra clave incorrecta. No se generó un reporte nuevo.',
@@ -5665,6 +5671,12 @@ const TRADUCCIONES = {
     'ayuda_ia.confirmar_avatar': 'Change',
     'ayuda_ia.cambiar_aspecto_a': 'Change your look to',
     'ayuda_ia.avatar_cambiado': 'Done, I now look like {0}',
+    'ayuda_ia.confirmar_moneda': 'Change',
+    'ayuda_ia.cambiar_moneda_a': 'Change your main currency to',
+    'ayuda_ia.moneda_cambiada': 'Done, your totals now show in {0}',
+    'ayuda_ia.confirmar_idioma': 'Change',
+    'ayuda_ia.cambiar_idioma_a': 'Change the app language to',
+    'ayuda_ia.idioma_cambiado': 'Done, the app is now in {0}',
     'ayuda_ia.gasto_abierto_formulario': 'Opened the form so you can adjust it',
     'radiografia.regenerar_boton': 'Generate again',
     'radiografia.pedir_palabra_clave': 'To regenerate this month\'s report (this calls the AI again), type the keyword:',
@@ -10845,7 +10857,7 @@ async function abrirAgregarGasto(sinFoco){
   document.getElementById('input-fecha-gasto').value = new Date().toISOString().slice(0, 10);
   document.getElementById('input-monto-gasto').value = '';
   document.getElementById('input-nota-gasto').value = '';
-  document.getElementById('select-moneda-gasto').value = 'MXN';
+  document.getElementById('select-moneda-gasto').value = MONEDA_PRINCIPAL;
   document.getElementById('check-gasto-recurrente').checked = false;
   document.getElementById('check-gasto-compra-meses').checked = false;
   document.getElementById('input-meses-recurrente').value = '12';
@@ -11225,6 +11237,8 @@ const accionesDeudaNuevaChat = {};
 const accionesBienNuevoChat = {};
 const accionesAccionNuevaChat = {};
 const accionesCambiarAvatarChat = {};
+const accionesCambiarMonedaChat = {};
+const accionesCambiarIdiomaChat = {};
 const sugerenciasChatTexto = {};
 let idAccionGastoChatSiguiente = 1;
 
@@ -11280,7 +11294,7 @@ function irADestinoChat(clave){
   if(destino) destino.fn();
 }
 
-function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva, accionCambiarAvatar, sugerenciasRespuesta){
+function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, accionPresupuesto, accionSaldo, accionIngreso, accionPagoDeuda, accionCuentaNueva, accionDeudaNueva, accionBienNuevo, accionAccionNueva, accionCambiarAvatar, accionCambiarMoneda, accionCambiarIdioma, sugerenciasRespuesta){
   const cont = document.getElementById('ayuda-ia-conversacion');
   document.getElementById('ayuda-ia-vacio').style.display = 'none';
 
@@ -11457,13 +11471,41 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
     </div>`;
   }
 
+  let accionCambiarMonedaHtml = '';
+  if(accionCambiarMoneda){
+    const idCambiarMoneda = idAccionGastoChatSiguiente++;
+    accionesCambiarMonedaChat[idCambiarMoneda] = accionCambiarMoneda;
+    const etiquetaMoneda = t('moneda.' + accionCambiarMoneda.moneda.toLowerCase());
+    accionCambiarMonedaHtml = `<div class="chat-accion-gasto" id="chat-accion-cambiar-moneda-${idCambiarMoneda}">
+      <div class="chat-accion-gasto-detalle">${escapeHtml(t('ayuda_ia.cambiar_moneda_a'))} ${escapeHtml(etiquetaMoneda)}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-cambiar-moneda-confirmar-${idCambiarMoneda}" class="chat-accion-confirmar" onclick="confirmarCambioMonedaChat(${idCambiarMoneda})">${t('ayuda_ia.confirmar_moneda')}</button>
+        <button type="button" id="chat-cambiar-moneda-cancelar-${idCambiarMoneda}" class="chat-accion-editar" onclick="cancelarAccionChat('cambiarMoneda', ${idCambiarMoneda})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
+  let accionCambiarIdiomaHtml = '';
+  if(accionCambiarIdioma){
+    const idCambiarIdioma = idAccionGastoChatSiguiente++;
+    accionesCambiarIdiomaChat[idCambiarIdioma] = accionCambiarIdioma;
+    const etiquetaIdioma = accionCambiarIdioma.idioma === 'en' ? 'English' : 'Español';
+    accionCambiarIdiomaHtml = `<div class="chat-accion-gasto" id="chat-accion-cambiar-idioma-${idCambiarIdioma}">
+      <div class="chat-accion-gasto-detalle">${escapeHtml(t('ayuda_ia.cambiar_idioma_a'))} ${escapeHtml(etiquetaIdioma)}</div>
+      <div class="chat-accion-gasto-botones">
+        <button type="button" id="chat-cambiar-idioma-confirmar-${idCambiarIdioma}" class="chat-accion-confirmar" onclick="confirmarCambioIdiomaChat(${idCambiarIdioma})">${t('ayuda_ia.confirmar_idioma')}</button>
+        <button type="button" id="chat-cambiar-idioma-cancelar-${idCambiarIdioma}" class="chat-accion-editar" onclick="cancelarAccionChat('cambiarIdioma', ${idCambiarIdioma})">${t('ayuda_ia.cancelar_accion')}</button>
+      </div>
+    </div>`;
+  }
+
   // Botones de respuesta rápida (ej. "Sí"/"No") — solo tiene sentido cuando
   // Freaky no trae ya una propuesta con sus propios botones de confirmar en
   // esta misma burbuja, para no duplicar la decisión de dos formas distintas.
   // El texto real se guarda en un mapa y el botón solo lleva un id numérico
   // (nunca el texto directo en el onclick) — el texto viene de la IA y puede
   // traer comillas u otros caracteres que romperían el atributo HTML.
-  const hayPropuesta = accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva || accionCambiarAvatar;
+  const hayPropuesta = accion || accionPresupuesto || accionSaldo || accionIngreso || accionPagoDeuda || accionCuentaNueva || accionDeudaNueva || accionBienNuevo || accionAccionNueva || accionCambiarAvatar || accionCambiarMoneda || accionCambiarIdioma;
   const sugerenciasHtml = (sugerenciasRespuesta && sugerenciasRespuesta.length && !hayPropuesta)
     ? `<div class="chat-sugerencias">${sugerenciasRespuesta.map(s => {
         const idSugerencia = idAccionGastoChatSiguiente++;
@@ -11472,7 +11514,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
       }).join('')}</div>`
     : '';
 
-  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${accionCambiarAvatarHtml}${linkHtml}${sugerenciasHtml}${horaHtml}</div>`;
+  const columna = `<div class="chat-columna"><div class="chat-burbuja">${textoEscapado}</div>${accionHtml}${accionPresupuestoHtml}${accionSaldoHtml}${accionIngresoHtml}${accionPagoDeudaHtml}${accionCuentaNuevaHtml}${accionDeudaNuevaHtml}${accionBienNuevoHtml}${accionAccionNuevaHtml}${accionCambiarAvatarHtml}${accionCambiarMonedaHtml}${accionCambiarIdiomaHtml}${linkHtml}${sugerenciasHtml}${horaHtml}</div>`;
   div.innerHTML = rol === 'asistente'
     ? `<div class="chat-avatar">${avatarFreakyImgHtml()}</div>${columna}`
     : columna;
@@ -12744,7 +12786,7 @@ async function preguntarSobreApp(){
     const ingresos_existentes = ingresosChat.map(i => ({ id: i.id, nombre: i.nombre, monto: Number(i.monto) }));
 
     const resultado = await llamarConAccesoIA('preguntar-sobre-app',
-      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, gamificacion, idioma: document.documentElement.lang === 'en' ? 'en' : 'es' },
+      { pregunta, historial: historialAyudaIA.slice(0, idxTurno), snapshot: snapshotFreakyCache, medios_pago_disponibles, cuentas_disponibles, deudas_disponibles, ingresos_existentes, gamificacion, idioma: document.documentElement.lang === 'en' ? 'en' : 'es', moneda_principal: MONEDA_PRINCIPAL },
       { sinAcceso: 'ayuda_ia.sin_acceso', codigoInvalido: 'ayuda_ia.codigo_invalido' });
     escribiendo.remove();
     if(!resultado.ok || !resultado.data || !resultado.data.respuesta){
@@ -12759,7 +12801,7 @@ async function preguntarSobreApp(){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.sugerencias_respuesta);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.accion_cambiar_moneda_principal, resultado.data.accion_cambiar_idioma, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error preguntando sobre la app', e);
     escribiendo.remove();
@@ -12816,7 +12858,7 @@ async function procesarNotaDeVozChat(blob, mimeType){
     historialAyudaIA.push({ rol: 'asistente', texto: resultado.data.respuesta });
 
     const accionParaBurbuja = construirAccionParaBurbuja(resultado.data.accion, opcionesPago);
-    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.sugerencias_respuesta);
+    agregarBurbujaChat('asistente', escapeHtml(resultado.data.respuesta), true, resultado.data.destino, accionParaBurbuja, resultado.data.accion_presupuesto, resultado.data.accion_saldo_cuenta, resultado.data.accion_ingreso, resultado.data.accion_pago_deuda, resultado.data.accion_cuenta_nueva, resultado.data.accion_deuda_nueva, resultado.data.accion_bien_nuevo, resultado.data.accion_accion_nueva, resultado.data.accion_cambiar_avatar, resultado.data.accion_cambiar_moneda_principal, resultado.data.accion_cambiar_idioma, resultado.data.sugerencias_respuesta);
   }catch(e){
     console.error('Error procesando nota de voz para Freaky', e);
     escribiendo.remove();
@@ -12995,12 +13037,12 @@ function cancelarAccionChat(tipo, idAccion){
   const mapas = {
     saldo: accionesSaldoChat, ingreso: accionesIngresoChat, pagoDeuda: accionesPagoDeudaChat,
     cuentaNueva: accionesCuentaNuevaChat, deudaNueva: accionesDeudaNuevaChat, bienNuevo: accionesBienNuevoChat, accionNueva: accionesAccionNuevaChat,
-    cambiarAvatar: accionesCambiarAvatarChat
+    cambiarAvatar: accionesCambiarAvatarChat, cambiarMoneda: accionesCambiarMonedaChat, cambiarIdioma: accionesCambiarIdiomaChat
   };
   const prefijos = {
     saldo: 'chat-accion-saldo-', ingreso: 'chat-accion-ingreso-', pagoDeuda: 'chat-accion-pago-deuda-',
     cuentaNueva: 'chat-accion-cuenta-nueva-', deudaNueva: 'chat-accion-deuda-nueva-', bienNuevo: 'chat-accion-bien-nuevo-', accionNueva: 'chat-accion-accion-nueva-',
-    cambiarAvatar: 'chat-accion-cambiar-avatar-'
+    cambiarAvatar: 'chat-accion-cambiar-avatar-', cambiarMoneda: 'chat-accion-cambiar-moneda-', cambiarIdioma: 'chat-accion-cambiar-idioma-'
   };
   const mapa = mapas[tipo];
   if(mapa) delete mapa[idAccion];
@@ -13035,6 +13077,33 @@ async function confirmarCambioAvatarChat(idAccion){
   }
   freakyTrigger('happy');
   delete accionesCambiarAvatarChat[idAccion];
+}
+
+// Mismo patrón que confirmarCambioAvatarChat, pero llamando a las funciones
+// que ya usa Configuración general (cambiarMonedaPrincipal/cambiarIdioma) --
+// Freaky nunca duplica esa lógica, solo la dispara tras la confirmación.
+function confirmarCambioMonedaChat(idAccion){
+  const accion = accionesCambiarMonedaChat[idAccion];
+  if(!accion) return;
+  cambiarMonedaPrincipal(accion.moneda);
+  const contenedor = document.getElementById(`chat-accion-cambiar-moneda-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(tf('ayuda_ia.moneda_cambiada', t('moneda.' + accion.moneda.toLowerCase())))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesCambiarMonedaChat[idAccion];
+}
+
+function confirmarCambioIdiomaChat(idAccion){
+  const accion = accionesCambiarIdiomaChat[idAccion];
+  if(!accion) return;
+  cambiarIdioma(accion.idioma);
+  const contenedor = document.getElementById(`chat-accion-cambiar-idioma-${idAccion}`);
+  if(contenedor){
+    contenedor.outerHTML = `<div class="chat-accion-gasto-resuelto">✓ ${escapeHtml(tf('ayuda_ia.idioma_cambiado', accion.idioma === 'en' ? 'English' : 'Español'))}</div>`;
+  }
+  freakyTrigger('happy');
+  delete accionesCambiarIdiomaChat[idAccion];
 }
 
 async function confirmarSaldoChat(idAccion){
@@ -16991,8 +17060,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 149;
+const VERSION_APP_ACTUAL = 150;
 const CHANGELOG_APP = [
+  {
+    version: 150,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'Freaky ahora puede cambiar tu moneda principal y el idioma de la app directamente en el chat, si se lo pides -- ya no hace falta ir a Configuración.',
+      'Un gasto nuevo ahora inicia en tu moneda principal (antes siempre iniciaba en pesos, lo cual confundía si tu moneda principal era otra).'
+    ],
+    cambios_en: [
+      'Freaky can now change your main currency and the app\'s language right from the chat, if you ask -- no need to go into Settings anymore.',
+      'A new expense now starts in your main currency (it used to always start in pesos, which was confusing if your main currency was something else).'
+    ]
+  },
   {
     version: 149,
     fecha: '2026-09-06',

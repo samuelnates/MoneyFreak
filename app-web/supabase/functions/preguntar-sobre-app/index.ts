@@ -158,6 +158,18 @@ const AccionCambiarAvatarSchema = z.object({
   avatar_id: z.string(),
 });
 
+const MONEDAS_PRINCIPAL_VALIDAS = ["MXN", "USD", "EUR"] as const;
+
+const AccionCambiarMonedaPrincipalSchema = z.object({
+  tipo: z.literal("cambiar_moneda_principal"),
+  moneda: z.enum(MONEDAS_PRINCIPAL_VALIDAS),
+});
+
+const AccionCambiarIdiomaSchema = z.object({
+  tipo: z.literal("cambiar_idioma"),
+  idioma: z.enum(["es", "en"]),
+});
+
 const RespuestaFreakySchema = z.object({
   respuesta: z.string(),
   sugerencias_respuesta: z.array(z.string().max(40)).max(4).nullable(),
@@ -172,6 +184,8 @@ const RespuestaFreakySchema = z.object({
   accion_bien_nuevo: AccionBienNuevoSchema.nullable(),
   accion_accion_nueva: AccionAccionNuevaSchema.nullable(),
   accion_cambiar_avatar: AccionCambiarAvatarSchema.nullable(),
+  accion_cambiar_moneda_principal: AccionCambiarMonedaPrincipalSchema.nullable(),
+  accion_cambiar_idioma: AccionCambiarIdiomaSchema.nullable(),
 });
 
 function construirSystemPrompt(
@@ -180,7 +194,8 @@ function construirSystemPrompt(
   deudas: DeudaDisponible[],
   ingresos: IngresoExistente[],
   idioma: string,
-  gamificacion: Gamificacion | null
+  gamificacion: Gamificacion | null,
+  monedaPrincipal: string
 ): string {
   const listaMediosPago = mediosPago.length
     ? mediosPago.map((m) => `- "${m.valor}" = ${m.etiqueta}`).join("\n")
@@ -343,7 +358,11 @@ Va de 0 a 100 y es el promedio simple de hasta 5 sub-scores (cada uno también d
 5. Constancia: 60% qué tan seguido (por semana, de las últimas 4) registraste al menos un gasto, actualizaste un saldo o abonaste a una deuda; 40% qué % de tus cuentas (las que cuentan para tu patrimonio) tienen su saldo actualizado en los últimos 28 días.
 Cuando el "Contexto financiero actual del usuario" traiga un bloque "score_money_freak", esos son los sub-scores YA CALCULADOS de verdad para este usuario en este momento (junto con las metas/techos configurados que se usaron para calcularlos) — úsalos para responder con sus números reales en vez de hablar solo en abstracto, y para dar consejos concretos y accionables de cuál sub-score conviene subir primero para llegar a la meta que busca (ej. si pregunta cuánto le falta para desbloquear un avatar). Si ese bloque no viene, explica el concepto general y aclara que no tienes sus números a la mano en este momento. Puedes mandarlo con "destino" en "score" para que vea el desglose completo con su gráfica histórica.
 
-REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva", "accion_cambiar_avatar" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
+TU MONEDA PRINCIPAL (campo "accion_cambiar_moneda_principal"): la moneda en la que el usuario ve TODOS sus totales agregados (patrimonio neto, balance, gastos del mes, salud financiera, flujo de efectivo) sin importar en qué moneda esté cada cuenta o gasto individual — hoy está en "${monedaPrincipal}". Si el usuario pide ver sus totales en otra moneda, o dice algo como "quiero ver todo en dólares"/"cámbiame a euros"/"mejor pesos", propón "accion_cambiar_moneda_principal" con tipo "cambiar_moneda_principal" y "moneda" en "MXN", "USD" o "EUR" (por ahora no hay más opciones — si pide otra distinta, dile que todavía no está disponible y deja esta acción en null). Si ya está en la moneda que pide, dilo y no propongas nada. Aclara siempre, en tu "respuesta", que esto solo cambia cómo se VEN los totales — cada cuenta y cada gasto se sigue guardando en la moneda con la que se capturó, esto no convierte nada de verdad.
+
+TU IDIOMA (campo "accion_cambiar_idioma"): el idioma de toda la interfaz de la app (no solo de esta conversación) — hoy está en "${idioma === "en" ? "inglés" : "español"}". Si el usuario pide cambiar el idioma de la app (ej. "cámbiame a inglés", "ponla en español", "switch to English"), propón "accion_cambiar_idioma" con tipo "cambiar_idioma" y "idioma" en "es" o "en". Si ya está en el idioma que pide, dilo y no propongas nada.
+
+REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva", "accion_cambiar_avatar", "accion_cambiar_moneda_principal", "accion_cambiar_idioma" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
 
 Pantallas válidas a las que puedes mandar un link (usa exactamente una de estas claves en "destino", o null si ninguna aplica):
 ${DESTINO_KEYS.map((k) => `- "${k}" = ${DESTINOS[k]}`).join("\n")}
@@ -433,6 +452,7 @@ Deno.serve(async (req) => {
     audio_base64?: string;
     mime_type?: string;
     idioma?: string;
+    moneda_principal?: string;
     gamificacion?: Gamificacion;
   };
   try {
@@ -454,6 +474,9 @@ Deno.serve(async (req) => {
   const ingresos = Array.isArray(body.ingresos_existentes) ? body.ingresos_existentes : [];
   const idioma = body.idioma === "en" ? "en" : "es";
   const gamificacion = body.gamificacion && Array.isArray(body.gamificacion.avatares) ? body.gamificacion : null;
+  const monedaPrincipal = MONEDAS_PRINCIPAL_VALIDAS.includes(body.moneda_principal as typeof MONEDAS_PRINCIPAL_VALIDAS[number])
+    ? (body.moneda_principal as string)
+    : "MXN";
 
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
@@ -493,7 +516,7 @@ Deno.serve(async (req) => {
       openai.responses.parse({
         model: MODEL,
         store: false,
-        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos, idioma, gamificacion),
+        instructions: construirSystemPrompt(mediosPago, cuentas, deudas, ingresos, idioma, gamificacion, monedaPrincipal),
         input: inputTexto,
         text: { format: zodTextFormat(RespuestaFreakySchema, "respuesta_freaky") },
       }),
@@ -589,6 +612,8 @@ Deno.serve(async (req) => {
       accion_bien_nuevo: accionBienNuevo,
       accion_accion_nueva: accionAccionNueva,
       accion_cambiar_avatar: accionCambiarAvatar,
+      accion_cambiar_moneda_principal: parsed.accion_cambiar_moneda_principal,
+      accion_cambiar_idioma: parsed.accion_cambiar_idioma,
       transcripcion,
     });
   } catch (e) {
