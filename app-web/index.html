@@ -4216,6 +4216,7 @@ const TRADUCCIONES = {
     'panel.insight_gasto_categoria': 'Tu gasto en {0} está {1}% arriba de tu promedio de los últimos 3 meses.',
     'panel.insight_ritmo_presupuesto': 'A este ritmo vas a cerrar el mes en {0}, por arriba de tu presupuesto de {1}.',
     'panel.insight_todo_bien': 'Tus números están en orden esta semana. Sigue así.',
+    'panel.insight_sin_datos': 'Todavía no tienes nada capturado -- empieza por agregar tus cuentas, ingresos y gastos para que pueda darte consejos reales. Si tienes dudas de cómo hacerlo, pregúntale a Freaky.',
     'panel.insight_categoria_dominante': 'El {0}% de tu gasto de este mes es en {1}.',
     'panel.insight_tasa_ahorro_positiva': 'Vas ahorrando el {0}% de tu ingreso este mes. Bien ahí.',
     'panel.insight_tasa_ahorro_negativa': 'Este mes has gastado {0}% más de lo que has ingresado.',
@@ -5190,6 +5191,7 @@ const TRADUCCIONES = {
     'panel.insight_gasto_categoria': 'Your spending on {0} is {1}% above your 3-month average.',
     'panel.insight_ritmo_presupuesto': "At this pace you'll close the month at {0}, above your budget of {1}.",
     'panel.insight_todo_bien': 'Your numbers look good this week. Keep it up.',
+    'panel.insight_sin_datos': "You haven't added anything yet -- start by adding your accounts, income, and expenses so I can give you real advice. If you're not sure how, just ask Freaky.",
     'panel.insight_categoria_dominante': '{0}% of this month\'s spending is in {1}.',
     'panel.insight_tasa_ahorro_positiva': "You're saving {0}% of your income this month. Nice.",
     'panel.insight_tasa_ahorro_negativa': "This month you've spent {0}% more than you've earned.",
@@ -8622,6 +8624,20 @@ function descartarTipWidget(){
 }
 
 async function calcularInsightsPanel(b, s, g){
+  // Cuenta recién creada, sin nada capturado todavía: ninguno de los
+  // candidatos de abajo se dispara con puros ceros/nulls, así que caía en el
+  // mismo mensaje genérico de "tus números están en orden" que un usuario
+  // real y saludable -- confuso y hasta engañoso el primer día (reportado
+  // por un usuario real, parte 189). Se detecta ANTES de evaluar nada más:
+  // sin cuentas/bienes/acciones/deudas, sin gasto este mes y sin ingreso
+  // registrado es, sin ambigüedad, "todavía no hay nada que evaluar".
+  const sinNingunDatoCapturado = b.detalleCuentas.length === 0 && b.detalleBienes.length === 0 &&
+    b.detalleAcciones.length === 0 && b.detalleDeudas.length === 0 &&
+    g.totalGastado === 0 && !s.ingreso;
+  if(sinNingunDatoCapturado){
+    return [{ severidad: 'saludable', texto: t('panel.insight_sin_datos'), generico: true }];
+  }
+
   const hoy = new Date();
   const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
   const inicioVentana = new Date(finMesAnterior.getFullYear(), finMesAnterior.getMonth() - 2, 1);
@@ -17185,8 +17201,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 152;
+const VERSION_APP_ACTUAL = 153;
 const CHANGELOG_APP = [
+  {
+    version: 153,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'En una cuenta recién creada, el panel de Inicio ya no dice "tus números están en orden" (no hay ningún número todavía) -- ahora invita a empezar a capturar tus cuentas, ingresos y gastos, y a preguntarle a Freaky si hay dudas.'
+    ],
+    cambios_en: [
+      'On a brand-new account, the Home panel no longer says "your numbers are in order" (there are no numbers yet) -- it now invites you to start adding your accounts, income, and expenses, and to ask Freaky if you\'re not sure how.'
+    ]
+  },
   {
     version: 152,
     fecha: '2026-09-06',
