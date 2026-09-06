@@ -4110,6 +4110,7 @@ const TRADUCCIONES = {
     'login.biometria_razon': 'Confirma tu identidad para entrar a Money Freak',
     'login.biometria_titulo': 'Iniciar sesión',
     'login.activar_biometria_pregunta': '¿Quieres activar el acceso rápido con Face ID/huella para la próxima vez?',
+    'login.confirma_password_biometria': 'Escribe tu contraseña una vez para guardarla de forma segura en tu dispositivo',
     'privacidad.desactivar_biometria': 'Desactivar Face ID / huella',
     'privacidad.biometria_desactivada': 'Acceso rápido desactivado.',
     'notif.titulo': 'Notificaciones',
@@ -4119,6 +4120,7 @@ const TRADUCCIONES = {
     'notif.reporte_mes_label': 'Avisarme a fin de mes para sacar mi reporte',
     'notif.deudas_label': 'Avisarme unos días antes de la fecha de pago de mis deudas y tarjetas',
     'notif.alerta_presupuesto_label': 'Avisarme si voy camino a exceder mi presupuesto',
+    'notif.alerta_presupuesto_pregunta_proactiva': '¿Quieres que te avisemos si vas camino a exceder tu presupuesto del mes?',
     'notif.alerta_presupuesto_aviso': 'A diferencia de las de arriba, esta sí requiere avisar desde el servidor (no es 100% local) -- compara tu ritmo de gasto de este mes contra tu propio patrón de meses anteriores, no un promedio simple, y necesita al menos 2 meses de historial para activarse.',
     'notif.nunca': 'Nunca',
     'notif.cada_dia': 'Cada día',
@@ -5082,6 +5084,7 @@ const TRADUCCIONES = {
     'login.biometria_razon': 'Confirm your identity to sign in to Money Freak',
     'login.biometria_titulo': 'Sign in',
     'login.activar_biometria_pregunta': 'Want to enable quick access with Face ID/fingerprint next time?',
+    'login.confirma_password_biometria': 'Enter your password once to save it securely on your device',
     'privacidad.desactivar_biometria': 'Disable Face ID / fingerprint',
     'privacidad.biometria_desactivada': 'Quick access disabled.',
     'notif.titulo': 'Notifications',
@@ -5091,6 +5094,7 @@ const TRADUCCIONES = {
     'notif.reporte_mes_label': 'Remind me at month-end to get my report',
     'notif.deudas_label': "Remind me a few days before my debts and cards are due",
     'notif.alerta_presupuesto_label': "Alert me if I'm on track to exceed my budget",
+    'notif.alerta_presupuesto_pregunta_proactiva': "Want us to warn you if you're on track to exceed your budget this month?",
     'notif.alerta_presupuesto_aviso': "Unlike the ones above, this one does need to alert from the server (it's not 100% local) -- it compares this month's spending pace against your own pattern from previous months, not a plain average, and needs at least 2 months of history to turn on.",
     'notif.nunca': 'Never',
     'notif.cada_dia': 'Every day',
@@ -6645,6 +6649,79 @@ async function ofrecerActivarBiometria(email, password){
   }catch(e){ /* biometría no disponible/no configurada en el dispositivo, seguir sin ella */ }
 }
 
+// Le pregunta a alguien que YA tiene sesión abierta (llegó aquí sin escribir
+// su contraseña -- venía de una sesión guardada de antes) si quiere activar
+// Face ID/huella, en vez de quedarse callada esperando a que la persona la
+// encuentre sola en Configuración. Usa las mismas dos banderas que
+// ofrecerActivarBiometria() (login con contraseña) para nunca preguntar dos
+// veces ni volver a insistir si ya dijo que no una vez (parte 187).
+async function ofrecerActivarBiometriaProactivo(){
+  if(modoDemo || !window.Capacitor?.isNativePlatform?.()) return;
+  if(localStorage.getItem('biometria_activada') === '1' || localStorage.getItem('biometria_rechazada') === '1') return;
+  try{
+    const { isAvailable } = await window.Capacitor.Plugins.NativeBiometric.isAvailable();
+    if(!isAvailable) return;
+  }catch(e){ return; }
+
+  if(!(await mostrarConfirmacion(t('login.activar_biometria_pregunta')))){
+    localStorage.setItem('biometria_rechazada', '1');
+    return;
+  }
+  // Aquí, a diferencia de ofrecerActivarBiometria() (que ya tiene la
+  // contraseña en memoria porque la acaban de escribir para entrar), nunca
+  // se tuvo la contraseña real -- hay que volver a pedirla una sola vez
+  // para poder guardarla en el llavero biométrico del dispositivo.
+  const password = await mostrarPromptPassword(t('login.confirma_password_biometria'));
+  if(!password){ return; } // canceló -- no se marca "rechazada", se le puede volver a ofrecer después
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user?.email) return;
+  const { error } = await sb.auth.signInWithPassword({ email: user.email, password });
+  if(error){
+    await mostrarAlerta(t('login.error_credenciales'));
+    return; // tampoco se marca nada -- se reintenta en la siguiente sesión
+  }
+  try{
+    await window.Capacitor.Plugins.NativeBiometric.setCredentials({ username: user.email, password, server: BIOMETRIA_SERVER });
+    localStorage.setItem('biometria_activada', '1');
+    actualizarVisibilidadBotonBiometrico();
+  }catch(e){ /* el dispositivo no dejó guardarla, seguir sin Face ID por ahora */ }
+}
+
+// Mismo espíritu que la de arriba, para la alerta real de "vas camino a
+// exceder tu presupuesto" (push por FCM) -- antes solo se activaba si el
+// usuario la encontraba sola en Configuración y la prendía a mano, así que
+// nadie que ya tuviera la app instalada se enteraba de que existe. Se
+// pregunta una sola vez en la vida por usuario (bandera aparte de
+// notif_alerta_presupuesto, que solo indica si está prendida o no).
+async function ofrecerAlertaPresupuestoProactivo(){
+  if(modoDemo || !window.Capacitor?.isNativePlatform?.()) return;
+  if(localStorage.getItem('notif_alerta_presupuesto_preguntada') === '1') return;
+  localStorage.setItem('notif_alerta_presupuesto_preguntada', '1');
+  if(localStorage.getItem('notif_alerta_presupuesto') === '1') return; // ya la tenía activada de antes
+
+  if(!(await mostrarConfirmacion(t('notif.alerta_presupuesto_pregunta_proactiva')))) return;
+  const check = document.getElementById('check-notif-alerta-presupuesto');
+  if(check) check.checked = true;
+  localStorage.setItem('notif_alerta_presupuesto', '1');
+  sincronizarPreferenciaPerfil('notif_alerta_presupuesto', true);
+  await registrarPushSiNecesario();
+}
+
+// Orquesta las dos preguntas de arriba, una a la vez (comparten el mismo
+// modal genérico -- nunca deben abrirse en paralelo) y solo si no hay ya
+// otro modal de "primera vez" en pantalla (aviso de privacidad, novedades de
+// la versión) -- si alguno de esos está abierto, se aplaza todo a la
+// siguiente vez que entre a la app en vez de amontonar modales encima.
+async function ofrecerAjustesProactivos(){
+  const hayOtroModalAbierto = () =>
+    document.getElementById('modal-privacidad-login').style.display === 'flex' ||
+    document.getElementById('modal-novedades').style.display === 'flex';
+  if(hayOtroModalAbierto()) return;
+  await ofrecerActivarBiometriaProactivo();
+  if(hayOtroModalAbierto()) return;
+  await ofrecerAlertaPresupuestoProactivo();
+}
+
 async function iniciarSesionBiometrico(){
   try{
     await window.Capacitor.Plugins.NativeBiometric.verifyIdentity({ reason: t('login.biometria_razon'), title: t('login.biometria_titulo') });
@@ -7158,6 +7235,7 @@ async function continuarTrasOnboarding(){
   abrirPanel();
   mostrarAvisoPrivacidadLogin();
   mostrarNovedadesSiHayPendientes();
+  ofrecerAjustesProactivos();
 }
 
 function validarConfigInicialOnboarding(){
@@ -7329,6 +7407,8 @@ function _mostrarModalGenerico(opciones){
     input.style.display = opciones.conInput ? 'block' : 'none';
     input.value = '';
     input.placeholder = opciones.placeholder || '';
+    input.type = opciones.tipoInput || 'text';
+    input.autocomplete = opciones.tipoInput === 'password' ? 'current-password' : 'off';
 
     const btnPrincipal = document.getElementById('modal-generico-btn-principal');
     btnPrincipal.textContent = opciones.textoPrincipal;
@@ -7377,6 +7457,25 @@ async function mostrarPromptTexto(mensaje, opciones){
     conInput: true,
     placeholder: opciones.placeholder,
     destructivo: opciones.destructivo
+  });
+  return ok ? document.getElementById('modal-generico-input').value : null;
+}
+
+// Igual que mostrarPromptTexto() pero con el campo oculto (type="password")
+// -- se usa para pedir la contraseña de vuelta cuando se activa Face ID
+// desde una sesión ya iniciada (ver ofrecerActivarBiometriaProactivo), donde
+// nunca se tuvo la contraseña en memoria porque el usuario no la volvió a
+// escribir para entrar.
+async function mostrarPromptPassword(mensaje, opciones){
+  opciones = opciones || {};
+  const ok = await _mostrarModalGenerico({
+    titulo: opciones.titulo,
+    mensaje,
+    textoPrincipal: opciones.textoConfirmar || t('comun.confirmar'),
+    textoCancelar: t('comun.cancelar'),
+    conInput: true,
+    tipoInput: 'password',
+    placeholder: opciones.placeholder,
   });
   return ok ? document.getElementById('modal-generico-input').value : null;
 }
@@ -17066,8 +17165,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 150;
+const VERSION_APP_ACTUAL = 151;
 const CHANGELOG_APP = [
+  {
+    version: 151,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'La app ahora te pregunta directamente si quieres activar Face ID/huella y el aviso de "vas camino a exceder tu presupuesto", en vez de dejarlos escondidos en Configuración esperando a que los encuentres solo.'
+    ],
+    cambios_en: [
+      'The app now directly asks if you want to enable Face ID/fingerprint and the "you\'re on track to exceed your budget" alert, instead of leaving them hidden in Settings waiting for you to find them on your own.'
+    ]
+  },
   {
     version: 150,
     fecha: '2026-09-06',
