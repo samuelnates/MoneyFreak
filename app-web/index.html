@@ -7248,6 +7248,7 @@ function intentarVideoIntroOnboarding(){
 // propio arreglo de tiempos aquí (el ritmo de cada locución es distinto).
 const TIEMPOS_AUDIO_INTRO_ONB = {
   es: [0, 2.47, 3.70, 9.14, 19.03, 25.29, 33.11],
+  en: [0, 2.37, 3.64, 9.40, 19.70, 28.48, 37.40],
 };
 
 function rutaAudioIntroOnboarding(){
@@ -16990,8 +16991,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 148;
+const VERSION_APP_ACTUAL = 149;
 const CHANGELOG_APP = [
+  {
+    version: 149,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'La bienvenida de Freaky con audio real ya también está disponible en inglés, sincronizada igual que la de español.'
+    ],
+    cambios_en: [
+      "Freaky's real-voice onboarding welcome is now also available in English, synced the same way as the Spanish version."
+    ]
+  },
   {
     version: 148,
     fecha: '2026-09-06',
