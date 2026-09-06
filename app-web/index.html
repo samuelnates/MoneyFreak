@@ -1990,6 +1990,7 @@
   <div id="onb-video-wrap" style="display:none;">
     <video id="video-intro-onb" playsinline webkit-playsinline preload="auto" style="width:100%;border-radius:16px;background:#000;display:block;"></video>
   </div>
+  <audio id="audio-intro-onb" preload="auto"></audio>
 
   <div id="onb-chat-conversacion" class="chat-conversacion"></div>
 
@@ -7222,18 +7223,60 @@ function iniciarOnboardingChat(){
 function intentarVideoIntroOnboarding(){
   const wrap = document.getElementById('onb-video-wrap');
   const video = document.getElementById('video-intro-onb');
-  let yaCayoATexto = false;
-  const caerATexto = () => {
-    if(yaCayoATexto) return;
-    yaCayoATexto = true;
+  let yaSiguio = false;
+  const siguienteEscalon = () => {
+    if(yaSiguio) return;
+    yaSiguio = true;
     wrap.style.display = 'none';
-    mostrarIntroOnboardingTexto();
+    intentarAudioIntroOnboarding();
   };
-  video.onerror = caerATexto;
+  video.onerror = siguienteEscalon;
   video.onended = () => finalizarIntroOnboarding();
   video.src = rutaVideoIntroOnboarding();
   wrap.style.display = 'block';
   const promesaPlay = video.play();
+  if(promesaPlay && typeof promesaPlay.catch === 'function') promesaPlay.catch(siguienteEscalon);
+}
+
+// Escalón intermedio (pedido explícito del usuario, mientras no hay video real
+// por falta de crédito en los proveedores de IA): usa el audio REAL que él
+// mismo grabó/generó -- ya no una síntesis de voz -- sincronizado con las
+// mismas burbujas de texto de siempre. Los tiempos de arranque de cada línea
+// se midieron a mano contra los silencios reales del archivo (ffmpeg
+// silencedetect) -- no son un estimado, son los cortes reales de este audio
+// específico. Si algún día se agrega un audio para otro idioma, necesita su
+// propio arreglo de tiempos aquí (el ritmo de cada locución es distinto).
+const TIEMPOS_AUDIO_INTRO_ONB = {
+  es: [0, 2.47, 3.70, 9.14, 19.03, 25.29, 33.11],
+};
+
+function rutaAudioIntroOnboarding(){
+  const idioma = document.documentElement.lang === 'en' ? 'en' : 'es';
+  return { idioma, ruta: `assets/onboarding-audio/freaky-intro-${idioma}.mp3`, tiempos: TIEMPOS_AUDIO_INTRO_ONB[idioma] };
+}
+
+function intentarAudioIntroOnboarding(){
+  const { ruta, tiempos } = rutaAudioIntroOnboarding();
+  if(!tiempos){ mostrarIntroOnboardingTexto(); return; }
+  const audio = document.getElementById('audio-intro-onb');
+  let yaCayoATexto = false;
+  let siguienteIndice = 0;
+  const caerATexto = () => {
+    if(yaCayoATexto) return;
+    yaCayoATexto = true;
+    audio.ontimeupdate = null;
+    mostrarIntroOnboardingTexto();
+  };
+  audio.onerror = caerATexto;
+  audio.onended = () => finalizarIntroOnboarding();
+  audio.ontimeupdate = () => {
+    while(siguienteIndice < tiempos.length && audio.currentTime >= tiempos[siguienteIndice]){
+      agregarBurbujaOnboarding('asistente', escapeHtml(t(MENSAJES_INTRO_ONB[siguienteIndice])));
+      siguienteIndice++;
+    }
+  };
+  audio.src = ruta;
+  const promesaPlay = audio.play();
   if(promesaPlay && typeof promesaPlay.catch === 'function') promesaPlay.catch(caerATexto);
 }
 
@@ -16947,8 +16990,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 147;
+const VERSION_APP_ACTUAL = 148;
 const CHANGELOG_APP = [
+  {
+    version: 148,
+    fecha: '2026-09-06',
+    cambios_es: [
+      'La bienvenida de Freaky en el onboarding ahora se escucha con su voz real (audio grabado), sincronizada con el texto en pantalla, mientras se prepara el video completo.'
+    ],
+    cambios_en: [
+      "Freaky's onboarding welcome can now be heard with his real recorded voice, synced with the on-screen text, while the full video is in the works."
+    ]
+  },
   {
     version: 147,
     fecha: '2026-09-05',
