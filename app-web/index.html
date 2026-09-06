@@ -11269,24 +11269,30 @@ function horaChatCorta(){
 }
 
 // Debe coincidir exactamente con DESTINOS en la Edge Function preguntar-sobre-app.
+// "etiquetaKey" es una clave de i18n (no el texto en sí) -- se resuelve con
+// t() al momento de dibujar el botón, nunca al definir este objeto, porque
+// este bloque corre una sola vez al cargar el script y el idioma puede
+// cambiar después (Configuración, o ahora también Freaky, ver parte 185).
+// Antes tenía el texto fijo en español y el botón de "ir a la pantalla"
+// jamás se traducía aunque toda la conversación estuviera en inglés.
 const DESTINOS_CHAT = {
-  inicio: { fn: () => abrirPanel(), etiqueta: 'Inicio' },
-  cuentas: { fn: () => mostrar('vista-cuentas'), etiqueta: 'Cuentas' },
-  gastos: { fn: () => abrirGastos(), etiqueta: 'Gastos y presupuesto' },
-  presupuesto: { fn: () => abrirPresupuesto(), etiqueta: 'Editar presupuesto' },
-  movimientos: { fn: () => abrirGastosMovimientos(), etiqueta: 'Movimientos' },
-  aprobaciones: { fn: () => abrirSolicitudesGasto(), etiqueta: 'Aprobaciones' },
-  flujo: { fn: () => abrirFlujoEfectivo(), etiqueta: 'Flujo de efectivo' },
-  balance: { fn: () => abrirBalance(), etiqueta: 'Balance general' },
-  salud: { fn: () => abrirSaludFinanciera(), etiqueta: 'Salud financiera' },
-  simulador: { fn: () => { ajustarPlazosSimulador(); mostrar('vista-simulador'); }, etiqueta: 'Simulador de crédito' },
-  configuracion: { fn: () => mostrar('vista-privacidad'), etiqueta: 'Configuración y privacidad' },
-  agregar_cuenta: { fn: () => mostrar('vista-agregar-cuenta'), etiqueta: 'Nueva cuenta' },
-  agregar_deuda: { fn: () => mostrar('vista-agregar-deuda'), etiqueta: 'Nueva deuda' },
-  agregar_bien: { fn: () => mostrar('vista-agregar-bien'), etiqueta: 'Nuevo bien' },
-  agregar_accion: { fn: () => mostrar('vista-agregar-accion'), etiqueta: 'Nueva acción' },
-  aspecto: { fn: () => abrirSelectorAsesor('configuracion'), etiqueta: 'Elegir aspecto de Freaky' },
-  score: { fn: () => abrirScore(), etiqueta: 'Score Money Freak' },
+  inicio: { fn: () => abrirPanel(), etiquetaKey: 'sidebar.inicio' },
+  cuentas: { fn: () => mostrar('vista-cuentas'), etiquetaKey: 'sidebar.mis_cuentas' },
+  gastos: { fn: () => abrirGastos(), etiquetaKey: 'sidebar.gastos' },
+  presupuesto: { fn: () => abrirPresupuesto(), etiquetaKey: 'gastos.editar_presupuesto_titulo' },
+  movimientos: { fn: () => abrirGastosMovimientos(), etiquetaKey: 'gastos.movimientos_titulo' },
+  aprobaciones: { fn: () => abrirSolicitudesGasto(), etiquetaKey: 'gastos.solicitudes_titulo' },
+  flujo: { fn: () => abrirFlujoEfectivo(), etiquetaKey: 'sidebar.flujo' },
+  balance: { fn: () => abrirBalance(), etiquetaKey: 'sidebar.balance' },
+  salud: { fn: () => abrirSaludFinanciera(), etiquetaKey: 'panel.salud.titulo' },
+  simulador: { fn: () => { ajustarPlazosSimulador(); mostrar('vista-simulador'); }, etiquetaKey: 'sidebar.simulador' },
+  configuracion: { fn: () => mostrar('vista-privacidad'), etiquetaKey: 'sidebar.configuracion' },
+  agregar_cuenta: { fn: () => mostrar('vista-agregar-cuenta'), etiquetaKey: 'cuenta.nueva_titulo' },
+  agregar_deuda: { fn: () => mostrar('vista-agregar-deuda'), etiquetaKey: 'deuda.nueva_titulo' },
+  agregar_bien: { fn: () => mostrar('vista-agregar-bien'), etiquetaKey: 'bien.nuevo_titulo' },
+  agregar_accion: { fn: () => mostrar('vista-agregar-accion'), etiquetaKey: 'accion.nueva_titulo' },
+  aspecto: { fn: () => abrirSelectorAsesor('configuracion'), etiquetaKey: 'asesor.titulo' },
+  score: { fn: () => abrirScore(), etiquetaKey: 'panel.score.titulo' },
 };
 
 function irADestinoChat(clave){
@@ -11306,7 +11312,7 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
   const horaHtml = mostrarHora === false ? '' : `<div class="chat-hora">${horaChatCorta()}</div>`;
   const destinoInfo = destino && DESTINOS_CHAT[destino] ? DESTINOS_CHAT[destino] : null;
   const linkHtml = destinoInfo
-    ? `<button type="button" class="chat-link-destino" onclick="irADestinoChat('${destino}')">${escapeHtml(destinoInfo.etiqueta)} →</button>`
+    ? `<button type="button" class="chat-link-destino" onclick="irADestinoChat('${destino}')">${escapeHtml(t(destinoInfo.etiquetaKey))} →</button>`
     : '';
 
   let accionHtml = '';

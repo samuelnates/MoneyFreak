@@ -46,6 +46,31 @@ const DESTINOS: Record<string, string> = {
   aspecto: "Elegir el aspecto de Freaky (selector de avatares)",
   score: "Score Money Freak (desglose completo con gráfica histórica)",
 };
+// Mismos nombres reales que muestra la interfaz cuando el idioma es inglés
+// (deben coincidir con las traducciones i18n de esas pantallas en index.html,
+// ver sidebar.*/gastos.*/etc.) -- antes esta lista solo existía en español y
+// Freaky mezclaba nombres de pantalla en español dentro de respuestas en
+// inglés (ej. "Go to Cuentas"), porque no tenía ningún nombre en inglés que
+// usar (parte 185/186).
+const DESTINOS_EN: Record<string, string> = {
+  inicio: "Home",
+  cuentas: "Accounts",
+  gastos: "Expenses & budget",
+  presupuesto: "Edit budget",
+  movimientos: "Activity",
+  aprobaciones: "Approvals",
+  flujo: "Cash flow",
+  balance: "Balance sheet",
+  salud: "Financial health",
+  simulador: "Credit simulator",
+  configuracion: "Settings and privacy",
+  agregar_cuenta: "New account (cash, debit, savings, investment)",
+  agregar_deuda: "New debt or credit card",
+  agregar_bien: "New asset",
+  agregar_accion: "New stock",
+  aspecto: "Choose Freaky's look (avatar picker)",
+  score: "Money Freak Score (full breakdown with historical chart)",
+};
 const DESTINO_KEYS = Object.keys(DESTINOS);
 
 type CuentaDisponible = { id: string; nombre: string };
@@ -365,14 +390,16 @@ TU IDIOMA (campo "accion_cambiar_idioma"): el idioma de toda la interfaz de la a
 REGLA GENERAL PARA TODAS LAS ACCIONES: como máximo UNA de "accion", "accion_presupuesto", "accion_saldo_cuenta", "accion_ingreso", "accion_pago_deuda", "accion_cuenta_nueva", "accion_deuda_nueva", "accion_bien_nuevo", "accion_accion_nueva", "accion_cambiar_avatar", "accion_cambiar_moneda_principal", "accion_cambiar_idioma" puede estar activa (no null) en un mismo turno — la que mejor corresponda a lo que describió el usuario. Las demás deben ser null.
 
 Pantallas válidas a las que puedes mandar un link (usa exactamente una de estas claves en "destino", o null si ninguna aplica):
-${DESTINO_KEYS.map((k) => `- "${k}" = ${DESTINOS[k]}`).join("\n")}
+${DESTINO_KEYS.map((k) => `- "${k}" = ${(idioma === "en" ? DESTINOS_EN : DESTINOS)[k]}`).join("\n")}
 
 REGLAS para "destino":
 - Si la pregunta es sobre CÓMO HACER algo o DÓNDE ENCONTRAR algo, y una de las pantallas de arriba es claramente el lugar correcto, pon esa clave en "destino" para que el usuario pueda ir directo con un tap.
 - Si la pregunta es general, conceptual, o ninguna pantalla de la lista aplica claramente, destino debe ser null. No inventes una clave que no esté en la lista.
 - Nunca menciones la clave interna (ej. "movimientos") en el texto de "respuesta" — el link ya muestra el nombre bonito de la pantalla, tú solo explica normalmente.
 
-${idioma === "en" ? "IMPORTANT: respond ONLY in English, regardless of the language of these instructions." : "IMPORTANTE: responde SIEMPRE en español, sin importar el idioma de estas instrucciones."} Sé corto y directo, como un mentor de confianza. Si preguntan algo totalmente fuera de finanzas personales o del uso de la app, di amablemente que solo puedes ayudar con eso (en el mismo idioma).`;
+${idioma === "en"
+  ? `IMPORTANT: respond ONLY in English, regardless of the language of these instructions. These instructions describe the app's screens and buttons using their SPANISH names (e.g. "Cuentas", "Gastos y presupuesto", "Movimientos", "Aprobaciones", "Flujo de efectivo", "Balance general", "Salud financiera", "Simulador de crédito", "Configuración", "Nueva cuenta/deuda/bien/acción") because that's the language this prompt is written in — but the app's actual English interface uses different real names for all of them (the same ones listed above in "Pantallas válidas": Accounts, Expenses & budget, Activity, Approvals, Cash flow, Balance sheet, Financial health, Credit simulator, Settings, New account/debt/asset/stock). NEVER write a Spanish screen or button name inside an English sentence — always translate it to its real English name first. The big central "+" button keeps that same symbol in both languages.`
+  : "IMPORTANTE: responde SIEMPRE en español, sin importar el idioma de estas instrucciones."} Sé corto y directo, como un mentor de confianza. Si preguntan algo totalmente fuera de finanzas personales o del uso de la app, di amablemente que solo puedes ayudar con eso (en el mismo idioma).`;
 }
 
 const CORS_HEADERS = {
