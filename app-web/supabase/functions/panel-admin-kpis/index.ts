@@ -96,6 +96,12 @@ Deno.serve(async (req) => {
 
     const usuarios = await listarTodosLosUsuarios(admin);
     const totalUsuarios = usuarios.length;
+    // Reutilizado por cada tarjeta clickeable (parte 192) para armar la
+    // lista de correos detrás de un número sin tener que volver a consultar
+    // auth.admin.listUsers().
+    const emailPorId: Record<string, string | null> = {};
+    for (const u of usuarios) emailPorId[u.id] = u.email ?? null;
+    const correosDe = (ids: Iterable<string>) => [...ids].map((id) => emailPorId[id] ?? null).filter((c): c is string => c !== null).sort();
     const nuevosHoy = usuarios.filter((u) => u.created_at >= inicioHoy).length;
     const nuevos7d = usuarios.filter((u) => u.created_at >= hace7d).length;
     const nuevos30d = usuarios.filter((u) => u.created_at >= hace30d).length;
@@ -269,6 +275,10 @@ Deno.serve(async (req) => {
     const activos24h = new Set<string>();
     const activos7d = new Set<string>();
     const activos30d = new Set<string>();
+    // Días distintos (últimos 30) en que cada usuario registró al menos un
+    // gasto -- señal 3 de "usuario activo real" (parte 192): un solo gasto
+    // suelto no es lo mismo que capturar con cierta regularidad.
+    const diasConGastoPorUsuario30d: Record<string, Set<string>> = {};
     for (const { clave, tabla } of TABLAS_SECCION) {
       const { data: filas, error: errorFilas } = await admin
         .from(tabla)
@@ -296,6 +306,8 @@ Deno.serve(async (req) => {
             activos30d.add(f.user_id);
             if (f.created_at >= hace7d) activos7d.add(f.user_id);
             if (f.created_at >= hace24h) activos24h.add(f.user_id);
+            if (!diasConGastoPorUsuario30d[f.user_id]) diasConGastoPorUsuario30d[f.user_id] = new Set();
+            diasConGastoPorUsuario30d[f.user_id].add(f.created_at.slice(0, 10));
           }
         }
       }
@@ -358,7 +370,7 @@ Deno.serve(async (req) => {
     // de pantalla, solo "cuánto duró cada pantalla activa".
     const { data: eventos, error: errorEventos } = await admin
       .from("eventos_uso")
-      .select("tipo, detalle, duracion_ms");
+      .select("user_id, tipo, detalle, duracion_ms, creado_en");
     if (errorEventos) console.error("panel-admin-kpis: error leyendo eventos_uso:", errorEventos);
 
     const tiempoPorPantalla: Record<string, { vistas: number; duracionTotalMs: number }> = {};
@@ -369,11 +381,24 @@ Deno.serve(async (req) => {
     // cuánto tiempo real (sumado entre todos los usuarios) pasa en cada
     // estado, para ver cuál prefiere la gente de verdad.
     const tiempoPorEstadoFreaky: Record<string, { veces: number; duracionTotalMs: number }> = {};
+    // Señales 1 y 2 de "usuario activo real" (parte 192), por usuario,
+    // últimos 30 días: en cuántos días distintos abrió alguna pantalla real
+    // (no solo entró y salió), y cuánto tiempo total pasó en el chat de
+    // Freaky (vista-ayuda-ia).
+    const diasConsultaPorUsuario30d: Record<string, Set<string>> = {};
+    const msFreakyPorUsuario30d: Record<string, number> = {};
     for (const ev of eventos || []) {
       if (ev.tipo === "pantalla") {
         if (!tiempoPorPantalla[ev.detalle]) tiempoPorPantalla[ev.detalle] = { vistas: 0, duracionTotalMs: 0 };
         tiempoPorPantalla[ev.detalle].vistas++;
         tiempoPorPantalla[ev.detalle].duracionTotalMs += Number(ev.duracion_ms || 0);
+        if (ev.user_id && ev.creado_en && ev.creado_en >= hace30d) {
+          if (!diasConsultaPorUsuario30d[ev.user_id]) diasConsultaPorUsuario30d[ev.user_id] = new Set();
+          diasConsultaPorUsuario30d[ev.user_id].add(ev.creado_en.slice(0, 10));
+          if (ev.detalle === "vista-ayuda-ia") {
+            msFreakyPorUsuario30d[ev.user_id] = (msFreakyPorUsuario30d[ev.user_id] || 0) + Number(ev.duracion_ms || 0);
+          }
+        }
       } else if (ev.tipo === "clic_social") {
         clicsSociales[ev.detalle] = (clicsSociales[ev.detalle] || 0) + 1;
       } else if (ev.tipo === "freaky_estado") {
@@ -398,6 +423,43 @@ Deno.serve(async (req) => {
         duracionPromedioMs: v.veces ? Math.round(v.duracionTotalMs / v.veces) : 0,
       }))
       .sort((a, b) => b.duracionTotalMs - a.duracionTotalMs);
+
+    // "Usuarios activos reales" (parte 192, pedido explícito del usuario):
+    // las tarjetas de "Activos 24h/7d/30d" de arriba solo miden "¿registró
+    // UN gasto?" -- eso cuenta igual a alguien que probó la app una vez y a
+    // alguien que de verdad la usa. Aquí se combinan 3 señales reales de
+    // los últimos 30 días y se exige al menos 2 de 3 (ni una sola señal
+    // aislada, ni las 3 a la vez -- alguien que solo captura gastos
+    // religiosamente sin nunca abrir a Freaky sigue siendo un usuario real):
+    //   1. Consulta la app de verdad: abrió alguna pantalla real en 3+ días distintos.
+    //   2. Habla con Freaky: pasó tiempo real (no un toque accidental) en su chat.
+    //   3. Registra gastos con regularidad: capturó al menos un gasto en 3+ días distintos.
+    const DIAS_MINIMOS_CONSULTA = 3;
+    const MS_MINIMOS_FREAKY = 8000; // 8s -- filtra un toque accidental a la pantalla
+    const DIAS_MINIMOS_GASTOS = 3;
+    const SEÑALES_MINIMAS_ACTIVO_REAL = 2;
+    let consultaAppCount = 0, hablaConFreakyCount = 0, registraGastosCount = 0;
+    const usuariosActivosRealesLista: { correo: string | null; fechaAlta: string; consultaApp: boolean; hablaConFreaky: boolean; registraGastos: boolean }[] = [];
+    for (const u of usuarios) {
+      const consultaApp = (diasConsultaPorUsuario30d[u.id]?.size || 0) >= DIAS_MINIMOS_CONSULTA;
+      const hablaConFreaky = (msFreakyPorUsuario30d[u.id] || 0) >= MS_MINIMOS_FREAKY;
+      const registraGastos = (diasConGastoPorUsuario30d[u.id]?.size || 0) >= DIAS_MINIMOS_GASTOS;
+      if (consultaApp) consultaAppCount++;
+      if (hablaConFreaky) hablaConFreakyCount++;
+      if (registraGastos) registraGastosCount++;
+      const señales = [consultaApp, hablaConFreaky, registraGastos].filter(Boolean).length;
+      if (señales >= SEÑALES_MINIMAS_ACTIVO_REAL) {
+        usuariosActivosRealesLista.push({ correo: u.email ?? null, fechaAlta: u.created_at, consultaApp, hablaConFreaky, registraGastos });
+      }
+    }
+    usuariosActivosRealesLista.sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta));
+    const usoReal = {
+      activosReales: usuariosActivosRealesLista.length,
+      totalUsuarios,
+      pctActivosReales: totalUsuarios ? usuariosActivosRealesLista.length / totalUsuarios : 0,
+      señales: { consultaApp: consultaAppCount, hablaConFreaky: hablaConFreakyCount, registraGastos: registraGastosCount },
+      usuarios: usuariosActivosRealesLista,
+    };
 
     // Freaky (asistente IA): activación (quién canjeó/tiene acceso) y reportes
     // ("radiografía mensual") generados -- la señal más directa de que alguien
@@ -493,11 +555,17 @@ Deno.serve(async (req) => {
         usuariosConCuenta: usuariosConCuenta.size,
         totalUsuarios,
         tasaActivacion: totalUsuarios ? usuariosConCuenta.size / totalUsuarios : 0,
+        // Listas de correos detrás de cada número -- para las tarjetas
+        // clickeables del panel (parte 192).
+        usuariosConCuentaCorreos: correosDe(usuariosConCuenta),
       },
       uso: {
         activos24h: activos24h.size,
         activos7d: activos7d.size,
         activos30d: activos30d.size,
+        activos24hCorreos: correosDe(activos24h),
+        activos7dCorreos: correosDe(activos7d),
+        activos30dCorreos: correosDe(activos30d),
         retencionD7,
         retencionD30,
         elegiblesRetencionD7: elegiblesD7.length,
@@ -505,6 +573,7 @@ Deno.serve(async (req) => {
         retenidosD7,
         retenidosD30,
       },
+      usoReal,
       riesgo: {
         usuarios: usuariosRiesgo,
       },

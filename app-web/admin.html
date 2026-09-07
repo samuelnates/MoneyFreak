@@ -59,6 +59,30 @@
   .tarjeta-valor{font-family:var(--mono);font-size:26px;font-weight:600;}
   .tarjeta-sub{font-size:11.5px;color:var(--texto-tenue);margin-top:4px;}
 
+  /* Tarjetas clickeables (parte 192): cualquier KPI con un desglose real
+     detrás (lista de usuarios, señales) se puede tocar para verlo, en vez
+     de quedarse como un número suelto sin forma de saber quién lo compone. */
+  .tarjeta.clickeable{cursor:pointer;transition:border-color 120ms ease, transform 120ms ease;}
+  .tarjeta.clickeable:hover{border-color:var(--acento);}
+  .tarjeta.clickeable:active{transform:scale(.98);}
+  .tarjeta.clickeable .tarjeta-etiqueta::after{content:' →';opacity:.5;}
+  .tarjeta.destacada{background:color-mix(in srgb, var(--acento) 14%, var(--superficie));border-color:color-mix(in srgb, var(--acento) 45%, var(--borde));}
+  .tarjeta.destacada .tarjeta-valor{color:var(--acento);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;}
+  .modal-kpi-caja{background:var(--superficie);border:1px solid var(--borde);border-radius:12px;max-width:560px;width:100%;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .modal-kpi-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--borde);flex:none;}
+  .modal-kpi-titulo{font-family:var(--sans);font-weight:700;font-size:15.5px;}
+  .modal-kpi-cerrar{background:none;border:none;color:var(--texto-tenue);font-size:22px;cursor:pointer;line-height:1;padding:0;flex:none;}
+  .modal-kpi-cerrar:hover{color:var(--texto);}
+  .modal-kpi-contenido{overflow-y:auto;padding:6px 20px 18px;}
+  .modal-kpi-fila{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--borde);font-size:12.5px;}
+  .modal-kpi-fila:last-child{border-bottom:none;}
+  .modal-kpi-correo{font-family:var(--mono);word-break:break-all;}
+  .modal-kpi-señales{display:flex;gap:5px;flex:none;}
+  .modal-kpi-señal{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--borde);color:var(--texto-tenue);}
+  .modal-kpi-señal.si{color:var(--acento);border-color:var(--acento);}
+
   h2{font-size:14px;margin:32px 0 12px;font-family:var(--mono);letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;}
   .caja{background:var(--superficie);border:1px solid var(--borde);border-radius:10px;padding:16px 18px;margin-bottom:8px;}
 
@@ -245,8 +269,7 @@
 
     <div class="caja">
       <div class="tarjeta-etiqueta">Registros por día (últimos 30 días)</div>
-      <div class="grafica-barras" id="grafica-registros"></div>
-      <div class="grafica-ejes"><span id="eje-inicio"></span><span id="eje-fin"></span></div>
+      <div style="height:180px;"><canvas id="grafica-registros"></canvas></div>
     </div>
 
     </div>
@@ -254,25 +277,52 @@
     <div class="seccion-admin oculto" id="seccion-activacion">
     <h2>Activación y uso</h2>
     <div class="grid-kpis">
-      <div class="tarjeta">
+      <div class="tarjeta clickeable" onclick="abrirDetalleCorreos('Se registraron y crearon al menos una cuenta', datosKpiGlobal?.activacion.usuariosConCuentaCorreos)">
         <div class="tarjeta-etiqueta">Tasa de activación</div>
         <div class="tarjeta-valor" id="kpi-activacion">—</div>
         <div class="tarjeta-sub" id="kpi-activacion-sub"></div>
       </div>
-      <div class="tarjeta">
+      <div class="tarjeta clickeable" onclick="abrirDetalleCorreos('Activos hoy', datosKpiGlobal?.uso.activos24hCorreos)">
         <div class="tarjeta-etiqueta">Activos hoy</div>
         <div class="tarjeta-valor" id="kpi-activos-24h">—</div>
       </div>
-      <div class="tarjeta">
+      <div class="tarjeta clickeable" onclick="abrirDetalleCorreos('Activos, últimos 7 días', datosKpiGlobal?.uso.activos7dCorreos)">
         <div class="tarjeta-etiqueta">Activos 7 días</div>
         <div class="tarjeta-valor" id="kpi-activos-7d">—</div>
       </div>
-      <div class="tarjeta">
+      <div class="tarjeta clickeable" onclick="abrirDetalleCorreos('Activos, últimos 30 días', datosKpiGlobal?.uso.activos30dCorreos)">
         <div class="tarjeta-etiqueta">Activos 30 días</div>
         <div class="tarjeta-valor" id="kpi-activos-30d">—</div>
       </div>
     </div>
-    <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo (todavía no hay analítica de sesiones, así que es la señal de uso real más directa que existe hoy).</div>
+    <div class="tarjeta-sub" style="margin:-14px 0 24px;">"Activo" = registró al menos un gasto en esa ventana de tiempo -- señal rápida pero débil (un solo gasto suelto ya cuenta). Toca cualquier tarjeta para ver quién la compone.</div>
+
+    <div class="caja" style="margin-bottom:24px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Usuarios activos reales — últimos 30 días</div>
+      <div class="tarjeta-sub" style="margin-bottom:14px;">No solo "tocó algo una vez": consulta la app seguido, habla con Freaky, o registra gastos con regularidad. Al menos 2 de estas 3 señales.</div>
+      <div class="grid-kpis" style="margin-bottom:0;">
+        <div class="tarjeta destacada clickeable" style="grid-column:1/-1;" onclick="abrirDetalleActivosReales()">
+          <div class="tarjeta-etiqueta">Usuarios activos reales</div>
+          <div class="tarjeta-valor" id="kpi-activos-reales">—</div>
+          <div class="tarjeta-sub" id="kpi-activos-reales-sub"></div>
+        </div>
+        <div class="tarjeta clickeable" onclick="abrirDetalleActivosReales('consultaApp')">
+          <div class="tarjeta-etiqueta">Consultan la app seguido</div>
+          <div class="tarjeta-valor" id="kpi-señal-consulta">—</div>
+          <div class="tarjeta-sub">3+ días distintos, 30d</div>
+        </div>
+        <div class="tarjeta clickeable" onclick="abrirDetalleActivosReales('hablaConFreaky')">
+          <div class="tarjeta-etiqueta">Hablan con Freaky</div>
+          <div class="tarjeta-valor" id="kpi-señal-freaky">—</div>
+          <div class="tarjeta-sub">tiempo real en el chat, 30d</div>
+        </div>
+        <div class="tarjeta clickeable" onclick="abrirDetalleActivosReales('registraGastos')">
+          <div class="tarjeta-etiqueta">Registran gastos seguido</div>
+          <div class="tarjeta-valor" id="kpi-señal-gastos">—</div>
+          <div class="tarjeta-sub">3+ días distintos, 30d</div>
+        </div>
+      </div>
+    </div>
 
     <div class="caja" style="margin-bottom:24px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:12px;">Retención — de los que ya llevan tiempo registrados, ¿siguen aquí o se fueron?</div>
@@ -732,10 +782,28 @@
 
 </div>
 
+<div class="modal-overlay oculto" id="modal-kpi-detalle" onclick="if(event.target===this) cerrarModalKpi()">
+  <div class="modal-kpi-caja">
+    <div class="modal-kpi-header">
+      <div>
+        <div class="modal-kpi-titulo" id="modal-kpi-titulo"></div>
+        <div class="tarjeta-sub" id="modal-kpi-sub"></div>
+      </div>
+      <button type="button" class="modal-kpi-cerrar" onclick="cerrarModalKpi()" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-kpi-contenido" id="modal-kpi-contenido"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 <script src="config.js"></script>
 <script>
 let sb = null;
+// Última respuesta completa de panel-admin-kpis -- se guarda tal cual para
+// que las tarjetas clickeables (parte 192) puedan armar su detalle sin
+// tener que volver a pedirle nada al servidor.
+let datosKpiGlobal = null;
 
 function iniciarCliente(){
   sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
@@ -2117,6 +2185,12 @@ function inicializarInteraccionesUsuarios(){
   });
 }
 
+// Gráfica real con Chart.js (parte 192) -- reemplaza las barras de puro CSS
+// de antes, que no tenían eje real ni tooltip por punto, solo el título nativo
+// del navegador al pasar el mouse. chartGraficaRegistros vive fuera de la
+// función para poder destruir la instancia anterior antes de repintar
+// (Chart.js no actualiza solo si el canvas ya tenía una gráfica encima).
+let chartGraficaRegistros = null;
 function pintarGraficaRegistros(registrosPorDia){
   const dias = [];
   const hoy = new Date();
@@ -2126,14 +2200,27 @@ function pintarGraficaRegistros(registrosPorDia){
     dias.push(d.toISOString().slice(0, 10));
   }
   const valores = dias.map(d => registrosPorDia[d] || 0);
-  const max = Math.max(1, ...valores);
-  const cont = document.getElementById('grafica-registros');
-  cont.innerHTML = valores.map(v => {
-    const alturaPct = Math.max(4, Math.round((v / max) * 100));
-    return `<div class="barra" style="height:${alturaPct}%" title="${v}"></div>`;
-  }).join('');
-  document.getElementById('eje-inicio').textContent = dias[0];
-  document.getElementById('eje-fin').textContent = dias[dias.length - 1];
+  const estilos = getComputedStyle(document.documentElement);
+  const colorAcento = estilos.getPropertyValue('--acento').trim();
+  const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
+  const colorBorde = estilos.getPropertyValue('--borde').trim();
+  const ctx = document.getElementById('grafica-registros');
+  if(chartGraficaRegistros) chartGraficaRegistros.destroy();
+  chartGraficaRegistros = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dias.map(d => d.slice(5)),
+      datasets: [{ data: valores, backgroundColor: colorAcento, borderRadius: 2, maxBarThickness: 14 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => dias[items[0].dataIndex] } } },
+      scales: {
+        x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
+        y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
+      },
+    },
+  });
 }
 
 async function pedirKpis(token){
@@ -2141,6 +2228,47 @@ async function pedirKpis(token){
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
   });
+}
+
+// Modal genérico de detalle de KPI (parte 192) -- cualquier tarjeta con una
+// lista real detrás (de correos, o de correos + señales) lo reutiliza en
+// vez de cada quien construir su propio popup.
+function cerrarModalKpi(){
+  document.getElementById('modal-kpi-detalle').classList.add('oculto');
+}
+function abrirModalKpiConHtml(titulo, sub, filasHtml){
+  document.getElementById('modal-kpi-titulo').textContent = titulo;
+  document.getElementById('modal-kpi-sub').textContent = sub || '';
+  document.getElementById('modal-kpi-contenido').innerHTML = filasHtml || '<div class="tarjeta-sub" style="padding:14px 0;">Nadie todavía.</div>';
+  document.getElementById('modal-kpi-detalle').classList.remove('oculto');
+}
+function abrirDetalleCorreos(titulo, correos){
+  correos = correos || [];
+  const filasHtml = correos.map(c => `<div class="modal-kpi-fila"><span class="modal-kpi-correo">${escapeHtmlAdmin(c)}</span></div>`).join('');
+  abrirModalKpiConHtml(titulo, `${formatoNumero(correos.length)} usuario${correos.length === 1 ? '' : 's'}`, filasHtml);
+}
+// filtroSeñal opcional ('consultaApp'/'hablaConFreaky'/'registraGastos'):
+// sin filtro muestra a todos los que cuentan como activos reales (2+ de 3
+// señales), con filtro muestra solo a quienes cumplen esa señal específica
+// (aunque no hayan llegado a las 2 necesarias para contar en el total).
+function abrirDetalleActivosReales(filtroSeñal){
+  const todos = datosKpiGlobal?.usoReal?.usuarios || [];
+  const lista = filtroSeñal ? todos.filter(u => u[filtroSeñal]) : todos;
+  const etiquetaSeñal = { consultaApp: 'Consulta', hablaConFreaky: 'Freaky', registraGastos: 'Gastos' };
+  const filasHtml = lista.map(u => `
+    <div class="modal-kpi-fila">
+      <span class="modal-kpi-correo">${escapeHtmlAdmin(u.correo || '—')}</span>
+      <span class="modal-kpi-señales">
+        ${['consultaApp', 'hablaConFreaky', 'registraGastos'].map(k =>
+          `<span class="modal-kpi-señal ${u[k] ? 'si' : ''}">${etiquetaSeñal[k]}</span>`
+        ).join('')}
+      </span>
+    </div>
+  `).join('');
+  const titulo = filtroSeñal
+    ? { consultaApp: 'Consultan la app seguido', hablaConFreaky: 'Hablan con Freaky', registraGastos: 'Registran gastos seguido' }[filtroSeñal]
+    : 'Usuarios activos reales';
+  abrirModalKpiConHtml(titulo, `${formatoNumero(lista.length)} usuario${lista.length === 1 ? '' : 's'}, últimos 30 días`, filasHtml);
 }
 
 async function cargarPanel(){
@@ -2189,6 +2317,7 @@ async function cargarPanel(){
   }
 
   const datos = await resp.json();
+  datosKpiGlobal = datos;
 
   document.getElementById('kpi-total').textContent = formatoNumero(datos.crecimiento.totalUsuarios);
   document.getElementById('kpi-hoy').textContent = formatoNumero(datos.crecimiento.nuevosHoy);
@@ -2202,6 +2331,13 @@ async function cargarPanel(){
   document.getElementById('kpi-activos-24h').textContent = formatoNumero(datos.uso.activos24h);
   document.getElementById('kpi-activos-7d').textContent = formatoNumero(datos.uso.activos7d);
   document.getElementById('kpi-activos-30d').textContent = formatoNumero(datos.uso.activos30d);
+
+  const pctActivosReales = Math.round((datos.usoReal?.pctActivosReales || 0) * 100);
+  document.getElementById('kpi-activos-reales').textContent = formatoNumero(datos.usoReal?.activosReales || 0);
+  document.getElementById('kpi-activos-reales-sub').textContent = `${pctActivosReales}% de ${formatoNumero(datos.usoReal?.totalUsuarios || 0)} usuarios`;
+  document.getElementById('kpi-señal-consulta').textContent = formatoNumero(datos.usoReal?.señales.consultaApp || 0);
+  document.getElementById('kpi-señal-freaky').textContent = formatoNumero(datos.usoReal?.señales.hablaConFreaky || 0);
+  document.getElementById('kpi-señal-gastos').textContent = formatoNumero(datos.usoReal?.señales.registraGastos || 0);
 
   pintarRetencionVisual('retencion-visual-7d', 'Retención 7 días', datos.uso.retenidosD7, datos.uso.elegiblesRetencionD7);
   pintarRetencionVisual('retencion-visual-30d', 'Retención 30 días', datos.uso.retenidosD30, datos.uso.elegiblesRetencionD30);
