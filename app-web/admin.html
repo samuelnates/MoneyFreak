@@ -273,11 +273,15 @@
     </div>
 
     <div class="caja" style="margin-bottom:24px;">
-      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Analítica de App Store Connect</div>
-      <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas, impresiones y conversión reales del lado de Apple (distinto de los registros de arriba, que son de nuestra base). Primera versión: descubre qué reportes están disponibles -- todavía no baja los números detallados de cada uno.</div>
-      <button type="button" onclick="cargarAnaliticaApple()" id="btn-analitica-apple" style="padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Cargar analítica de Apple</button>
-      <div id="analitica-apple-estado" class="tarjeta-sub" style="margin-top:10px;"></div>
-      <div id="analitica-apple-lista" style="margin-top:10px;"></div>
+      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Embudo real: App Store → registro → uso</div>
+      <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas e impresiones reales de Apple, cruzadas con nuestros propios registros y con "usuarios activos reales" -- así se ve el camino completo: alguien ve la ficha en el App Store, la descarga, se registra, y de ahí si de verdad la usa. Se refresca sola una vez al día (cron); el botón solo fuerza un refresco inmediato.</div>
+      <div id="analitica-apple-embudo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <div id="analitica-apple-grafica-caja" style="height:180px;margin-bottom:14px;display:none;"><canvas id="grafica-embudo-apple"></canvas></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button type="button" onclick="cargarAnaliticaApple(true)" id="btn-analitica-apple" style="padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Actualizar ahora</button>
+        <div id="analitica-apple-estado" class="tarjeta-sub"></div>
+      </div>
+      <div id="analitica-apple-lista" style="margin-top:14px;"></div>
     </div>
 
     </div>
@@ -934,6 +938,20 @@ function escapeHtmlAdmin(texto){
 
 function formatoNumero(n){
   return new Intl.NumberFormat('es-MX').format(n);
+}
+
+// "hace X" en español para timestamps de refresco automático (caché de
+// analítica de Apple, parte 195) -- sin librería extra, alcance chico.
+function formatoRelativoAdmin(iso){
+  if(!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(ms / 60000);
+  if(min < 1) return 'hace un momento';
+  if(min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min / 60);
+  if(horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `hace ${dias} d`;
 }
 
 function formatoMoneda(n){
@@ -2238,42 +2256,154 @@ async function pedirKpis(token){
   });
 }
 
-// Primera versión de la analítica de App Store Connect (parte 192/193) --
-// a diferencia del resto del panel, no se carga sola con cargarPanel()
-// porque le pega a la API real de Apple (más lenta, y con un límite de uso
-// que no vale la pena gastar en cada apertura del panel) -- se pide a mano
-// con el botón.
-async function cargarAnaliticaApple(){
+// Analítica de App Store Connect combinada con el embudo interno (parte
+// 195). Por default (forzar=false, como la llama cargarPanel() sola al
+// abrir el panel) esta función lee la caché que ya rellenó el cron diario
+// (sync-analitica-apple) -- instantáneo, no le pega a Apple en vivo. El
+// botón "Actualizar ahora" llama con forzar=true para forzar el pipeline
+// completo contra Apple en ese momento.
+let chartEmbudoApple = null;
+async function cargarAnaliticaApple(forzar){
   const btn = document.getElementById('btn-analitica-apple');
   const estado = document.getElementById('analitica-apple-estado');
   const lista = document.getElementById('analitica-apple-lista');
-  btn.disabled = true;
-  estado.textContent = 'Consultando a Apple…';
-  lista.innerHTML = '';
+  const embudo = document.getElementById('analitica-apple-embudo');
+  if(forzar){ btn.disabled = true; estado.textContent = 'Consultando a Apple en vivo… puede tardar unos segundos.'; }
   try{
     const { data: { session } } = await sb.auth.getSession();
     const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-apple-analytics`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ forzar: !!forzar }),
     });
-    const datos = await resp.json();
+    const cuerpo = await resp.json();
     if(!resp.ok){
-      estado.innerHTML = `<span style="color:var(--alerta);">Error (${resp.status}): ${escapeHtmlAdmin(datos.detalle ? JSON.stringify(datos.detalle) : (datos.error || 'desconocido'))}</span>`;
+      estado.innerHTML = `<span style="color:var(--alerta);">Error (${resp.status}): ${escapeHtmlAdmin(cuerpo.detalle ? JSON.stringify(cuerpo.detalle) : (cuerpo.error || 'desconocido'))}</span>`;
       return;
     }
-    estado.textContent = datos.avisoPrimeraVez || `Solicitud de analítica: ${datos.solicitudId}`;
-    if(!datos.reportesDisponibles || !datos.reportesDisponibles.length){
-      lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear).</div>';
+    if(!cuerpo.datos){
+      estado.textContent = cuerpo.avisoSinDatos || 'Todavía no hay datos de Apple guardados.';
+      embudo.innerHTML = '';
+      lista.innerHTML = '';
+      document.getElementById('analitica-apple-grafica-caja').style.display = 'none';
+      return;
+    }
+    const actualizadoTxt = cuerpo.actualizadoEn ? `Actualizado ${formatoRelativoAdmin(cuerpo.actualizadoEn)}` : '';
+    estado.textContent = [cuerpo.datos.avisoPrimeraVez, actualizadoTxt].filter(Boolean).join(' · ');
+    if(cuerpo.ultimoError){
+      estado.innerHTML += ` <span style="color:var(--alerta);">(el último refresco automático falló: ${escapeHtmlAdmin(cuerpo.ultimoError.slice(0, 200))})</span>`;
+    }
+
+    pintarEmbudoApple(cuerpo.datos, cuerpo.registrosInternos || {});
+
+    const reportes = cuerpo.datos.reportes || [];
+    if(!reportes.length){
+      lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear -- Apple tarda 24-48h en generar los primeros datos).</div>';
     }else{
-      lista.innerHTML = `<table><thead><tr><th>Categoría</th><th>Reporte</th></tr></thead><tbody>${
-        datos.reportesDisponibles.map(r => `<tr><td>${escapeHtmlAdmin(r.categoria || '—')}</td><td>${escapeHtmlAdmin(r.nombre || '—')}</td></tr>`).join('')
-      }</tbody></table>`;
+      lista.innerHTML = reportes.map(r => {
+        const dias = Object.keys(r.porFecha || {}).sort().slice(-10);
+        const cols = r.columnasNumericas || [];
+        if(!dias.length){
+          const errorTxt = (r.erroresParciales && r.erroresParciales[0]) ? ` -- ${escapeHtmlAdmin(r.erroresParciales[0])}` : '';
+          return `<div class="tarjeta-sub" style="margin-bottom:10px;"><strong>${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</strong>: sin datos todavía${errorTxt}.</div>`;
+        }
+        return `<div style="margin-bottom:16px;">
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>
+          <div style="overflow-x:auto;"><table><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
+            dias.map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
+          }</tbody></table></div>
+        </div>`;
+      }).join('');
     }
   }catch(e){
     estado.innerHTML = `<span style="color:var(--alerta);">No se pudo conectar: ${escapeHtmlAdmin(e.message || String(e))}</span>`;
   }finally{
     btn.disabled = false;
   }
+}
+
+// Arma el embudo de adquisición combinando lo que trae Apple con lo que ya
+// sabemos por dentro (parte 195: "combinala con la info que ya tenemos por
+// aparte donde haga sentido"). No se sabe todavía el nombre exacto que usa
+// Apple para su columna de descargas (nunca se pudo probar en vivo desde el
+// sandbox de desarrollo) -- por eso se busca de forma genérica cualquier
+// columna numérica que contenga "download" o "install" en cualquier
+// reporte, y si no aparece ninguna, el embudo simplemente no muestra ese
+// primer escalón (se agrega solo en cuanto Apple entregue datos reales).
+function pintarEmbudoApple(datosApple, registrosInternos){
+  const embudo = document.getElementById('analitica-apple-embudo');
+  const cajaGrafica = document.getElementById('analitica-apple-grafica-caja');
+  const reportes = datosApple.reportes || [];
+
+  let columnaDescargas = null, reporteDescargas = null;
+  for(const r of reportes){
+    const col = (r.columnasNumericas || []).find(c => /download|install/i.test(c));
+    if(col){ columnaDescargas = col; reporteDescargas = r; break; }
+  }
+
+  const dias = [];
+  const hoy = new Date();
+  for(let i = 29; i >= 0; i--){
+    const d = new Date(hoy);
+    d.setDate(d.getDate() - i);
+    dias.push(d.toISOString().slice(0, 10));
+  }
+  const serieDescargas = columnaDescargas
+    ? dias.map(d => (reporteDescargas.porFecha[d] && reporteDescargas.porFecha[d][columnaDescargas]) || 0)
+    : null;
+  const serieRegistros = dias.map(d => registrosInternos[d] || 0);
+
+  const totalDescargas30d = serieDescargas ? serieDescargas.reduce((a, b) => a + b, 0) : null;
+  const totalRegistros30d = (datosKpiGlobal && datosKpiGlobal.crecimiento) ? datosKpiGlobal.crecimiento.nuevos30d : serieRegistros.reduce((a, b) => a + b, 0);
+  const totalActivados = (datosKpiGlobal && datosKpiGlobal.activacion) ? datosKpiGlobal.activacion.usuariosConCuenta : null;
+  const totalActivosReales = (datosKpiGlobal && datosKpiGlobal.usoReal) ? datosKpiGlobal.usoReal.activosReales : null;
+
+  const escalones = [
+    { etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
+    { etiqueta: 'Registros (30d)', valor: totalRegistros30d },
+    { etiqueta: 'Crearon cuenta (total)', valor: totalActivados },
+    { etiqueta: 'Activos reales (total)', valor: totalActivosReales },
+  ].filter(e => e.valor !== null && e.valor !== undefined);
+
+  embudo.innerHTML = escalones.map((e, i) => {
+    const anterior = i > 0 ? escalones[i - 1].valor : null;
+    const pct = (anterior && anterior > 0) ? Math.round((e.valor / anterior) * 100) : null;
+    return `<div style="flex:1;min-width:130px;background:var(--fondo-tarjeta,transparent);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;">
+      <div style="font-size:10px;color:var(--texto-tenue);text-transform:uppercase;letter-spacing:.03em;">${escapeHtmlAdmin(e.etiqueta)}</div>
+      <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${formatoNumero(e.valor)}</div>
+      ${pct !== null ? `<div style="font-size:11px;color:var(--texto-tenue);">${pct}% del paso anterior</div>` : ''}
+    </div>`;
+  }).join('');
+
+  if(chartEmbudoApple){ chartEmbudoApple.destroy(); chartEmbudoApple = null; }
+  if(!serieDescargas || !serieDescargas.some(v => v > 0)){
+    cajaGrafica.style.display = 'none';
+    return;
+  }
+  cajaGrafica.style.display = 'block';
+  const estilos = getComputedStyle(document.documentElement);
+  const colorAcento = estilos.getPropertyValue('--acento').trim();
+  const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
+  const colorBorde = estilos.getPropertyValue('--borde').trim();
+  const ctx = document.getElementById('grafica-embudo-apple');
+  chartEmbudoApple = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dias.map(d => d.slice(5)),
+      datasets: [
+        { label: 'Descargas (Apple)', data: serieDescargas, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 },
+        { label: 'Registros reales', data: serieRegistros, borderColor: colorTexto, backgroundColor: colorTexto, tension: .3, pointRadius: 0, borderDash: [4, 3] },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 } } } },
+      scales: {
+        x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
+        y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
+      },
+    },
+  });
 }
 
 // Modal genérico de detalle de KPI (parte 192) -- cualquier tarjeta con una
@@ -2440,6 +2570,9 @@ async function cargarPanel(){
 
   await cargarInfluencers();
   await cargarNegocio();
+  // No se espera (fire-and-forget): lee de caché (instantáneo), pero si
+  // algo tarda no debe bloquear el resto del panel (parte 195).
+  cargarAnaliticaApple(false);
 
   let seccionInicial = SECCIONES_ADMIN[0];
   try{
