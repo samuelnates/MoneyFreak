@@ -14,9 +14,15 @@
 // adquisición (impresiones/descargas de Apple -> registro real en la app)
 // sin tener que volver a consultar auth.admin.listUsers() cada vez que se
 // abre el panel.
+//
+// Parte 200: también trae la calificación/reseñas reales de App Store
+// Connect (nueva función habilitada por el rol Admin de la API key) --
+// corre aparte con su propio try/catch, para que un fallo ahí (o al revés)
+// nunca tire el refresco completo.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { obtenerAnaliticaApple } from "../_shared/apple_analytics.ts";
+import { obtenerReseñasApple } from "../_shared/apple_reviews.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -57,35 +63,42 @@ Deno.serve(async (req) => {
   // abajo (éxito o fracaso) nunca se pierde por falta de fila.
   await admin.from("analitica_apple_cache").upsert({ id: "actual" }, { onConflict: "id", ignoreDuplicates: true });
 
-  try {
-    const resultado = await obtenerAnaliticaApple();
-    const { error } = await admin.from("analitica_apple_cache").update({
-      datos: resultado,
-      registros_internos: registrosPorDia,
-      actualizado_en: new Date().toISOString(),
-      ultimo_intento_en: new Date().toISOString(),
-      ultimo_error: null,
-    }).eq("id", "actual");
-    if (error) throw error;
-    return new Response(JSON.stringify({ ok: true, segmentosDescargados: resultado.segmentosDescargados }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    const detalle = e instanceof Error ? e.message : String(e);
-    console.error("sync-analitica-apple: error:", detalle);
-    // No se borra el "datos" bueno anterior (UPDATE parcial, no upsert de la
-    // fila completa) -- solo se anota el intento fallido, para que el panel
-    // siga mostrando el último dato real mientras se resuelve lo que sea que
-    // falló (p.ej. Apple caído, o el colchón de 24-48h de la primera vez).
-    await admin.from("analitica_apple_cache").update({
-      registros_internos: registrosPorDia,
-      ultimo_intento_en: new Date().toISOString(),
-      ultimo_error: detalle,
-    }).eq("id", "actual");
-    return new Response(JSON.stringify({ ok: false, error: detalle }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  const [analiticaResult, reseñasResult] = await Promise.allSettled([obtenerAnaliticaApple(), obtenerReseñasApple()]);
+
+  const actualizacion: Record<string, unknown> = {
+    registros_internos: registrosPorDia,
+    ultimo_intento_en: new Date().toISOString(),
+  };
+  const errores: string[] = [];
+
+  if (analiticaResult.status === "fulfilled") {
+    actualizacion.datos = analiticaResult.value;
+    actualizacion.actualizado_en = new Date().toISOString();
+  } else {
+    const detalle = analiticaResult.reason instanceof Error ? analiticaResult.reason.message : String(analiticaResult.reason);
+    console.error("sync-analitica-apple: error en analítica:", detalle);
+    errores.push(`analítica: ${detalle}`);
   }
+
+  if (reseñasResult.status === "fulfilled") {
+    actualizacion.reseñas = reseñasResult.value;
+  } else {
+    const detalle = reseñasResult.reason instanceof Error ? reseñasResult.reason.message : String(reseñasResult.reason);
+    console.error("sync-analitica-apple: error en reseñas:", detalle);
+    errores.push(`reseñas: ${detalle}`);
+  }
+
+  // No se borra el "datos"/"reseñas" bueno anterior en caso de fallo parcial
+  // (UPDATE, no upsert de la fila completa) -- si solo una de las dos partes
+  // falló, la otra igual se guarda y el panel sigue mostrando lo último
+  // bueno de la que falló, mientras se resuelve lo que sea que falló.
+  actualizacion.ultimo_error = errores.length ? errores.join(" | ") : null;
+  const { error } = await admin.from("analitica_apple_cache").update(actualizacion).eq("id", "actual");
+  if (error) console.error("sync-analitica-apple: error guardando en la caché:", error);
+
+  const ok = errores.length === 0 && !error;
+  return new Response(JSON.stringify({ ok, errores, dbError: error?.message ?? null }), {
+    status: ok ? 200 : 500,
+    headers: { "Content-Type": "application/json" },
+  });
 });

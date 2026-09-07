@@ -27,7 +27,9 @@
 
 const INSTANCIAS_POR_REPORTE = 5;
 const SEGMENTOS_MAXIMOS_TOTAL = 25;
-const APPLE_APP_ID = "6805201423";
+// Exportado (parte 200) para que _shared/apple_reviews.ts reutilice la
+// misma firma de JWT y el mismo id de app en vez de duplicarlos.
+export const APPLE_APP_ID = "6805201423";
 
 function base64UrlDesdeBytes(bytes: Uint8Array): string {
   let binario = "";
@@ -47,7 +49,7 @@ async function importarLlavePrivadaApple(pem: string): Promise<CryptoKey> {
   return crypto.subtle.importKey("pkcs8", bytes.buffer, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
 }
 
-async function firmarJWTAppStoreConnect(): Promise<string> {
+export async function firmarJWTAppStoreConnect(): Promise<string> {
   const keyId = Deno.env.get("APPLE_ASC_KEY_ID");
   const issuerId = Deno.env.get("APPLE_ASC_ISSUER_ID");
   const privateKeyPem = Deno.env.get("APPLE_ASC_PRIVATE_KEY");
@@ -71,7 +73,7 @@ async function firmarJWTAppStoreConnect(): Promise<string> {
   return `${header}.${claims}.${base64UrlDesdeBytes(new Uint8Array(firma))}`;
 }
 
-async function llamarAppleAPI(jwt: string, path: string): Promise<{ ok: boolean; status: number; data: unknown }> {
+export async function llamarAppleAPI(jwt: string, path: string): Promise<{ ok: boolean; status: number; data: unknown }> {
   const resp = await fetch(`https://api.appstoreconnect.apple.com${path}`, {
     headers: { Authorization: `Bearer ${jwt}` },
   });

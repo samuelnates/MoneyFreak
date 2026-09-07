@@ -221,6 +221,7 @@
     <h1>Panel de administración</h1>
 
     <div class="tabs-admin" id="tabs-admin">
+      <button class="tab-admin" data-seccion="resumen" onclick="mostrarSeccionAdmin('resumen')">Resumen diario</button>
       <button class="tab-admin" data-seccion="crecimiento" onclick="mostrarSeccionAdmin('crecimiento')">Crecimiento</button>
       <button class="tab-admin" data-seccion="activacion" onclick="mostrarSeccionAdmin('activacion')">Activación y retención</button>
       <button class="tab-admin" data-seccion="salud" onclick="mostrarSeccionAdmin('salud')">Salud</button>
@@ -232,7 +233,48 @@
       <button class="tab-admin" data-seccion="logs" onclick="mostrarSeccionAdmin('logs')">Logs</button>
     </div>
 
-    <div class="seccion-admin" id="seccion-crecimiento">
+    <div class="seccion-admin" id="seccion-resumen">
+    <h2>Resumen diario</h2>
+    <div class="tarjeta-sub" style="margin-bottom:16px;">Lo importante de un vistazo, para revisar en menos de un minuto cada día. El detalle completo de cada cosa sigue en su pestaña.</div>
+
+    <div id="resumen-alertas" style="margin-bottom:18px;"></div>
+
+    <div class="grid-kpis" style="margin-bottom:18px;">
+      <div class="tarjeta destacada">
+        <div class="tarjeta-etiqueta">Activos reales (30d)</div>
+        <div class="tarjeta-valor" id="resumen-activos-reales">—</div>
+        <div class="tarjeta-sub" id="resumen-activos-reales-sub"></div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Nuevos hoy</div>
+        <div class="tarjeta-valor" id="resumen-nuevos-hoy">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Activos hoy</div>
+        <div class="tarjeta-valor" id="resumen-activos-hoy">—</div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-etiqueta">Calificación App Store</div>
+        <div class="tarjeta-valor" id="resumen-rating">—</div>
+        <div class="tarjeta-sub" id="resumen-rating-sub"></div>
+      </div>
+    </div>
+
+    <div id="resumen-embudo-debil" style="margin-bottom:18px;"></div>
+
+    <div class="caja" style="margin-bottom:18px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Reseñas recientes de App Store</div>
+      <div class="tarjeta-sub" style="margin-bottom:12px;">Las más nuevas primero. Responder es público -- lo ve cualquiera en la ficha.</div>
+      <div id="resumen-reseñas"></div>
+    </div>
+
+    <div class="caja" style="margin-bottom:24px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:10px;">Otros números del día</div>
+      <div id="resumen-otros" style="display:flex;gap:24px;flex-wrap:wrap;"></div>
+    </div>
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-crecimiento">
     <h2>Crecimiento</h2>
     <div class="grid-kpis">
       <div class="tarjeta">
@@ -795,6 +837,14 @@ let sb = null;
 // que las tarjetas clickeables (parte 192) puedan armar su detalle sin
 // tener que volver a pedirle nada al servidor.
 let datosKpiGlobal = null;
+// Cache en memoria de la última respuesta de panel-admin-apple-analytics
+// (analítica + reseñas), para que el Resumen diario (parte 200) pueda
+// reusarla sin volver a pedirla -- se llena en cargarAnaliticaApple().
+let datosAppleGlobal = null;
+// Diagnóstico de la transición más débil del embudo (parte 197), calculado
+// dentro de pintarEmbudoApple() -- se guarda aquí para que el Resumen
+// diario lo muestre sin recalcularlo.
+let ultimoDiagnosticoEmbudo = null;
 
 function iniciarCliente(){
   sb = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
@@ -812,7 +862,7 @@ function mostrar(id){
 // separan en pestañas. Los datos se cargan una sola vez para todas (ver
 // cargarPanel) así que cambiar de pestaña es instantáneo, sin volver a
 // pedir nada al servidor.
-const SECCIONES_ADMIN = ['crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'influencers', 'negocio', 'logs'];
+const SECCIONES_ADMIN = ['resumen', 'crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'influencers', 'negocio', 'logs'];
 
 function mostrarSeccionAdmin(id){
   if(!SECCIONES_ADMIN.includes(id)) id = SECCIONES_ADMIN[0];
@@ -2214,6 +2264,7 @@ async function cargarAnaliticaApple(forzar){
       estado.innerHTML = `<span style="color:var(--alerta);">Error (${resp.status}): ${escapeHtmlAdmin(cuerpo.detalle ? JSON.stringify(cuerpo.detalle) : (cuerpo.error || 'desconocido'))}</span>`;
       return;
     }
+    datosAppleGlobal = cuerpo;
     if(!cuerpo.datos){
       estado.textContent = cuerpo.avisoSinDatos || 'Todavía no hay datos de Apple guardados.';
       embudo.innerHTML = '';
@@ -2221,6 +2272,7 @@ async function cargarAnaliticaApple(forzar){
       document.getElementById('analitica-apple-diagnostico').innerHTML = '';
       document.getElementById('analitica-apple-cohortes').innerHTML = '';
       document.getElementById('analitica-apple-grafica-caja').style.display = 'none';
+      pintarResumenDiario();
       return;
     }
     const actualizadoTxt = cuerpo.actualizadoEn ? `Actualizado ${formatoRelativoAdmin(cuerpo.actualizadoEn)}` : '';
@@ -2279,10 +2331,129 @@ async function cargarAnaliticaApple(forzar){
         </div>`;
       }).join('');
     }
+    pintarResumenDiario();
   }catch(e){
     estado.innerHTML = `<span style="color:var(--alerta);">No se pudo conectar: ${escapeHtmlAdmin(e.message || String(e))}</span>`;
   }finally{
     btn.disabled = false;
+  }
+}
+
+// Resumen diario (parte 200) -- pensado para revisarse en menos de un
+// minuto: alertas activas primero, luego los números que más importan hoy,
+// el punto más débil del embudo (si ya se sabe), y las reseñas recientes de
+// App Store con la opción de responder ahí mismo. Se llama dos veces: una
+// vez con lo interno apenas carga el panel, y otra vez cuando llega la
+// respuesta de Apple (puede tardar), para no bloquear lo que ya se sabe.
+function pintarResumenDiario(){
+  if(!datosKpiGlobal) return;
+  const d = datosKpiGlobal;
+
+  const alertas = [];
+  if((d.salud?.errores24h || 0) > 0) alertas.push({ txt: `${formatoNumero(d.salud.errores24h)} error(es) de la app en las últimas 24h`, ir: 'salud' });
+  if((d.salud?.solicitudesPendientes || 0) > 0) alertas.push({ txt: `${formatoNumero(d.salud.solicitudesPendientes)} aprobación(es) de gasto pendientes de revisar`, ir: 'salud' });
+  if((d.riesgo?.usuarios?.length || 0) > 0) alertas.push({ txt: `${formatoNumero(d.riesgo.usuarios.length)} usuario(s) en riesgo de abandono`, ir: 'salud' });
+  if(datosAppleGlobal?.ultimoError) alertas.push({ txt: `El refresco automático de Apple falló: ${datosAppleGlobal.ultimoError.slice(0, 140)}`, ir: 'crecimiento' });
+
+  const alertasCont = document.getElementById('resumen-alertas');
+  alertasCont.innerHTML = alertas.length
+    ? alertas.map(a => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--alerta);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12.5px;">
+        <span>⚠️ ${escapeHtmlAdmin(a.txt)}</span>
+        <button type="button" onclick="mostrarSeccionAdmin('${a.ir}')" style="background:none;border:none;color:var(--alerta);font-weight:600;cursor:pointer;font-size:12px;">Ver →</button>
+      </div>`).join('')
+    : `<div style="border:1px solid var(--borde);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--texto-tenue);">✅ Sin alertas activas.</div>`;
+
+  document.getElementById('resumen-activos-reales').textContent = formatoNumero(d.usoReal?.activosReales ?? 0);
+  document.getElementById('resumen-activos-reales-sub').textContent = d.usoReal
+    ? `${Math.round((d.usoReal.pctActivosReales || 0) * 100)}% de ${formatoNumero(d.usoReal.totalUsuarios)} usuarios`
+    : '';
+  document.getElementById('resumen-nuevos-hoy').textContent = formatoNumero(d.crecimiento?.nuevosHoy ?? 0);
+  document.getElementById('resumen-activos-hoy').textContent = formatoNumero(d.uso?.activos24h ?? 0);
+
+  const rating = datosAppleGlobal?.reseñas?.ratingPublico;
+  document.getElementById('resumen-rating').textContent = (rating?.promedio != null) ? rating.promedio.toFixed(1) : '—';
+  document.getElementById('resumen-rating-sub').textContent = rating?.totalCalificaciones != null
+    ? `${formatoNumero(rating.totalCalificaciones)} calificaciones`
+    : (datosAppleGlobal ? 'sin dato de Apple todavía' : 'cargando…');
+
+  const embudoDebilCont = document.getElementById('resumen-embudo-debil');
+  if(ultimoDiagnosticoEmbudo){
+    const pctTxt = Math.round(ultimoDiagnosticoEmbudo.pct * 100);
+    embudoDebilCont.innerHTML = `<div style="border:1px solid var(--alerta);border-radius:10px;padding:12px 14px;font-size:13px;">
+      ⚠️ <strong>Dónde enfocarte hoy:</strong> ${escapeHtmlAdmin(ultimoDiagnosticoEmbudo.anterior.etiqueta)} → ${escapeHtmlAdmin(ultimoDiagnosticoEmbudo.actual.etiqueta)} (${pctTxt}%) — problema ${ultimoDiagnosticoEmbudo.texto}
+      <button type="button" onclick="mostrarSeccionAdmin('crecimiento')" style="display:block;margin-top:6px;background:none;border:none;color:var(--alerta);font-weight:600;cursor:pointer;font-size:12px;padding:0;">Ver embudo completo →</button>
+    </div>`;
+  }else{
+    embudoDebilCont.innerHTML = '';
+  }
+
+  const reseñasCont = document.getElementById('resumen-reseñas');
+  const reseñas = datosAppleGlobal?.reseñas?.reseñas || [];
+  if(!datosAppleGlobal){
+    reseñasCont.innerHTML = '<div class="tarjeta-sub">Cargando…</div>';
+  }else if(!reseñas.length){
+    reseñasCont.innerHTML = '<div class="tarjeta-sub">Sin reseñas guardadas todavía (se refrescan solas una vez al día).</div>';
+  }else{
+    reseñasCont.innerHTML = reseñas.slice(0, 5).map(r => {
+      const estrellas = r.rating != null ? '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) : '';
+      const fecha = r.creadaEn ? r.creadaEn.slice(0, 10) : '';
+      const idSeguro = String(r.id).replace(/[^a-zA-Z0-9_-]/g, '');
+      return `<div style="border-bottom:1px solid var(--borde);padding:10px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+          <span style="color:var(--acento);font-size:13px;letter-spacing:1px;">${estrellas}</span>
+          <span style="font-size:11px;color:var(--texto-tenue);">${escapeHtmlAdmin(r.autor || 'anónimo')} · ${escapeHtmlAdmin(r.territorio || '')} · ${fecha}</span>
+        </div>
+        ${r.titulo ? `<div style="font-weight:600;font-size:13px;margin-top:4px;">${escapeHtmlAdmin(r.titulo)}</div>` : ''}
+        ${r.cuerpo ? `<div style="font-size:12.5px;color:var(--texto-tenue);margin-top:2px;">${escapeHtmlAdmin(r.cuerpo)}</div>` : ''}
+        ${r.tieneRespuesta
+          ? '<div style="font-size:11px;color:var(--texto-tenue);margin-top:4px;">✓ ya respondida</div>'
+          : `<div style="margin-top:6px;">
+              <textarea id="resp-texto-${idSeguro}" placeholder="Escribe una respuesta pública…" style="width:100%;min-height:44px;font-family:var(--sans);font-size:12px;border:1px solid var(--borde);border-radius:6px;padding:6px;background:transparent;color:var(--texto);box-sizing:border-box;"></textarea>
+              <button type="button" onclick="responderReseñaDesdeApple('${idSeguro}')" style="margin-top:4px;padding:5px 10px;border-radius:6px;border:none;background:var(--texto);color:var(--bg);font-size:11px;font-weight:600;cursor:pointer;">Responder (público)</button>
+              <span id="resp-estado-${idSeguro}" style="font-size:11px;color:var(--texto-tenue);margin-left:8px;"></span>
+            </div>`}
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('resumen-otros').innerHTML = `
+    <div><div class="tarjeta-etiqueta">Radiografías este mes</div><div class="tarjeta-valor" style="font-size:22px;">${formatoNumero(d.freaky?.reportesEsteMes ?? 0)}</div></div>
+    <div><div class="tarjeta-etiqueta">Nuevos 7 días</div><div class="tarjeta-valor" style="font-size:22px;">${formatoNumero(d.crecimiento?.nuevos7d ?? 0)}</div></div>
+    <div><div class="tarjeta-etiqueta">Prospección de influencers</div><div class="tarjeta-valor" style="font-size:22px;">${formatoNumero((typeof prospectosGlobal !== 'undefined' && prospectosGlobal) ? prospectosGlobal.length : 0)}</div></div>
+  `;
+}
+
+// Responder una reseña es público -- lo ve cualquiera en la ficha de la
+// app -- por eso pide confirmación explícita antes de mandarlo, aunque ya
+// haya un botón de por medio (parte 200).
+async function responderReseñaDesdeApple(idSeguro){
+  const textarea = document.getElementById(`resp-texto-${idSeguro}`);
+  const estado = document.getElementById(`resp-estado-${idSeguro}`);
+  const texto = (textarea.value || '').trim();
+  if(!texto){ estado.textContent = 'Escribe algo primero.'; return; }
+  if(!confirm('Esta respuesta se va a publicar en el App Store -- la ve cualquiera. ¿Confirmas?')) return;
+  const reseñas = datosAppleGlobal?.reseñas?.reseñas || [];
+  const reseña = reseñas.find(r => String(r.id).replace(/[^a-zA-Z0-9_-]/g, '') === idSeguro);
+  if(!reseña){ estado.textContent = 'No se encontró la reseña (recarga el panel).'; return; }
+  estado.textContent = 'Enviando…';
+  textarea.disabled = true;
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-apple-analytics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ accion: 'responder', reviewId: reseña.id, texto }),
+    });
+    const cuerpo = await resp.json();
+    if(!resp.ok){
+      estado.textContent = `Error: ${cuerpo.detalle || cuerpo.error || 'desconocido'}`;
+      textarea.disabled = false;
+      return;
+    }
+    estado.textContent = '✓ Respondida.';
+  }catch(e){
+    estado.textContent = `No se pudo conectar: ${e.message || e}`;
+    textarea.disabled = false;
   }
 }
 
@@ -2397,6 +2568,7 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   // separa el problema de marketing/ASO del de producto sin que el lector
   // tenga que restar tarjetas a mano (parte 197).
   const diagnostico = document.getElementById('analitica-apple-diagnostico');
+  ultimoDiagnosticoEmbudo = transicionMasDebil ? { ...transicionMasDebil, texto: DIAGNOSTICOS_TRANSICION[transicionMasDebil.clave] } : null;
   if(transicionMasDebil){
     const pctTxt = Math.round(transicionMasDebil.pct * 100);
     diagnostico.innerHTML = `<div style="border:1px solid var(--alerta);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--texto);">
@@ -2656,6 +2828,10 @@ async function cargarPanel(){
 
   await cargarInfluencers();
   await cargarNegocio();
+  // Pinta el Resumen diario con lo interno de inmediato (parte 200) -- los
+  // bits de Apple (rating/reseñas) se rellenan solos en cuanto responda
+  // cargarAnaliticaApple(), sin bloquear lo que ya se sabe.
+  pintarResumenDiario();
   // No se espera (fire-and-forget): lee de caché (instantáneo), pero si
   // algo tarda no debe bloquear el resto del panel (parte 195).
   cargarAnaliticaApple(false);
