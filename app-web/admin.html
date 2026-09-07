@@ -272,6 +272,14 @@
       <div style="height:180px;"><canvas id="grafica-registros"></canvas></div>
     </div>
 
+    <div class="caja" style="margin-bottom:24px;">
+      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Analítica de App Store Connect</div>
+      <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas, impresiones y conversión reales del lado de Apple (distinto de los registros de arriba, que son de nuestra base). Primera versión: descubre qué reportes están disponibles -- todavía no baja los números detallados de cada uno.</div>
+      <button type="button" onclick="cargarAnaliticaApple()" id="btn-analitica-apple" style="padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Cargar analítica de Apple</button>
+      <div id="analitica-apple-estado" class="tarjeta-sub" style="margin-top:10px;"></div>
+      <div id="analitica-apple-lista" style="margin-top:10px;"></div>
+    </div>
+
     </div>
 
     <div class="seccion-admin oculto" id="seccion-activacion">
@@ -2228,6 +2236,44 @@ async function pedirKpis(token){
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
   });
+}
+
+// Primera versión de la analítica de App Store Connect (parte 192/193) --
+// a diferencia del resto del panel, no se carga sola con cargarPanel()
+// porque le pega a la API real de Apple (más lenta, y con un límite de uso
+// que no vale la pena gastar en cada apertura del panel) -- se pide a mano
+// con el botón.
+async function cargarAnaliticaApple(){
+  const btn = document.getElementById('btn-analitica-apple');
+  const estado = document.getElementById('analitica-apple-estado');
+  const lista = document.getElementById('analitica-apple-lista');
+  btn.disabled = true;
+  estado.textContent = 'Consultando a Apple…';
+  lista.innerHTML = '';
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-apple-analytics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    });
+    const datos = await resp.json();
+    if(!resp.ok){
+      estado.innerHTML = `<span style="color:var(--alerta);">Error (${resp.status}): ${escapeHtmlAdmin(datos.detalle ? JSON.stringify(datos.detalle) : (datos.error || 'desconocido'))}</span>`;
+      return;
+    }
+    estado.textContent = datos.avisoPrimeraVez || `Solicitud de analítica: ${datos.solicitudId}`;
+    if(!datos.reportesDisponibles || !datos.reportesDisponibles.length){
+      lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear).</div>';
+    }else{
+      lista.innerHTML = `<table><thead><tr><th>Categoría</th><th>Reporte</th></tr></thead><tbody>${
+        datos.reportesDisponibles.map(r => `<tr><td>${escapeHtmlAdmin(r.categoria || '—')}</td><td>${escapeHtmlAdmin(r.nombre || '—')}</td></tr>`).join('')
+      }</tbody></table>`;
+    }
+  }catch(e){
+    estado.innerHTML = `<span style="color:var(--alerta);">No se pudo conectar: ${escapeHtmlAdmin(e.message || String(e))}</span>`;
+  }finally{
+    btn.disabled = false;
+  }
 }
 
 // Modal genérico de detalle de KPI (parte 192) -- cualquier tarjeta con una
