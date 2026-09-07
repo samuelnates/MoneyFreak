@@ -2293,7 +2293,15 @@ async function cargarAnaliticaApple(forzar){
       return;
     }
     const actualizadoTxt = cuerpo.actualizadoEn ? `Actualizado ${formatoRelativoAdmin(cuerpo.actualizadoEn)}` : '';
-    estado.textContent = [cuerpo.datos.avisoPrimeraVez, actualizadoTxt].filter(Boolean).join(' · ');
+    // Apple ya tiene la solicitud y devuelve los reportes, pero todavía
+    // ninguno trae filas reales -- distinto de "solicitud recién creada"
+    // (ese aviso solo sale la primera vez). Es el caso normal mientras se
+    // cumplen las 24-48h que Apple tarda en generar los primeros datos, y
+    // sin este aviso el embudo se ve vacío sin explicar por qué (parte 198).
+    const sinDatosTodavia = (cuerpo.datos.segmentosDescargados === 0 && (cuerpo.datos.reportes || []).length > 0 && !cuerpo.datos.avisoPrimeraVez)
+      ? 'Apple ya tiene la solicitud y mandó la lista de reportes, pero ninguno trae datos todavía -- normal dentro de las primeras 24-48h. Se refresca sola una vez al día.'
+      : null;
+    estado.textContent = [cuerpo.datos.avisoPrimeraVez, sinDatosTodavia, actualizadoTxt].filter(Boolean).join(' · ');
     if(cuerpo.ultimoError){
       estado.innerHTML += ` <span style="color:var(--alerta);">(el último refresco automático falló: ${escapeHtmlAdmin(cuerpo.ultimoError.slice(0, 200))})</span>`;
     }
@@ -2392,23 +2400,29 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   const totalDescargas30d = serieDescargas ? serieDescargas.reduce((a, b) => a + b, 0) : null;
   const totalRegistros30d = (datosKpiGlobal && datosKpiGlobal.crecimiento) ? datosKpiGlobal.crecimiento.nuevos30d : serieRegistros.reduce((a, b) => a + b, 0);
   const totalActivados = (datosKpiGlobal && datosKpiGlobal.activacion) ? datosKpiGlobal.activacion.usuariosConCuenta : null;
+  const totalConGasto = (datosKpiGlobal && datosKpiGlobal.embudoActivacion) ? datosKpiGlobal.embudoActivacion.conGasto : null;
   const totalActivosReales = (datosKpiGlobal && datosKpiGlobal.usoReal) ? datosKpiGlobal.usoReal.activosReales : null;
 
   // Cada paso lleva una "clave" fija (no depende de qué tan completo esté
   // el embudo) para poder diagnosticar la transición más débil aunque
-  // falte algún escalón intermedio (parte 197: "semáforo automático" del
-  // embudo -- distinguir problema de marketing/ASO de problema de producto).
+  // falte algún escalón intermedio (parte 197/198: "semáforo automático"
+  // del embudo -- distinguir problema de marketing/ASO de problema de
+  // producto -- y "sign in, creacion de cuenta, registro de gastos" para
+  // que el embudo tenga los pasos concretos que pidió el usuario, no solo
+  // el compuesto de "activos reales").
   const DIAGNOSTICOS_TRANSICION = {
     'impresiones->descargas': 'de marketing/ASO -- poca gente que ve la ficha la descarga (palabras clave, capturas de pantalla, precio, reseñas).',
     'descargas->registros': 'de primer uso -- bajan la app pero no llegan ni a registrarse (fricción en el arranque, tarda en abrir, pide demasiado de entrada).',
-    'registros->cuenta': 'de activación -- se registran pero no llegan a capturar su primera cuenta o gasto dentro de la app.',
-    'cuenta->activos': 'de retención -- capturan algo una vez pero no vuelven lo suficiente para contar como uso real.',
+    'registros->cuenta': 'de onboarding -- se registran (sign in) pero no llegan a crear su primera cuenta dentro de la app.',
+    'cuenta->gasto': 'de primer valor -- crean una cuenta pero no llegan a registrar ni un gasto (no ven para qué sirve todavía).',
+    'gasto->activos': 'de retención -- registran algo una vez pero no vuelven lo suficiente para contar como uso real.',
   };
   const pasos = [
     { key: 'impresiones', etiqueta: 'Impresiones App Store (30d)', valor: totalImpresiones30d },
     { key: 'descargas', etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
-    { key: 'registros', etiqueta: 'Registros (30d)', valor: totalRegistros30d },
-    { key: 'cuenta', etiqueta: 'Crearon cuenta (total)', valor: totalActivados },
+    { key: 'registros', etiqueta: 'Sign in / registro (30d)', valor: totalRegistros30d },
+    { key: 'cuenta', etiqueta: 'Creación de cuenta (total)', valor: totalActivados },
+    { key: 'gasto', etiqueta: 'Registraron un gasto (total)', valor: totalConGasto },
     { key: 'activos', etiqueta: 'Activos reales (total)', valor: totalActivosReales },
   ];
   const escalones = pasos.filter(e => e.valor !== null && e.valor !== undefined);
