@@ -977,6 +977,36 @@
     .panel-freaky-chips button:hover{border-color:var(--borde-fuerte);}
   }
 
+  /* Checklist de "primeros pasos" para usuarios nuevos (parte 202) --
+     acompañamiento activo en los primeros días, se oculta sola al
+     completarse o si el usuario la cierra a mano. */
+  .panel-checklist-card{
+    border:1px solid var(--borde-fuerte);border-radius:10px;background:var(--superficie);
+    padding:12px;margin-bottom:8px;
+  }
+  .panel-checklist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;}
+  .panel-checklist-titulo{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--texto);flex:1;min-width:0;}
+  .panel-checklist-contador{font-family:var(--sans);font-size:12px;color:var(--texto-tenue);flex:none;}
+  .panel-checklist-barra{height:4px;border-radius:2px;background:var(--borde);overflow:hidden;margin-bottom:10px;}
+  .panel-checklist-barra-relleno{height:100%;background:var(--acento);border-radius:2px;transition:width .3s ease;}
+  .panel-checklist-items{display:flex;flex-direction:column;gap:2px;}
+  .panel-checklist-item{
+    display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
+    padding:8px 2px;text-align:left;cursor:pointer;font-family:var(--sans);
+  }
+  .panel-checklist-check{
+    width:20px;height:20px;border-radius:50%;border:1.5px solid var(--borde-fuerte);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;
+  }
+  .panel-checklist-item.hecho .panel-checklist-check{background:var(--acento);border-color:var(--acento);color:var(--acento-texto);}
+  .panel-checklist-item.hecho .panel-checklist-texto{color:var(--texto-tenue);text-decoration:line-through;}
+  .panel-checklist-texto{flex:1;font-size:13.5px;color:var(--texto);}
+  .panel-checklist-flecha{font-size:16px;color:var(--texto-tenue-2);flex:none;}
+  .panel-checklist-cerrar{
+    background:none;border:none;color:var(--texto-tenue-2);
+    font-size:16px;cursor:pointer;padding:0;flex:none;line-height:1;
+  }
+
   .aviso-flotante-version{
     position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
     display:flex;align-items:center;gap:10px;max-width:92vw;
@@ -4217,6 +4247,13 @@ const TRADUCCIONES = {
     'panel.insight_ritmo_presupuesto': 'A este ritmo vas a cerrar el mes en {0}, por arriba de tu presupuesto de {1}.',
     'panel.insight_todo_bien': 'Tus números están en orden esta semana. Sigue así.',
     'panel.insight_sin_datos': 'Todavía no tienes nada capturado -- empieza por agregar tus cuentas, ingresos y gastos para que pueda darte consejos reales. Si tienes dudas de cómo hacerlo, pregúntale a Freaky.',
+    'panel.checklist_titulo': 'Primeros pasos',
+    'panel.checklist_contador': '{0} de 4',
+    'panel.checklist_cerrar_aria': 'Ocultar por unos días',
+    'panel.checklist_cuenta': 'Agrega tu primera cuenta',
+    'panel.checklist_ingreso': 'Registra un ingreso',
+    'panel.checklist_gasto': 'Registra tu primer gasto',
+    'panel.checklist_score': 'Descubre tu Score Money Freak',
     'panel.insight_categoria_dominante': 'El {0}% de tu gasto de este mes es en {1}.',
     'panel.insight_tasa_ahorro_positiva': 'Vas ahorrando el {0}% de tu ingreso este mes. Bien ahí.',
     'panel.insight_tasa_ahorro_negativa': 'Este mes has gastado {0}% más de lo que has ingresado.',
@@ -5192,6 +5229,13 @@ const TRADUCCIONES = {
     'panel.insight_ritmo_presupuesto': "At this pace you'll close the month at {0}, above your budget of {1}.",
     'panel.insight_todo_bien': 'Your numbers look good this week. Keep it up.',
     'panel.insight_sin_datos': "You haven't added anything yet -- start by adding your accounts, income, and expenses so I can give you real advice. If you're not sure how, just ask Freaky.",
+    'panel.checklist_titulo': 'First steps',
+    'panel.checklist_contador': '{0} of 4',
+    'panel.checklist_cerrar_aria': 'Hide for a few days',
+    'panel.checklist_cuenta': 'Add your first account',
+    'panel.checklist_ingreso': 'Log an income',
+    'panel.checklist_gasto': 'Log your first expense',
+    'panel.checklist_score': 'Discover your Money Freak Score',
     'panel.insight_categoria_dominante': '{0}% of this month\'s spending is in {1}.',
     'panel.insight_tasa_ahorro_positiva': "You're saving {0}% of your income this month. Nice.",
     'panel.insight_tasa_ahorro_negativa': "This month you've spent {0}% more than you've earned.",
@@ -9452,6 +9496,46 @@ async function abrirPanel(){
     ? `${escapeHtml(masUrgente.nombre)}: ${masUrgente.diasFaltan <= 0 ? t('flujo.hoy_vencido').toLowerCase() : `${t('flujo.en').toLowerCase()} ${masUrgente.diasFaltan} ${masUrgente.diasFaltan === 1 ? t('flujo.dia') : t('flujo.dias')}`}`
     : t('panel.sin_pagos_proximos');
 
+  // Checklist de "primeros pasos" (parte 202) -- acompañamiento activo para
+  // usuarios nuevos que no saben por dónde empezar. Se oculta sola al
+  // completar los 4 pasos, o si el usuario la cierra a mano (localStorage,
+  // con vencimiento -- no desaparece para siempre, solo unos días).
+  const pasoCuenta = b.detalleCuentas.length > 0;
+  const pasoIngreso = !!s.ingreso;
+  const pasoGasto = g.totalGastado > 0;
+  const pasoScore = score.general !== null;
+  const checklistCompleta = pasoCuenta && pasoIngreso && pasoGasto && pasoScore;
+  let checklistOcultaAMano = false;
+  try{
+    const ocultaHasta = Number(localStorage.getItem('checklist_primeros_pasos_oculta_hasta') || 0);
+    checklistOcultaAMano = ocultaHasta > Date.now();
+  }catch(e){}
+  const htmlChecklistPrimerosPasos = (modoDemo || checklistCompleta || checklistOcultaAMano) ? '' : (() => {
+    const pasos = [
+      { hecho: pasoCuenta, texto: t('panel.checklist_cuenta'), accion: "mostrar('vista-agregar-cuenta')" },
+      { hecho: pasoIngreso, texto: t('panel.checklist_ingreso'), accion: "mostrar('vista-agregar-ingreso')" },
+      { hecho: pasoGasto, texto: t('panel.checklist_gasto'), accion: 'abrirAgregarGasto()' },
+      { hecho: pasoScore, texto: t('panel.checklist_score'), accion: 'abrirScore()' },
+    ];
+    const hechos = pasos.filter(p => p.hecho).length;
+    return `
+    <div class="panel-checklist-card">
+      <div class="panel-checklist-header">
+        <span class="panel-checklist-titulo">${t('panel.checklist_titulo')}</span>
+        <span class="panel-checklist-contador">${tf('panel.checklist_contador', hechos)}</span>
+        <button type="button" class="panel-checklist-cerrar" onclick="cerrarChecklistPrimerosPasos()" aria-label="${t('panel.checklist_cerrar_aria')}">×</button>
+      </div>
+      <div class="panel-checklist-barra"><div class="panel-checklist-barra-relleno" style="width:${hechos / pasos.length * 100}%;"></div></div>
+      <div class="panel-checklist-items">
+        ${pasos.map(p => `<button type="button" class="panel-checklist-item ${p.hecho ? 'hecho' : ''}" onclick="${p.hecho ? '' : p.accion}">
+          <span class="panel-checklist-check">${p.hecho ? '✓' : ''}</span>
+          <span class="panel-checklist-texto">${p.texto}</span>
+          ${p.hecho ? '' : '<span class="panel-checklist-flecha">›</span>'}
+        </button>`).join('')}
+      </div>
+    </div>`;
+  })();
+
   const gastosSubTxt = g.totalPresupuestado > 0
     ? tf('panel.pct_presupuesto', ((g.totalGastado / g.totalPresupuestado) * 100).toFixed(0))
     : t('panel.sin_presupuesto');
@@ -9475,6 +9559,8 @@ async function abrirPanel(){
         <button type="button" onclick="abrirFreakyConPregunta(t('panel.freaky_chip_gasto'))">${t('panel.freaky_chip_gasto')}</button>
       </div>
     </div>
+
+    ${htmlChecklistPrimerosPasos}
 
     <div class="panel-acciones-rapidas">
       <button type="button" class="panel-accion-rapida" onclick="abrirAgregarGasto()"><span class="panel-accion-icono">+</span>${t('panel.accion_gasto')}</button>
@@ -9550,6 +9636,18 @@ async function abrirPanel(){
   inicializarRotacionInsights(insights);
   activarSwipeInsights(document.getElementById('panel-insights'));
   activarReordenPanelGrid();
+}
+
+// Cierra el checklist de "primeros pasos" por unos días (no para siempre --
+// si sigue sin completar los 4 pasos, vuelve a aparecer más adelante en vez
+// de desaparecer y dejar al usuario sin ninguna guía).
+const DIAS_CHECKLIST_OCULTA_AL_CERRAR = 3;
+function cerrarChecklistPrimerosPasos(){
+  try{
+    localStorage.setItem('checklist_primeros_pasos_oculta_hasta', String(Date.now() + DIAS_CHECKLIST_OCULTA_AL_CERRAR * 24 * 60 * 60 * 1000));
+  }catch(e){}
+  const tarjeta = document.querySelector('.panel-checklist-card');
+  if(tarjeta) tarjeta.remove();
 }
 
 let graficaScore = null;
@@ -17192,8 +17290,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 155;
+const VERSION_APP_ACTUAL = 156;
 const CHANGELOG_APP = [
+  {
+    version: 156,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Nuevo: una tarjeta de "Primeros pasos" en Inicio para cuentas nuevas -- te guía a agregar tu primera cuenta, un ingreso, un gasto y a descubrir tu Score, con progreso visible. Se oculta sola en cuanto los completas.'
+    ],
+    cambios_en: [
+      'New: a "First steps" card on Home for new accounts -- guides you to add your first account, an income, an expense, and discover your Score, with visible progress. It hides itself once you complete them.'
+    ]
+  },
   {
     version: 155,
     fecha: '2026-09-06',
