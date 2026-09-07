@@ -83,6 +83,25 @@
       --color-saludable:#4F6B47;
     }
   }
+  /* Tema "Girly" (parte 204) -- fondo rosa pastel + acento lavanda, pedido
+     explícito del usuario tras ver varias combinaciones de muestra. Un
+     tema explícito más (nunca sigue @media prefers-color-scheme como
+     claro/oscuro -- solo se activa a mano). */
+  :root[data-theme="girly"]{
+    --bg:#FDF2F8;
+    --superficie:#FFFFFF;
+    --borde:#F6DCEB;
+    --borde-fuerte:#EFC0DE;
+    --texto:#5C3A4E;
+    --texto-tenue:#9C7690;
+    --texto-tenue-2:#D2AFC7;
+    --acento:#A98FD2;
+    --acento-texto:#FFFFFF;
+    --neg:#B98CA0;
+    --color-riesgo:#D6688A;
+    --color-atencion:#DDA05E;
+    --color-saludable:#74AC8F;
+  }
   *{box-sizing:border-box;}
   /* overflow-x:hidden va SOLO en body, nunca junto con html: si ambos lo
      tienen, el navegador promueve overflow-y a "auto" en los dos (regla del
@@ -1857,6 +1876,7 @@
       <button type="button" data-tema="auto" class="activo" onclick="elegirTemaRegistro('auto')">Automático</button>
       <button type="button" data-tema="light" onclick="elegirTemaRegistro('light')">Claro</button>
       <button type="button" data-tema="dark" onclick="elegirTemaRegistro('dark')">Oscuro</button>
+      <button type="button" data-tema="girly" onclick="elegirTemaRegistro('girly')">Girly</button>
     </div>
     <button type="button" class="btn-grande" onclick="siguientePasoRegistro()" data-i18n="comun.continuar">Continuar</button>
   </div>
@@ -2007,6 +2027,7 @@
       <button type="button" data-tema="auto" class="activo" onclick="elegirTemaOnboarding('auto')">Automático</button>
       <button type="button" data-tema="light" onclick="elegirTemaOnboarding('light')">Claro</button>
       <button type="button" data-tema="dark" onclick="elegirTemaOnboarding('dark')">Oscuro</button>
+      <button type="button" data-tema="girly" onclick="elegirTemaOnboarding('girly')">Girly</button>
     </div>
     <label data-i18n="config.moneda_principal_h2">Moneda principal</label>
     <div class="rango-botones selector-moneda-principal" id="selector-moneda-principal-onb">
@@ -2684,6 +2705,7 @@
     <button type="button" data-tema="auto" onclick="cambiarTema('auto')">Automático</button>
     <button type="button" data-tema="light" onclick="cambiarTema('light')">Claro</button>
     <button type="button" data-tema="dark" onclick="cambiarTema('dark')">Oscuro</button>
+    <button type="button" data-tema="girly" onclick="cambiarTema('girly')">Girly</button>
   </div>
   <div class="aviso" data-i18n="config.apariencia_aviso">Automático sigue el ajuste de tu teléfono o computadora, igual que otras apps.</div>
 
@@ -17299,8 +17321,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 157;
+const VERSION_APP_ACTUAL = 158;
 const CHANGELOG_APP = [
+  {
+    version: 158,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Nuevo tema "Girly" -- fondo rosa pastel y acentos lavanda en toda la app (gráficas incluidas). Se elige junto con Claro/Oscuro/Automático, en el registro, el onboarding o Configuración.'
+    ],
+    cambios_en: [
+      'New "Girly" theme -- pastel pink background with lavender accents across the whole app (charts included). Pick it alongside Light/Dark/Automatic, in sign-up, onboarding, or Settings.'
+    ]
+  },
   {
     version: 157,
     fecha: '2026-09-08',
