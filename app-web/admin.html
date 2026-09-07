@@ -136,20 +136,6 @@
     .caja{padding:14px 14px;}
   }
 
-  .embudo-cont{display:flex;gap:18px;align-items:stretch;}
-  .embudo-forma{width:110px;flex:0 0 110px;display:flex;flex-direction:column;}
-  .embudo-segmento{height:72px;box-sizing:border-box;border-top:1px solid var(--bg);}
-  .embudo-segmento:first-child{border-top:none;}
-  .embudo-notas{flex:1;display:flex;flex-direction:column;min-width:0;}
-  .embudo-nota{height:72px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--borde);}
-  .embudo-nota:last-child{border-bottom:none;}
-  .embudo-nota-titulo{font-family:var(--sans);font-size:13.5px;font-weight:700;}
-  .embudo-nota-cifra{font-family:var(--mono);font-size:16px;font-weight:600;margin-top:3px;}
-  .embudo-nota-detalle{font-family:var(--mono);font-size:10.5px;color:var(--texto-tenue);margin-top:2px;}
-  @media (max-width: 480px){
-    .embudo-forma{width:70px;flex-basis:70px;}
-  }
-
   .form-negocio{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;}
   .campo-negocio label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--texto-tenue);text-transform:uppercase;margin-bottom:4px;}
   .campo-negocio input, .campo-negocio select{
@@ -344,15 +330,6 @@
       <div id="retencion-visual-30d"></div>
       <div class="tarjeta-sub" style="margin-top:12px;">Solo cuenta a quienes ya llevan más de 7/30 días registrados (a alguien de ayer no le ha dado tiempo de "irse"). Distinto de "activos" de arriba: ahí no importa cuándo se registraron, aquí sí — esto mide si la gente se queda con el tiempo, no solo si hay actividad hoy.</div>
     </div>
-
-    <div class="caja" style="margin-bottom:8px;">
-      <div class="tarjeta-etiqueta" style="margin-bottom:14px;">Embudo de activación</div>
-      <div class="embudo-cont">
-        <div class="embudo-forma" id="embudo-forma"></div>
-        <div class="embudo-notas" id="embudo-notas"></div>
-      </div>
-    </div>
-    <div class="tarjeta-sub" style="margin:-4px 0 24px;">Cada barra es más angosta que la anterior porque no todos pasan al siguiente paso — entre barras, cuántos días tardan en promedio los que sí avanzan. Mide fricción real del onboarding.</div>
 
     </div>
 
@@ -1030,52 +1007,6 @@ function formatoDuracion(ms){
   if(horas > 0) return `${horas}h ${min}min`;
   if(min > 0) return `${min}min ${seg}s`;
   return `${seg}s`;
-}
-
-// Embudo de activación, versión gráfica -- 3 barras centradas, cada una
-// más angosta que la anterior (el ancho es proporcional a cuántos llegaron
-// a ese paso, sobre el total de registrados). Antes eran 2 tarjetas con
-// solo el %, pero un usuario probando el panel no entendía el concepto
-// hasta verlo dibujado como embudo de verdad.
-function pintarEmbudoVisual(e){
-  const formaCont = document.getElementById('embudo-forma');
-  const notasCont = document.getElementById('embudo-notas');
-  const total = e.registrados || 1;
-  const pasos = [
-    { etiqueta: 'Se registraron', valor: e.registrados, dias: null },
-    { etiqueta: 'Agregaron su 1ª cuenta', valor: e.conCuenta, dias: e.diasPromedioRegistroACuenta },
-    { etiqueta: 'Registraron su 1er gasto', valor: e.conGasto, dias: e.diasPromedioCuentaAGasto },
-  ];
-  // Ancho de cada paso (% del total de registrados), con un mínimo visual
-  // para que un paso con pocos usuarios no desaparezca por completo.
-  const anchos = pasos.map(p => Math.max(14, Math.round((p.valor / total) * 100)));
-  const opacidades = [1, 0.72, 0.46];
-
-  // Cada segmento es un trapecio real: arriba mide lo mismo que el segmento
-  // anterior medía abajo, y abajo se angosta hasta el ancho del siguiente
-  // paso -- así quedan pegados sin huecos, como un embudo de verdad y no
-  // nada más "barras cada vez más chicas".
-  formaCont.innerHTML = pasos.map((p, i) => {
-    const arriba = anchos[i];
-    const abajo = i < pasos.length - 1 ? anchos[i + 1] : anchos[i];
-    const x1 = (50 - arriba / 2).toFixed(1), x2 = (50 + arriba / 2).toFixed(1);
-    const x3 = (50 + abajo / 2).toFixed(1), x4 = (50 - abajo / 2).toFixed(1);
-    const clip = `polygon(${x1}% 0%, ${x2}% 0%, ${x3}% 100%, ${x4}% 100%)`;
-    return `<div class="embudo-segmento" style="background:var(--acento);opacity:${opacidades[i]};clip-path:${clip};"></div>`;
-  }).join('');
-
-  notasCont.innerHTML = pasos.map((p, i) => {
-    const pctDelTotal = e.registrados ? Math.round((p.valor / e.registrados) * 100) : 0;
-    const detalle = i === 0
-      ? 'punto de partida'
-      : (p.dias === null || p.dias === undefined ? 'sin datos suficientes todavía' : `tardan ${p.dias.toFixed(1)} días en promedio`);
-    return `
-      <div class="embudo-nota">
-        <div class="embudo-nota-titulo">${p.etiqueta}</div>
-        <div class="embudo-nota-cifra">${formatoNumero(p.valor)} <span style="font-size:12px;font-weight:400;color:var(--texto-tenue);">(${pctDelTotal}%)</span></div>
-        <div class="embudo-nota-detalle">${detalle}</div>
-      </div>`;
-  }).join('');
 }
 
 // Retención como una barra de "se quedaron vs. ya no volvieron" -- se
@@ -2674,8 +2605,6 @@ async function cargarPanel(){
 
   pintarRetencionVisual('retencion-visual-7d', 'Retención 7 días', datos.uso.retenidosD7, datos.uso.elegiblesRetencionD7);
   pintarRetencionVisual('retencion-visual-30d', 'Retención 30 días', datos.uso.retenidosD30, datos.uso.elegiblesRetencionD30);
-
-  pintarEmbudoVisual(datos.embudoActivacion);
 
   const tablaRiesgo = document.getElementById('tabla-riesgo');
   if(!datos.riesgo.usuarios.length){
