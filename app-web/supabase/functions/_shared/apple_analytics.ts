@@ -98,8 +98,33 @@ function parsearFilasTSV(texto: string): Record<string, string>[] {
   });
 }
 
-function agruparPorFecha(filas: Record<string, string>[]): { columnaFecha: string | null; columnasNumericas: string[]; porFecha: Record<string, Record<string, number>> } {
-  if (filas.length === 0) return { columnaFecha: null, columnasNumericas: [], porFecha: {} };
+// Además de agrupar por fecha, detecta UNA columna "dimensión" (categórica:
+// ni fecha ni numérica) para poder desglosar el total del periodo por ahí
+// -- parte 197, pedido explícito: "desglosar por dimensión, no solo por
+// fecha" para saber DE DÓNDE vienen las descargas (territorio, dispositivo,
+// tipo de página), no solo cuántas. Se prioriza territorio/país, luego
+// dispositivo, luego tipo de página, y si no hay ninguna de esas se toma la
+// primera columna categórica que tenga una cardinalidad razonable (2-50
+// valores distintos en la muestra) -- una columna con 1 solo valor no dice
+// nada, y una con cientos (como un identificador) tampoco sirve para un
+// desglose legible.
+function elegirColumnaDimension(encabezados: string[], columnaFecha: string | null, columnasNumericas: string[], filas: Record<string, string>[]): string | null {
+  const candidatas = encabezados.filter((h) => h !== columnaFecha && !columnasNumericas.includes(h));
+  if (candidatas.length === 0) return null;
+  const prioridad = [/territory|country/i, /device/i, /page.?type|content.?type|download.?type/i];
+  for (const regex of prioridad) {
+    const encontrada = candidatas.find((h) => regex.test(h));
+    if (encontrada) return encontrada;
+  }
+  for (const h of candidatas) {
+    const valores = new Set(filas.slice(0, 200).map((f) => f[h]).filter((v) => v !== ""));
+    if (valores.size >= 2 && valores.size <= 50) return h;
+  }
+  return null;
+}
+
+function agruparPorFecha(filas: Record<string, string>[]): { columnaFecha: string | null; columnasNumericas: string[]; porFecha: Record<string, Record<string, number>>; columnaDimension: string | null; porDimension: Record<string, Record<string, number>> } {
+  if (filas.length === 0) return { columnaFecha: null, columnasNumericas: [], porFecha: {}, columnaDimension: null, porDimension: {} };
   const encabezados = Object.keys(filas[0]);
   const columnaFecha = encabezados.find((h) => h.toLowerCase() === "date") ?? null;
   const columnasNumericas = encabezados.filter((h) => {
@@ -108,22 +133,30 @@ function agruparPorFecha(filas: Record<string, string>[]): { columnaFecha: strin
     if (valores.length === 0) return false;
     return valores.every((v) => !isNaN(Number(v)));
   });
+  const columnaDimension = elegirColumnaDimension(encabezados, columnaFecha, columnasNumericas, filas);
   const porFecha: Record<string, Record<string, number>> = {};
+  const porDimension: Record<string, Record<string, number>> = {};
   for (const fila of filas) {
     const clave = columnaFecha ? (fila[columnaFecha] || "sin_fecha") : "todo";
     if (!porFecha[clave]) porFecha[clave] = {};
+    const claveDim = columnaDimension ? (fila[columnaDimension] || "sin_dato") : null;
+    if (claveDim && !porDimension[claveDim]) porDimension[claveDim] = {};
     for (const col of columnasNumericas) {
       const valor = Number(fila[col] || 0);
-      porFecha[clave][col] = (porFecha[clave][col] || 0) + (isNaN(valor) ? 0 : valor);
+      const valorLimpio = isNaN(valor) ? 0 : valor;
+      porFecha[clave][col] = (porFecha[clave][col] || 0) + valorLimpio;
+      if (claveDim) porDimension[claveDim][col] = (porDimension[claveDim][col] || 0) + valorLimpio;
     }
   }
-  return { columnaFecha, columnasNumericas, porFecha };
+  return { columnaFecha, columnasNumericas, porFecha, columnaDimension, porDimension };
 }
 
 export type ReporteAppleConDatos = {
   id: string; nombre: string | null; categoria: string | null;
   columnaFecha: string | null; columnasNumericas: string[];
   porFecha: Record<string, Record<string, number>>;
+  columnaDimension: string | null;
+  porDimension: Record<string, Record<string, number>>;
   erroresParciales: string[];
 };
 
@@ -204,7 +237,7 @@ export async function obtenerAnaliticaApple(): Promise<ResultadoAnaliticaApple> 
     const instanciasResp = await llamarAppleAPI(jwtApple, `/v1/analyticsReports/${rep.id}/instances?limit=30`);
     if (!instanciasResp.ok) {
       erroresParciales.push(`No se pudieron listar instancias: status ${instanciasResp.status}`);
-      reportesConDatos.push({ ...rep, columnaFecha: null, columnasNumericas: [], porFecha: {}, erroresParciales });
+      reportesConDatos.push({ ...rep, columnaFecha: null, columnasNumericas: [], porFecha: {}, columnaDimension: null, porDimension: {}, erroresParciales });
       continue;
     }
     const instancias = ((instanciasResp.data as { data?: { id: string; attributes?: { processingDate?: string; granularity?: string } }[] })?.data || [])
@@ -213,8 +246,10 @@ export async function obtenerAnaliticaApple(): Promise<ResultadoAnaliticaApple> 
       .slice(0, INSTANCIAS_POR_REPORTE);
 
     const porFechaAcumulado: Record<string, Record<string, number>> = {};
+    const porDimensionAcumulado: Record<string, Record<string, number>> = {};
     let columnaFechaDetectada: string | null = null;
     let columnasNumericasDetectadas: string[] = [];
+    let columnaDimensionDetectada: string | null = null;
 
     for (const instancia of instancias) {
       if (segmentosDescargados >= SEGMENTOS_MAXIMOS_TOTAL) break;
@@ -232,8 +267,9 @@ export async function obtenerAnaliticaApple(): Promise<ResultadoAnaliticaApple> 
           const texto = await descargarYDescomprimirSegmento(url);
           segmentosDescargados++;
           const filas = parsearFilasTSV(texto);
-          const { columnaFecha, columnasNumericas, porFecha } = agruparPorFecha(filas);
+          const { columnaFecha, columnasNumericas, porFecha, columnaDimension, porDimension } = agruparPorFecha(filas);
           if (columnaFecha) columnaFechaDetectada = columnaFecha;
+          if (columnaDimension) columnaDimensionDetectada = columnaDimension;
           for (const col of columnasNumericas) {
             if (!columnasNumericasDetectadas.includes(col)) columnasNumericasDetectadas.push(col);
           }
@@ -241,6 +277,12 @@ export async function obtenerAnaliticaApple(): Promise<ResultadoAnaliticaApple> 
             if (!porFechaAcumulado[fecha]) porFechaAcumulado[fecha] = {};
             for (const [col, valor] of Object.entries(metricas)) {
               porFechaAcumulado[fecha][col] = (porFechaAcumulado[fecha][col] || 0) + valor;
+            }
+          }
+          for (const [dim, metricas] of Object.entries(porDimension)) {
+            if (!porDimensionAcumulado[dim]) porDimensionAcumulado[dim] = {};
+            for (const [col, valor] of Object.entries(metricas)) {
+              porDimensionAcumulado[dim][col] = (porDimensionAcumulado[dim][col] || 0) + valor;
             }
           }
         } catch (e) {
@@ -254,6 +296,8 @@ export async function obtenerAnaliticaApple(): Promise<ResultadoAnaliticaApple> 
       columnaFecha: columnaFechaDetectada,
       columnasNumericas: columnasNumericasDetectadas,
       porFecha: porFechaAcumulado,
+      columnaDimension: columnaDimensionDetectada,
+      porDimension: porDimensionAcumulado,
       erroresParciales,
     });
   }

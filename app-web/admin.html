@@ -275,8 +275,10 @@
     <div class="caja" style="margin-bottom:24px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Embudo real: App Store → registro → uso</div>
       <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas e impresiones reales de Apple, cruzadas con nuestros propios registros y con "usuarios activos reales" -- así se ve el camino completo: alguien ve la ficha en el App Store, la descarga, se registra, y de ahí si de verdad la usa. Se refresca sola una vez al día (cron); el botón solo fuerza un refresco inmediato.</div>
-      <div id="analitica-apple-embudo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <div id="analitica-apple-embudo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+      <div id="analitica-apple-diagnostico" style="margin-bottom:14px;"></div>
       <div id="analitica-apple-grafica-caja" style="height:180px;margin-bottom:14px;display:none;"><canvas id="grafica-embudo-apple"></canvas></div>
+      <div id="analitica-apple-cohortes" style="margin-bottom:14px;"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button type="button" onclick="cargarAnaliticaApple(true)" id="btn-analitica-apple" style="padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Actualizar ahora</button>
         <div id="analitica-apple-estado" class="tarjeta-sub"></div>
@@ -2285,6 +2287,8 @@ async function cargarAnaliticaApple(forzar){
       estado.textContent = cuerpo.avisoSinDatos || 'Todavía no hay datos de Apple guardados.';
       embudo.innerHTML = '';
       lista.innerHTML = '';
+      document.getElementById('analitica-apple-diagnostico').innerHTML = '';
+      document.getElementById('analitica-apple-cohortes').innerHTML = '';
       document.getElementById('analitica-apple-grafica-caja').style.display = 'none';
       return;
     }
@@ -2307,8 +2311,29 @@ async function cargarAnaliticaApple(forzar){
           const errorTxt = (r.erroresParciales && r.erroresParciales[0]) ? ` -- ${escapeHtmlAdmin(r.erroresParciales[0])}` : '';
           return `<div class="tarjeta-sub" style="margin-bottom:10px;"><strong>${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</strong>: sin datos todavía${errorTxt}.</div>`;
         }
+        // Desglose por dimensión (territorio/dispositivo/tipo de página,
+        // parte 197) -- top 8 valores por la primera columna numérica, para
+        // saber DE DÓNDE viene el total, no solo cuánto es.
+        let bloqueDimension = '';
+        if(r.columnaDimension && r.porDimension && Object.keys(r.porDimension).length && cols.length){
+          const colPrincipal = cols[0];
+          const filasDim = Object.entries(r.porDimension)
+            .map(([clave, metricas]) => ({ clave, valor: metricas[colPrincipal] || 0 }))
+            .sort((a, b) => b.valor - a.valor)
+            .slice(0, 8);
+          const maxValor = filasDim[0]?.valor || 1;
+          bloqueDimension = `<div style="margin:8px 0 12px;">
+            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Por ${escapeHtmlAdmin(r.columnaDimension)} (${escapeHtmlAdmin(colPrincipal)}, todo el periodo)</div>
+            ${filasDim.map(f => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+              <div style="width:110px;font-size:11px;color:var(--texto-tenue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlAdmin(f.clave)}</div>
+              <div style="flex:1;background:var(--borde);border-radius:3px;height:8px;overflow:hidden;"><div style="width:${Math.max(2, Math.round(f.valor / maxValor * 100))}%;height:100%;background:var(--acento);"></div></div>
+              <div style="width:60px;text-align:right;font-size:11px;font-family:'JetBrains Mono';">${formatoNumero(f.valor)}</div>
+            </div>`).join('')}
+          </div>`;
+        }
         return `<div style="margin-bottom:16px;">
           <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>
+          ${bloqueDimension}
           <div style="overflow-x:auto;"><table><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
             dias.map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
           }</tbody></table></div>
@@ -2369,21 +2394,45 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   const totalActivados = (datosKpiGlobal && datosKpiGlobal.activacion) ? datosKpiGlobal.activacion.usuariosConCuenta : null;
   const totalActivosReales = (datosKpiGlobal && datosKpiGlobal.usoReal) ? datosKpiGlobal.usoReal.activosReales : null;
 
-  const escalones = [
-    { etiqueta: 'Impresiones App Store (30d)', valor: totalImpresiones30d },
-    { etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
-    { etiqueta: 'Registros (30d)', valor: totalRegistros30d },
-    { etiqueta: 'Crearon cuenta (total)', valor: totalActivados },
-    { etiqueta: 'Activos reales (total)', valor: totalActivosReales },
-  ].filter(e => e.valor !== null && e.valor !== undefined);
+  // Cada paso lleva una "clave" fija (no depende de qué tan completo esté
+  // el embudo) para poder diagnosticar la transición más débil aunque
+  // falte algún escalón intermedio (parte 197: "semáforo automático" del
+  // embudo -- distinguir problema de marketing/ASO de problema de producto).
+  const DIAGNOSTICOS_TRANSICION = {
+    'impresiones->descargas': 'de marketing/ASO -- poca gente que ve la ficha la descarga (palabras clave, capturas de pantalla, precio, reseñas).',
+    'descargas->registros': 'de primer uso -- bajan la app pero no llegan ni a registrarse (fricción en el arranque, tarda en abrir, pide demasiado de entrada).',
+    'registros->cuenta': 'de activación -- se registran pero no llegan a capturar su primera cuenta o gasto dentro de la app.',
+    'cuenta->activos': 'de retención -- capturan algo una vez pero no vuelven lo suficiente para contar como uso real.',
+  };
+  const pasos = [
+    { key: 'impresiones', etiqueta: 'Impresiones App Store (30d)', valor: totalImpresiones30d },
+    { key: 'descargas', etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
+    { key: 'registros', etiqueta: 'Registros (30d)', valor: totalRegistros30d },
+    { key: 'cuenta', etiqueta: 'Crearon cuenta (total)', valor: totalActivados },
+    { key: 'activos', etiqueta: 'Activos reales (total)', valor: totalActivosReales },
+  ];
+  const escalones = pasos.filter(e => e.valor !== null && e.valor !== undefined);
+
+  let transicionMasDebil = null;
+  for(let i = 1; i < pasos.length; i++){
+    const actual = pasos[i], anterior = pasos[i - 1];
+    if(actual.valor === null || actual.valor === undefined || !anterior.valor) continue;
+    const pct = actual.valor / anterior.valor;
+    const clave = `${anterior.key}->${actual.key}`;
+    if(!DIAGNOSTICOS_TRANSICION[clave]) continue;
+    if(!transicionMasDebil || pct < transicionMasDebil.pct){
+      transicionMasDebil = { pct, clave, anterior, actual };
+    }
+  }
 
   embudo.innerHTML = escalones.map((e, i) => {
     const anterior = i > 0 ? escalones[i - 1].valor : null;
     const pct = (anterior && anterior > 0) ? Math.round((e.valor / anterior) * 100) : null;
-    return `<div style="flex:1;min-width:130px;background:var(--fondo-tarjeta,transparent);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;">
+    const esDebil = transicionMasDebil && transicionMasDebil.actual.key === e.key;
+    return `<div style="flex:1;min-width:130px;background:var(--fondo-tarjeta,transparent);border:1px solid ${esDebil ? 'var(--alerta)' : 'var(--borde)'};border-radius:10px;padding:10px 12px;">
       <div style="font-size:10px;color:var(--texto-tenue);text-transform:uppercase;letter-spacing:.03em;">${escapeHtmlAdmin(e.etiqueta)}</div>
       <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${formatoNumero(e.valor)}</div>
-      ${pct !== null ? `<div style="font-size:11px;color:var(--texto-tenue);">${pct}% del paso anterior</div>` : ''}
+      ${pct !== null ? `<div style="font-size:11px;color:${esDebil ? 'var(--alerta)' : 'var(--texto-tenue)'};">${pct}% del paso anterior${esDebil ? ' ⚠️' : ''}</div>` : ''}
     </div>`;
   }).join('');
   // "Instalaciones fantasma": de quienes bajan la app, cuántos nunca ni se
@@ -2397,6 +2446,65 @@ function pintarEmbudoApple(datosApple, registrosInternos){
       <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${pctFantasma}%</div>
       <div style="font-size:11px;color:var(--texto-tenue);">de las descargas de los últimos 30 días</div>
     </div>`;
+  }
+
+  // Semáforo: la transición más débil del embudo, con su diagnóstico --
+  // separa el problema de marketing/ASO del de producto sin que el lector
+  // tenga que restar tarjetas a mano (parte 197).
+  const diagnostico = document.getElementById('analitica-apple-diagnostico');
+  if(transicionMasDebil){
+    const pctTxt = Math.round(transicionMasDebil.pct * 100);
+    diagnostico.innerHTML = `<div style="border:1px solid var(--alerta);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--texto);">
+      ⚠️ <strong>Aquí se está cayendo más gente:</strong> ${escapeHtmlAdmin(transicionMasDebil.anterior.etiqueta)} → ${escapeHtmlAdmin(transicionMasDebil.actual.etiqueta)} (${pctTxt}%). Pinta a un problema ${DIAGNOSTICOS_TRANSICION[transicionMasDebil.clave]}
+    </div>`;
+  }else{
+    diagnostico.innerHTML = '';
+  }
+
+  // Eliminaciones de Apple (si el reporte las trae) cruzadas con la lista
+  // interna de usuarios en riesgo de abandono -- si Apple reporta muchas
+  // más eliminaciones que gente que ya detectamos en riesgo por dentro, hay
+  // gente que se va sin que el sistema interno se entere (parte 197).
+  const eliminacionesInfo = buscarColumnaApple(reportes, /delet|uninstall/i);
+  if(eliminacionesInfo){
+    const serieEliminaciones = dias.map(d => (eliminacionesInfo.reporte.porFecha[d] && eliminacionesInfo.reporte.porFecha[d][eliminacionesInfo.columna]) || 0);
+    const totalEliminaciones30d = serieEliminaciones.reduce((a, b) => a + b, 0);
+    const totalRiesgoInterno = (datosKpiGlobal && datosKpiGlobal.riesgo && Array.isArray(datosKpiGlobal.riesgo.usuarios)) ? datosKpiGlobal.riesgo.usuarios.length : null;
+    let notaRiesgo = '';
+    if(totalRiesgoInterno !== null){
+      notaRiesgo = totalEliminaciones30d > totalRiesgoInterno
+        ? ` Nuestra lista de "en riesgo" solo tiene ${formatoNumero(totalRiesgoInterno)} -- hay gente yéndose que el sistema interno todavía no marca como en riesgo.`
+        : ` Va en línea con los ${formatoNumero(totalRiesgoInterno)} que ya tenemos marcados como en riesgo por dentro.`;
+    }
+    diagnostico.innerHTML += `<div style="border:1px solid var(--borde);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--texto-tenue);margin-top:8px;">
+      🗑️ <strong style="color:var(--texto);">${formatoNumero(totalEliminaciones30d)} eliminaciones de la app</strong> reportadas por Apple en los últimos 30 días.${notaRiesgo}
+    </div>`;
+  }
+
+  // Cohortes semanales: agrupa descargas/registros en bloques de 7 días
+  // para ver si la CALIDAD de conversión mejora o empeora semana a semana,
+  // no solo el volumen (parte 197: "vengan las impresiones" + "otro nivel").
+  const cohortes = document.getElementById('analitica-apple-cohortes');
+  if(serieDescargas && serieDescargas.some(v => v > 0)){
+    const bloques = [];
+    for(let ini = 0; ini < dias.length; ini += 7){
+      const rango = dias.slice(ini, ini + 7);
+      const descargasBloque = serieDescargas.slice(ini, ini + 7).reduce((a, b) => a + b, 0);
+      const registrosBloque = serieRegistros.slice(ini, ini + 7).reduce((a, b) => a + b, 0);
+      bloques.push({ inicio: rango[0], fin: rango[rango.length - 1], descargasBloque, registrosBloque });
+    }
+    const maxDescargas = Math.max(1, ...bloques.map(b => b.descargasBloque));
+    cohortes.innerHTML = `<div style="font-size:11px;color:var(--texto-tenue);margin-bottom:6px;">Conversión descarga → registro por semana (últimos 30 días) -- ¿mejora o empeora la calidad, no solo el volumen?</div>` +
+      bloques.map(b => {
+        const pct = b.descargasBloque > 0 ? Math.round(b.registrosBloque / b.descargasBloque * 100) : null;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="width:110px;font-size:11px;color:var(--texto-tenue);">${b.inicio.slice(5)} – ${b.fin.slice(5)}</div>
+          <div style="flex:1;background:var(--borde);border-radius:3px;height:8px;overflow:hidden;"><div style="width:${Math.max(2, Math.round(b.descargasBloque / maxDescargas * 100))}%;height:100%;background:var(--acento);"></div></div>
+          <div style="width:150px;text-align:right;font-size:11px;font-family:'JetBrains Mono';">${formatoNumero(b.descargasBloque)} desc. · ${pct !== null ? pct + '% reg.' : '—'}</div>
+        </div>`;
+      }).join('');
+  }else{
+    cohortes.innerHTML = '';
   }
 
   if(chartEmbudoApple){ chartEmbudoApple.destroy(); chartEmbudoApple = null; }
