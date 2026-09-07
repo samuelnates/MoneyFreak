@@ -2008,6 +2008,13 @@
       <button type="button" data-tema="light" onclick="elegirTemaOnboarding('light')">Claro</button>
       <button type="button" data-tema="dark" onclick="elegirTemaOnboarding('dark')">Oscuro</button>
     </div>
+    <label data-i18n="config.moneda_principal_h2">Moneda principal</label>
+    <div class="rango-botones selector-moneda-principal" id="selector-moneda-principal-onb">
+      <button type="button" data-moneda="MXN" class="activo" onclick="cambiarMonedaPrincipal('MXN')">MXN</button>
+      <button type="button" data-moneda="USD" onclick="cambiarMonedaPrincipal('USD')">USD</button>
+      <button type="button" data-moneda="EUR" onclick="cambiarMonedaPrincipal('EUR')">EUR</button>
+    </div>
+    <div class="aviso" style="margin-bottom:16px;" data-i18n="onboarding_rapido.aviso_moneda_principal">Puedes cambiarla después en Configuración si quieres.</div>
     <div class="check-fila" onclick="avisarSiFaltaLeerPrivacidad('check-privacidad-onb')">
       <input type="checkbox" id="check-privacidad-onb" disabled>
       <label for="check-privacidad-onb" data-i18n-html="onboarding_rapido.acepto_privacidad">He leído y acepto el <a href="#" onclick="event.stopPropagation(); abrirAvisoLegal('onboarding'); return false;">Aviso de Privacidad</a>.</label>
@@ -4263,6 +4270,7 @@ const TRADUCCIONES = {
     'onboarding_rapido.titulo': 'Antes de empezar',
     'onboarding_rapido.subtitulo': 'Freaky te cuenta cómo funciona esto — un minuto y entras.',
     'onboarding_rapido.aviso_config_inicial': 'Confirma esto antes de seguir.',
+    'onboarding_rapido.aviso_moneda_principal': 'Puedes cambiarla después en Configuración si quieres.',
     'onboarding_rapido.chat_intro_1': '¡Hola, soy Freaky!',
     'onboarding_rapido.chat_intro_2': '¡Relájate!',
     'onboarding_rapido.chat_intro_3': 'No necesitas tener toda tu información ahorita, podemos ir agregándola poco a poco.',
@@ -5245,6 +5253,7 @@ const TRADUCCIONES = {
     'onboarding_rapido.titulo': 'Before you start',
     'onboarding_rapido.subtitulo': "Freaky walks you through how this works — one minute and you're in.",
     'onboarding_rapido.aviso_config_inicial': 'Confirm this before continuing.',
+    'onboarding_rapido.aviso_moneda_principal': 'You can change this later in Settings if you want.',
     'onboarding_rapido.chat_intro_1': "Hi, I'm Freaky!",
     'onboarding_rapido.chat_intro_2': "Relax!",
     'onboarding_rapido.chat_intro_3': "You don't need to have all your info right now — we can add it little by little.",
@@ -17290,8 +17299,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 156;
+const VERSION_APP_ACTUAL = 157;
 const CHANGELOG_APP = [
+  {
+    version: 157,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'El onboarding ahora también pregunta tu moneda principal (junto con idioma y tema) -- MXN queda seleccionada por default, pero puedes cambiarla a USD o EUR desde el primer momento en vez de tener que encontrarlo después en Configuración.'
+    ],
+    cambios_en: [
+      'Onboarding now also asks for your main currency (along with language and theme) -- MXN is selected by default, but you can switch to USD or EUR right away instead of having to find it later in Settings.'
+    ]
+  },
   {
     version: 156,
     fecha: '2026-09-08',
