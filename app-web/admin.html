@@ -2323,23 +2323,30 @@ async function cargarAnaliticaApple(forzar){
 }
 
 // Arma el embudo de adquisición combinando lo que trae Apple con lo que ya
-// sabemos por dentro (parte 195: "combinala con la info que ya tenemos por
-// aparte donde haga sentido"). No se sabe todavía el nombre exacto que usa
-// Apple para su columna de descargas (nunca se pudo probar en vivo desde el
-// sandbox de desarrollo) -- por eso se busca de forma genérica cualquier
-// columna numérica que contenga "download" o "install" en cualquier
-// reporte, y si no aparece ninguna, el embudo simplemente no muestra ese
-// primer escalón (se agrega solo en cuanto Apple entregue datos reales).
+// sabemos por dentro (parte 195/196: "combinala con la info que ya tenemos
+// por aparte donde haga sentido" + "quiero que en el funnel tambien vengan
+// las impresiones de appstore"). No se sabe todavía el nombre exacto que usa
+// Apple para sus columnas de impresiones/descargas (nunca se pudo probar en
+// vivo desde el sandbox de desarrollo) -- por eso se busca de forma
+// genérica cualquier columna numérica que contenga "impression" (para
+// impresiones de la ficha) o "download"/"install" (para descargas) en
+// cualquier reporte, y si no aparece ninguna, el embudo simplemente no
+// muestra ese escalón (se agrega solo en cuanto Apple entregue datos
+// reales con esos nombres).
+function buscarColumnaApple(reportes, regex){
+  for(const r of reportes){
+    const col = (r.columnasNumericas || []).find(c => regex.test(c));
+    if(col) return { columna: col, reporte: r };
+  }
+  return null;
+}
 function pintarEmbudoApple(datosApple, registrosInternos){
   const embudo = document.getElementById('analitica-apple-embudo');
   const cajaGrafica = document.getElementById('analitica-apple-grafica-caja');
   const reportes = datosApple.reportes || [];
 
-  let columnaDescargas = null, reporteDescargas = null;
-  for(const r of reportes){
-    const col = (r.columnasNumericas || []).find(c => /download|install/i.test(c));
-    if(col){ columnaDescargas = col; reporteDescargas = r; break; }
-  }
+  const impresionesInfo = buscarColumnaApple(reportes, /impression/i);
+  const descargasInfo = buscarColumnaApple(reportes, /download|install/i);
 
   const dias = [];
   const hoy = new Date();
@@ -2348,17 +2355,22 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     d.setDate(d.getDate() - i);
     dias.push(d.toISOString().slice(0, 10));
   }
-  const serieDescargas = columnaDescargas
-    ? dias.map(d => (reporteDescargas.porFecha[d] && reporteDescargas.porFecha[d][columnaDescargas]) || 0)
+  const serieImpresiones = impresionesInfo
+    ? dias.map(d => (impresionesInfo.reporte.porFecha[d] && impresionesInfo.reporte.porFecha[d][impresionesInfo.columna]) || 0)
+    : null;
+  const serieDescargas = descargasInfo
+    ? dias.map(d => (descargasInfo.reporte.porFecha[d] && descargasInfo.reporte.porFecha[d][descargasInfo.columna]) || 0)
     : null;
   const serieRegistros = dias.map(d => registrosInternos[d] || 0);
 
+  const totalImpresiones30d = serieImpresiones ? serieImpresiones.reduce((a, b) => a + b, 0) : null;
   const totalDescargas30d = serieDescargas ? serieDescargas.reduce((a, b) => a + b, 0) : null;
   const totalRegistros30d = (datosKpiGlobal && datosKpiGlobal.crecimiento) ? datosKpiGlobal.crecimiento.nuevos30d : serieRegistros.reduce((a, b) => a + b, 0);
   const totalActivados = (datosKpiGlobal && datosKpiGlobal.activacion) ? datosKpiGlobal.activacion.usuariosConCuenta : null;
   const totalActivosReales = (datosKpiGlobal && datosKpiGlobal.usoReal) ? datosKpiGlobal.usoReal.activosReales : null;
 
   const escalones = [
+    { etiqueta: 'Impresiones App Store (30d)', valor: totalImpresiones30d },
     { etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
     { etiqueta: 'Registros (30d)', valor: totalRegistros30d },
     { etiqueta: 'Crearon cuenta (total)', valor: totalActivados },
@@ -2374,34 +2386,57 @@ function pintarEmbudoApple(datosApple, registrosInternos){
       ${pct !== null ? `<div style="font-size:11px;color:var(--texto-tenue);">${pct}% del paso anterior</div>` : ''}
     </div>`;
   }).join('');
+  // "Instalaciones fantasma": de quienes bajan la app, cuántos nunca ni se
+  // registran -- una sola cifra que junta las dos fuentes (Apple + interna)
+  // para señalar un problema de onboarding/primera impresión, no de
+  // marketing (eso ya lo distingue el paso anterior del embudo).
+  if(totalDescargas30d && totalDescargas30d > 0 && totalRegistros30d !== null && totalRegistros30d !== undefined){
+    const pctFantasma = Math.max(0, Math.round((1 - Math.min(totalRegistros30d, totalDescargas30d) / totalDescargas30d) * 100));
+    embudo.innerHTML += `<div style="flex:1;min-width:200px;background:var(--fondo-tarjeta,transparent);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;">
+      <div style="font-size:10px;color:var(--texto-tenue);text-transform:uppercase;letter-spacing:.03em;">Descargan y nunca se registran</div>
+      <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${pctFantasma}%</div>
+      <div style="font-size:11px;color:var(--texto-tenue);">de las descargas de los últimos 30 días</div>
+    </div>`;
+  }
 
   if(chartEmbudoApple){ chartEmbudoApple.destroy(); chartEmbudoApple = null; }
-  if(!serieDescargas || !serieDescargas.some(v => v > 0)){
+  if((!serieDescargas || !serieDescargas.some(v => v > 0)) && (!serieImpresiones || !serieImpresiones.some(v => v > 0))){
     cajaGrafica.style.display = 'none';
     return;
   }
   cajaGrafica.style.display = 'block';
   const estilos = getComputedStyle(document.documentElement);
   const colorAcento = estilos.getPropertyValue('--acento').trim();
+  const colorAlerta = estilos.getPropertyValue('--alerta').trim();
   const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
   const colorBorde = estilos.getPropertyValue('--borde').trim();
   const ctx = document.getElementById('grafica-embudo-apple');
+  const datasets = [];
+  // Las impresiones suelen ser un orden de magnitud más grandes que
+  // descargas/registros -- van en su propio eje derecho (y1) para que no
+  // aplasten a las otras dos líneas contra el piso de la gráfica.
+  if(serieImpresiones && serieImpresiones.some(v => v > 0)){
+    datasets.push({ label: 'Impresiones (Apple)', data: serieImpresiones, borderColor: colorAlerta, backgroundColor: colorAlerta, tension: .3, pointRadius: 0, yAxisID: 'y1' });
+  }
+  if(serieDescargas && serieDescargas.some(v => v > 0)){
+    datasets.push({ label: 'Descargas (Apple)', data: serieDescargas, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0, yAxisID: 'y' });
+  }
+  datasets.push({ label: 'Registros reales', data: serieRegistros, borderColor: colorTexto, backgroundColor: colorTexto, tension: .3, pointRadius: 0, borderDash: [4, 3], yAxisID: 'y' });
+
+  const escalas = {
+    x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
+    y: { beginAtZero: true, position: 'left', ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
+  };
+  if(serieImpresiones && serieImpresiones.some(v => v > 0)){
+    escalas.y1 = { beginAtZero: true, position: 'right', ticks: { color: colorAlerta, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { display: false }, border: { display: false } };
+  }
   chartEmbudoApple = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: dias.map(d => d.slice(5)),
-      datasets: [
-        { label: 'Descargas (Apple)', data: serieDescargas, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 },
-        { label: 'Registros reales', data: serieRegistros, borderColor: colorTexto, backgroundColor: colorTexto, tension: .3, pointRadius: 0, borderDash: [4, 3] },
-      ],
-    },
+    data: { labels: dias.map(d => d.slice(5)), datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: true, labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 } } } },
-      scales: {
-        x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
-        y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
-      },
+      scales: escalas,
     },
   });
 }
