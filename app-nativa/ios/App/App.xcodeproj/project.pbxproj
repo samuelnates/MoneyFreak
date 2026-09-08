@@ -18,7 +18,34 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F3 /* PrivacyInfo.xcprivacy */; };
 		C3D4E5F6A7B8C9D0E1F2A3B4 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B5 /* GoogleService-Info.plist */; };
+		41557F5DF8A522DEFA4906FB /* RegistrarGastoWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFEAD33B9A57F77135E0B3D8 /* RegistrarGastoWidget.swift */; };
+		33A3DA634564B41AB5B50796 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0F81A2DE1621E364E5CE684A /* Assets.xcassets */; };
+		A97CF17390101FA4D2CDA273 /* RegistrarGastoWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0D807718904FA103573E096F /* RegistrarGastoWidget.appex */; settings = {ATTRIBUTES = (RemoveHeaderOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5E8A867681EEDE5D11278E9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0750F8277E3C9FBE35B4462B;
+			remoteInfo = RegistrarGastoWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		140FB7A13A84A1B07D818F24 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A97CF17390101FA4D2CDA273 /* RegistrarGastoWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -35,6 +62,10 @@
 		A1B2C3D4E5F6A7B8C9D0E1F3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B2C3D4E5F6A7B8C9D0E1F4A5 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		C3D4E5F6A7B8C9D0E1F2A3B5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		EFEAD33B9A57F77135E0B3D8 /* RegistrarGastoWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrarGastoWidget.swift; sourceTree = "<group>"; };
+		67C3D3A3B6D4902C5664B3E5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0F81A2DE1621E364E5CE684A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0D807718904FA103573E096F /* RegistrarGastoWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RegistrarGastoWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +77,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9101DABF9049472C03FDC352 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -54,6 +92,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				8494E78BEC58B17A71B067E5 /* RegistrarGastoWidget */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -62,6 +101,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				0D807718904FA103573E096F /* RegistrarGastoWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,6 +125,16 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		8494E78BEC58B17A71B067E5 /* RegistrarGastoWidget */ = {
+			isa = PBXGroup;
+			children = (
+				EFEAD33B9A57F77135E0B3D8 /* RegistrarGastoWidget.swift */,
+				0F81A2DE1621E364E5CE684A /* Assets.xcassets */,
+				67C3D3A3B6D4902C5664B3E5 /* Info.plist */,
+			);
+			path = RegistrarGastoWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -95,10 +145,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				140FB7A13A84A1B07D818F24 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				65F07B53F4CC9B888BB69CCE /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -107,6 +159,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		0750F8277E3C9FBE35B4462B /* RegistrarGastoWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1083CEA4F45C425BFCA872ED /* Build configuration list for PBXNativeTarget "RegistrarGastoWidgetExtension" */;
+			buildPhases = (
+				C182CA08896BA47CD6270BF3 /* Sources */,
+				9101DABF9049472C03FDC352 /* Frameworks */,
+				5BB44579C38AE663E638CEC8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RegistrarGastoWidgetExtension;
+			productName = RegistrarGastoWidgetExtension;
+			productReference = 0D807718904FA103573E096F /* RegistrarGastoWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -121,6 +190,11 @@
 						CreatedOnToolsVersion = 9.2;
 						DevelopmentTeam = D5GDMDV3X5;
 						LastSwiftMigration = 1100;
+						ProvisioningStyle = Automatic;
+					};
+					0750F8277E3C9FBE35B4462B = {
+						CreatedOnToolsVersion = 15.0;
+						DevelopmentTeam = D5GDMDV3X5;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -142,6 +216,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				0750F8277E3C9FBE35B4462B /* RegistrarGastoWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -162,6 +237,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5BB44579C38AE663E638CEC8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33A3DA634564B41AB5B50796 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -174,7 +257,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C182CA08896BA47CD6270BF3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41557F5DF8A522DEFA4906FB /* RegistrarGastoWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		65F07B53F4CC9B888BB69CCE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0750F8277E3C9FBE35B4462B /* RegistrarGastoWidgetExtension */;
+			targetProxy = 5E8A867681EEDE5D11278E9F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -355,6 +454,56 @@
 			};
 			name = Release;
 		};
+		DB3802AC5911E1729ABE63CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = D5GDMDV3X5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RegistrarGastoWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.miscuentaspro.app.RegistrarGastoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		6CF4DF2C46B79CC6E5392832 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_TEAM = D5GDMDV3X5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RegistrarGastoWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.miscuentaspro.app.RegistrarGastoWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -372,6 +521,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1083CEA4F45C425BFCA872ED /* Build configuration list for PBXNativeTarget "RegistrarGastoWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DB3802AC5911E1729ABE63CC /* Debug */,
+				6CF4DF2C46B79CC6E5392832 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
