@@ -2523,10 +2523,26 @@ async function responderReseñaDesdeApple(idSeguro, reviewIdReal){
 // cualquier reporte, y si no aparece ninguna, el embudo simplemente no
 // muestra ese escalón (se agrega solo en cuanto Apple entregue datos
 // reales con esos nombres).
-function buscarColumnaApple(reportes, regex){
+// Bug real reportado por el usuario ("no puedes traer las descargas"):
+// confirmado en vivo (2026-09-08) que "App Store Installation and Deletion
+// Standard" SÍ trae datos reales de instalaciones, pero Apple no le pone un
+// nombre descriptivo a la columna -- se llama genérico "Counts", no
+// "Downloads"/"Installs", así que nunca la encontraba el regex por nombre
+// de columna. regexNombreReporte es el fallback: si no aparece ninguna
+// columna que matchee por nombre, busca el REPORTE por su nombre y usa su
+// columna "Counts". (Esta columna suma instalaciones Y eliminaciones
+// juntas si el reporte trae ambas -- separarlas exigiría capturar la
+// dimensión "Download Type" además de "Territory", que agruparPorFecha en
+// _shared/apple_analytics.ts todavía no soporta a la vez; queda como
+// mejora futura, no bloqueante para mostrar el número.)
+function buscarColumnaApple(reportes, regex, regexNombreReporte){
   for(const r of reportes){
     const col = (r.columnasNumericas || []).find(c => regex.test(c));
     if(col) return { columna: col, reporte: r };
+  }
+  if(regexNombreReporte){
+    const r = reportes.find(rep => regexNombreReporte.test(rep.nombre || '') && (rep.columnasNumericas || []).includes('Counts'));
+    if(r) return { columna: 'Counts', reporte: r };
   }
   return null;
 }
@@ -2536,7 +2552,7 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   const reportes = datosApple.reportes || [];
 
   const impresionesInfo = buscarColumnaApple(reportes, /impression/i);
-  const descargasInfo = buscarColumnaApple(reportes, /download|install/i);
+  const descargasInfo = buscarColumnaApple(reportes, /download|install/i, /Installation and Deletion Standard/i);
 
   const dias = [];
   const hoy = new Date();
