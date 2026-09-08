@@ -23,7 +23,8 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { obtenerAnaliticaApple } from "../_shared/apple_analytics.ts";
-import { obtenerReseñasApple, responderReseñaApple } from "../_shared/apple_reviews.ts";
+import { obtenerReseñasApple, responderReseñaApple, type ResultadoReseñasApple } from "../_shared/apple_reviews.ts";
+import { agregarBorradoresIA } from "../_shared/generar_borrador_reseña.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -105,7 +106,9 @@ Deno.serve(async (req) => {
         errores.push(`analítica: ${analiticaResult.reason instanceof Error ? analiticaResult.reason.message : String(analiticaResult.reason)}`);
       }
       if (reseñasResult.status === "fulfilled") {
-        actualizacion.reseñas = reseñasResult.value;
+        const { data: filaPrevia } = await admin.from("analitica_apple_cache").select("reseñas").eq("id", "actual").maybeSingle();
+        const previasReseñas = (filaPrevia?.reseñas as ResultadoReseñasApple | null)?.reseñas ?? null;
+        actualizacion.reseñas = await agregarBorradoresIA(reseñasResult.value, previasReseñas);
       } else {
         errores.push(`reseñas: ${reseñasResult.reason instanceof Error ? reseñasResult.reason.message : String(reseñasResult.reason)}`);
       }

@@ -27,6 +27,10 @@ export type ReseñaApple = {
   territorio: string | null;
   creadaEn: string | null;
   tieneRespuesta: boolean;
+  // Borrador de respuesta generado por IA -- lo llena aparte
+  // agregarBorradoresIA() en generar_borrador_reseña.ts, nunca esta función.
+  // Ver ahí el porqué de que viva separado.
+  borrador: string | null;
 };
 
 export type ResultadoReseñasApple = {
@@ -60,22 +64,21 @@ export async function obtenerReseñasApple(limite = 20): Promise<ResultadoReseñ
   if (!resp.ok) {
     throw new Error(`apple_api_error en listar_reseñas: ${JSON.stringify(resp).slice(0, 500)}`);
   }
-  const data = (resp.data as { data?: unknown[]; included?: { type?: string; relationships?: { review?: { data?: { id?: string } } } }[] }) || {};
+  const data = (resp.data as { data?: unknown[] }) || {};
   const filas = data.data || [];
-  // Las respuestas vienen en "included" como recurso aparte, ligadas a la
-  // reseña por relación -- se arma un set de qué reseñas ya tienen
-  // respuesta en vez de asumir un campo plano (el shape real nunca se pudo
-  // confirmar en vivo desde el sandbox de desarrollo, mismo patrón que el
-  // resto de esta integración).
-  const idsConRespuesta = new Set(
-    (data.included || [])
-      .filter((inc) => inc.type === "customerReviewResponses")
-      .map((inc) => inc.relationships?.review?.data?.id)
-      .filter((id): id is string => !!id),
-  );
 
   const reseñas: ReseñaApple[] = filas.map((f) => {
-    const fila = f as { id: string; attributes?: { rating?: number; title?: string; body?: string; reviewerNickname?: string; territory?: string; createdDate?: string } };
+    // La relación va en la RESEÑA (relationships.response.data.id), no al
+    // revés -- se confirmó en vivo (parte 208) que los objetos
+    // "customerReviewResponses" que llegan en "included" NO traen ninguna
+    // relación de vuelta hacia la reseña, así que buscarla ahí (como hacía
+    // antes esta función) nunca podía encontrar nada: todas las reseñas
+    // salían como "sin contestar" aunque ya tuvieran respuesta pública.
+    const fila = f as {
+      id: string;
+      attributes?: { rating?: number; title?: string; body?: string; reviewerNickname?: string; territory?: string; createdDate?: string };
+      relationships?: { response?: { data?: { id?: string } | null } };
+    };
     return {
       id: fila.id,
       rating: fila.attributes?.rating ?? null,
@@ -84,7 +87,8 @@ export async function obtenerReseñasApple(limite = 20): Promise<ResultadoReseñ
       autor: fila.attributes?.reviewerNickname ?? null,
       territorio: fila.attributes?.territory ?? null,
       creadaEn: fila.attributes?.createdDate ?? null,
-      tieneRespuesta: idsConRespuesta.has(fila.id),
+      tieneRespuesta: !!fila.relationships?.response?.data?.id,
+      borrador: null,
     };
   });
 

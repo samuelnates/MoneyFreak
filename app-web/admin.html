@@ -2378,7 +2378,8 @@ function htmlListaReseñas(lista, prefijo){
       ${r.tieneRespuesta
         ? '<div style="font-size:11px;color:var(--texto-tenue);margin-top:4px;">✓ ya respondida</div>'
         : `<div style="margin-top:6px;">
-            <textarea id="resp-texto-${idSeguro}" placeholder="Escribe una respuesta pública…" style="width:100%;min-height:44px;font-family:var(--sans);font-size:12px;border:1px solid var(--borde);border-radius:6px;padding:6px;background:transparent;color:var(--texto);box-sizing:border-box;"></textarea>
+            ${r.borrador ? '<div style="font-size:11px;color:var(--acento);margin-bottom:3px;">✨ Borrador generado por IA -- revísalo antes de mandarlo</div>' : ''}
+            <textarea id="resp-texto-${idSeguro}" placeholder="Escribe una respuesta pública…" style="width:100%;min-height:44px;font-family:var(--sans);font-size:12px;border:1px solid var(--borde);border-radius:6px;padding:6px;background:transparent;color:var(--texto);box-sizing:border-box;">${r.borrador ? escapeHtmlAdmin(r.borrador) : ''}</textarea>
             <button type="button" onclick="responderReseñaDesdeApple('${idSeguro}', '${escapeHtmlAdmin(r.id)}')" style="margin-top:4px;padding:5px 10px;border-radius:6px;border:none;background:var(--texto);color:var(--bg);font-size:11px;font-weight:600;cursor:pointer;">Responder (público)</button>
             <span id="resp-estado-${idSeguro}" style="font-size:11px;color:var(--texto-tenue);margin-left:8px;"></span>
           </div>`}

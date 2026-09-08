@@ -22,7 +22,8 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { obtenerAnaliticaApple } from "../_shared/apple_analytics.ts";
-import { obtenerReseñasApple } from "../_shared/apple_reviews.ts";
+import { obtenerReseñasApple, type ResultadoReseñasApple } from "../_shared/apple_reviews.ts";
+import { agregarBorradoresIA } from "../_shared/generar_borrador_reseña.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -81,7 +82,13 @@ Deno.serve(async (req) => {
   }
 
   if (reseñasResult.status === "fulfilled") {
-    actualizacion.reseñas = reseñasResult.value;
+    // Se lee la fila previa para reutilizar los borradores de IA ya
+    // generados en corridas anteriores para reseñas que siguen sin
+    // contestar -- así no se le vuelve a pedir a OpenAI un texto para la
+    // misma reseña pendiente cada vez que corre este cron.
+    const { data: filaPrevia } = await admin.from("analitica_apple_cache").select("reseñas").eq("id", "actual").maybeSingle();
+    const previasReseñas = (filaPrevia?.reseñas as ResultadoReseñasApple | null)?.reseñas ?? null;
+    actualizacion.reseñas = await agregarBorradoresIA(reseñasResult.value, previasReseñas);
   } else {
     const detalle = reseñasResult.reason instanceof Error ? reseñasResult.reason.message : String(reseñasResult.reason);
     console.error("sync-analitica-apple: error en reseñas:", detalle);
