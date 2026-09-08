@@ -86,9 +86,83 @@ struct RegistrarGastoWidget: Widget {
   }
 }
 
+// Versión chica del mismo botón, para la pantalla de bloqueo -- pedido
+// explícito del usuario ("está muy grande, ¿no podría ser más chico?"):
+// el widget de Inicio (arriba) ya es el tamaño mínimo que existe ahí
+// (systemSmall, 2x2 íconos); lo más chico que hay en todo iOS es un widget
+// de pantalla de bloqueo (accessoryCircular/accessoryRectangular), pero esas
+// familias solo existen desde iOS 16 -- por eso viven en un Widget aparte,
+// gateado con @available, en vez de meterlas al de arriba.
+//
+// La pantalla de bloqueo se pinta en un solo color (vibrancy) que pone el
+// propio sistema -- cualquier imagen con detalle (como el logo a color del
+// widget de Inicio) se vería como una mancha ilegible ahí. Por eso usa un
+// símbolo de sistema (SF Symbol) en vez del logo, y nada de fondo/color
+// propio (widgetAccentable delega el tinte real al sistema).
+@available(iOS 16.0, *)
+struct RegistrarGastoLockScreenEntry: TimelineEntry {
+  let date: Date
+}
+
+@available(iOS 16.0, *)
+struct RegistrarGastoLockScreenProvider: TimelineProvider {
+  func placeholder(in context: Context) -> RegistrarGastoLockScreenEntry {
+    RegistrarGastoLockScreenEntry(date: Date())
+  }
+
+  func getSnapshot(in context: Context, completion: @escaping (RegistrarGastoLockScreenEntry) -> Void) {
+    completion(RegistrarGastoLockScreenEntry(date: Date()))
+  }
+
+  func getTimeline(in context: Context, completion: @escaping (Timeline<RegistrarGastoLockScreenEntry>) -> Void) {
+    completion(Timeline(entries: [RegistrarGastoLockScreenEntry(date: Date())], policy: .never))
+  }
+}
+
+@available(iOS 16.0, *)
+struct RegistrarGastoLockScreenView: View {
+  @Environment(\.widgetFamily) private var family
+
+  var body: some View {
+    Group {
+      if family == .accessoryCircular {
+        Image(systemName: "plus.circle.fill")
+          .font(.system(size: 22, weight: .semibold))
+      } else {
+        // accessoryRectangular
+        HStack(spacing: 5) {
+          Image(systemName: "plus.circle.fill")
+          Text("Registrar gasto")
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+        }
+      }
+    }
+    .widgetAccentable()
+    .widgetURL(URL(string: "https://www.moneyfreak.app/?widget=gasto"))
+  }
+}
+
+@available(iOS 16.0, *)
+struct RegistrarGastoLockScreenWidget: Widget {
+  let kind: String = "RegistrarGastoLockScreenWidget"
+
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: kind, provider: RegistrarGastoLockScreenProvider()) { _ in
+      RegistrarGastoLockScreenView()
+    }
+    .configurationDisplayName("Registrar gasto")
+    .description("Ícono chico para la pantalla de bloqueo -- un toque abre Money Freak directo en Registrar gasto.")
+    .supportedFamilies([.accessoryCircular, .accessoryRectangular])
+  }
+}
+
 @main
 struct RegistrarGastoWidgetBundle: WidgetBundle {
   var body: some Widget {
     RegistrarGastoWidget()
+    if #available(iOS 16.0, *) {
+      RegistrarGastoLockScreenWidget()
+    }
   }
 }
