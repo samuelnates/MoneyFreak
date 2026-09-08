@@ -2420,13 +2420,34 @@ function calcularTendenciaReporte(porFecha, columna){
   }
   return { totalReciente, ventana, tendenciaTxt, diasTotales: dias.length };
 }
+function formatoDuracion(segundos){
+  if(!segundos || segundos < 60) return `${Math.round(segundos || 0)} seg`;
+  const minutos = segundos / 60;
+  if(minutos < 60) return `${minutos.toFixed(1)} min`;
+  return `${(minutos / 60).toFixed(1)} h`;
+}
+// Orden de prioridad (parte 227: "creo que las más valiosas son la 2 y la
+// 4... deberían ir juntas"): Sesiones (uso real) y Descargas Standard (el
+// número completo, sin el filtro de privacidad que sí tiene "Detailed" --
+// ver nota más abajo) van primero y juntas; el resto en el orden en que
+// Apple los mande. Los "Detailed" de un mismo tema NUNCA van antes que su
+// versión "Standard" -- su número puede ser menor solo por privacidad, no
+// porque falten descargas de verdad, y mostrarlo primero confunde.
+const PRIORIDAD_REPORTE = [/sessions standard/i, /downloads standard/i, /installation and deletion standard/i, /discovery and engagement standard/i];
+function prioridadReporte(nombre){
+  const i = PRIORIDAD_REPORTE.findIndex(regex => regex.test(nombre || ''));
+  if(i !== -1) return i;
+  return /detailed/i.test(nombre || '') ? 999 : 500;
+}
 function pintarListaReportesApple(reportes){
   const lista = document.getElementById('analitica-apple-lista');
   if(!reportes.length){
     lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear -- Apple tarda 24-48h en generar los primeros datos).</div>';
     return;
   }
-  const conDatos = reportes.filter(r => Object.keys(r.porFecha || {}).length && (r.columnasNumericas || []).length);
+  const conDatos = reportes
+    .filter(r => Object.keys(r.porFecha || {}).length && (r.columnasNumericas || []).length)
+    .sort((a, b) => prioridadReporte(a.nombre) - prioridadReporte(b.nombre));
   const sinDatos = reportes.length - conDatos.length;
 
   if(!conDatos.length){
@@ -2446,10 +2467,42 @@ function pintarListaReportesApple(reportes){
     const periodoTxt = stat.diasTotales < stat.ventana + 1
       ? `en ${stat.diasTotales} día${stat.diasTotales === 1 ? '' : 's'} de datos`
       : `en los últimos ${stat.ventana} días`;
+    // Parte 227: el usuario asumió que "Detallado" era el número más
+    // exacto de descargas -- es al revés. Apple oculta combinaciones con
+    // pocos casos en los reportes "Detailed" para proteger privacidad, así
+    // que su total suele ser MENOR que el de "Standard" sin que falte nada
+    // de verdad. Nota explícita para no repetir la confusión.
+    const notaDetallado = /detailed/i.test(r.nombre || '')
+      ? '<div class="tarjeta-sub" style="margin-top:2px;">Puede salir más bajo que el reporte sin "detallado" -- Apple oculta combinaciones con pocos casos aquí por privacidad, no es que falten descargas.</div>'
+      : '';
+    // Parte 227 (segunda mitad): "también desplegaría la de uso en número
+    // de dispositivos y tiempo... dónde propones ponerla para que no esté
+    // todo revuelto" -- van AQUÍ, como segunda línea de la MISMA tarjeta
+    // de Sesiones (es la misma historia -- calidad de uso -- no un tema
+    // aparte), no como tarjetas nuevas que fragmentarían lo que ya se
+    // simplificó en la parte 226.
+    let extraUso = '';
+    const colDispositivos = cols.find(c => /unique devices/i.test(c));
+    const colDuracion = cols.find(c => /total session duration/i.test(c));
+    if(colDispositivos || colDuracion){
+      const dias = Object.keys(r.porFecha || {}).sort().slice(-stat.ventana);
+      const partes = [];
+      if(colDispositivos){
+        const maxDisp = Math.max(0, ...dias.map(d => (r.porFecha[d] && r.porFecha[d][colDispositivos]) || 0));
+        partes.push(`hasta ${formatoNumero(maxDisp)} dispositivo${maxDisp === 1 ? '' : 's'} distinto${maxDisp === 1 ? '' : 's'} en un día`);
+      }
+      if(colDuracion && stat.totalReciente > 0){
+        const totalDur = dias.reduce((acc, d) => acc + ((r.porFecha[d] && r.porFecha[d][colDuracion]) || 0), 0);
+        partes.push(`~${formatoDuracion(totalDur / stat.totalReciente)} por sesión en promedio`);
+      }
+      if(partes.length) extraUso = `<div class="tarjeta-sub" style="margin-top:2px;">${partes.join(' · ')}</div>`;
+    }
     return `<div class="tarjeta">
       <div class="tarjeta-etiqueta">${escapeHtmlAdmin(traducirNombreReporte(r.nombre) || r.categoria || '—')}</div>
       <div class="tarjeta-valor">${formatoNumero(stat.totalReciente)}</div>
       <div class="tarjeta-sub">${escapeHtmlAdmin(traducirColumna(colPrincipal))} ${periodoTxt}${stat.tendenciaTxt ? ` · ${stat.tendenciaTxt}` : ''}</div>
+      ${extraUso}
+      ${notaDetallado}
     </div>`;
   }).join('');
 
