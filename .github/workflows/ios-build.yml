@@ -41,17 +41,28 @@ jobs:
       # un keychain temporal aislado (se borra al final del job, nunca toca
       # el keychain real del runner), se importa el certificado ahí, y se
       # instala el perfil donde Xcode lo espera encontrar.
-      - name: Importar certificado y perfil de aprovisionamiento
+      #
+      # Parte 210: el widget "Registrar gasto" es un target de extensión
+      # aparte, con su propio bundle id (com.miscuentaspro.app.RegistrarGastoWidget)
+      # -- necesita su PROPIO perfil de aprovisionamiento (PROVISIONING_PROFILE_WIDGET),
+      # pero usa el MISMO certificado de distribución que ya firma la app
+      # (Apple permite firmar varios App IDs del mismo equipo con un solo
+      # certificado). Los dos perfiles se copian a la misma carpeta -- Xcode
+      # elige el correcto para cada target según el bundle id que traiga
+      # adentro cada perfil, no importa el orden ni el nombre del archivo.
+      - name: Importar certificado y perfiles de aprovisionamiento
         env:
           CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
           CERTIFICATE_P12_PASSWORD: ${{ secrets.CERTIFICATE_P12_PASSWORD }}
           PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
+          PROVISIONING_PROFILE_WIDGET: ${{ secrets.PROVISIONING_PROFILE_WIDGET }}
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(uuidgen)
 
           echo -n "$CERTIFICATE_P12" | base64 --decode -o $RUNNER_TEMP/certificate.p12
           echo -n "$PROVISIONING_PROFILE" | base64 --decode -o $RUNNER_TEMP/profile.mobileprovision
+          echo -n "$PROVISIONING_PROFILE_WIDGET" | base64 --decode -o $RUNNER_TEMP/profile-widget.mobileprovision
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
@@ -63,6 +74,7 @@ jobs:
 
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $RUNNER_TEMP/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp $RUNNER_TEMP/profile-widget.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Archivar y exportar el .ipa firmado
         run: |
@@ -96,6 +108,8 @@ jobs:
             <dict>
               <key>com.miscuentaspro.app</key>
               <string>Money Freak App Store</string>
+              <key>com.miscuentaspro.app.RegistrarGastoWidget</key>
+              <string>Money Freak Widget App Store</string>
             </dict>
           </dict>
           </plist>

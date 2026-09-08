@@ -482,9 +482,11 @@
 		6CF4DF2C46B79CC6E5392832 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = D5GDMDV3X5;
+				PROVISIONING_PROFILE_SPECIFIER = "Money Freak Widget App Store";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RegistrarGastoWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
