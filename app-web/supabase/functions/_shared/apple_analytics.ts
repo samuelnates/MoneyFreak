@@ -131,6 +131,21 @@ function agruparPorFecha(filas: Record<string, string>[]): { columnaFecha: strin
   const columnaFecha = encabezados.find((h) => h.toLowerCase() === "date") ?? null;
   const columnasNumericas = encabezados.filter((h) => {
     if (h === columnaFecha) return false;
+    // Bug real reportado por el usuario (parte 222): "App Apple Identifier"
+    // -- el ID numérico de la app, siempre el mismo valor repetido en cada
+    // fila -- pasaba el check de "todo son números" y se colaba como
+    // columna numérica. Al ser la primera columna numérica del TSV, el
+    // panel la tomaba como LA métrica del reporte y sumaba el ID miles de
+    // veces (una vez por fila/territorio/fecha), dando cifras absurdas
+    // (cientos de miles de millones). Mismo problema con "App Version"
+    // ("1.2", "1.1"...) -- un número de versión también pasa el check de
+    // "son números" pero sumar versiones no significa nada. Ninguna columna
+    // de identificador o versión es una cantidad que tenga sentido sumar
+    // aunque sus valores sean numéricos -- se excluyen por nombre (columnas
+    // reales de Apple para esto: "App Apple Identifier", "App Version",
+    // "Platform Version", nunca una métrica de verdad como "Counts" o
+    // "Sessions").
+    if (/identifier|version/i.test(h)) return false;
     const valores = filas.slice(0, 50).map((f) => f[h]).filter((v) => v !== "");
     if (valores.length === 0) return false;
     return valores.every((v) => !isNaN(Number(v)));
