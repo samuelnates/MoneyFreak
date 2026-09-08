@@ -80,7 +80,7 @@ struct RegistrarGastoWidget: Widget {
     StaticConfiguration(kind: kind, provider: RegistrarGastoProvider()) { _ in
       RegistrarGastoWidgetView()
     }
-    .configurationDisplayName("Registrar gasto")
+    .configurationDisplayName("Registrar gasto (Inicio)")
     .description("Un toque para abrir Money Freak directo en Registrar gasto.")
     .supportedFamilies([.systemSmall])
   }
@@ -151,28 +151,27 @@ struct RegistrarGastoLockScreenWidget: Widget {
     StaticConfiguration(kind: kind, provider: RegistrarGastoLockScreenProvider()) { _ in
       RegistrarGastoLockScreenView()
     }
-    .configurationDisplayName("Registrar gasto")
+    .configurationDisplayName("Registrar gasto (pantalla de bloqueo)")
     .description("Ícono chico para la pantalla de bloqueo -- un toque abre Money Freak directo en Registrar gasto.")
     .supportedFamilies([.accessoryCircular, .accessoryRectangular])
   }
 }
 
-// El widget de Inicio funcionaba confirmado (build 5); en cuanto se agregó
-// el de pantalla de bloqueo (build 6) el usuario dejó de encontrar CUALQUIER
-// widget en su iPhone -- ni el nuevo ni el de Inicio que ya le funcionaba,
-// incluso después de borrar la app y reinstalarla de cero. Eso apunta a que
-// algo en el segundo Widget está tumbando el proceso de la extensión
-// completa al arrancar (WidgetKit registra los widgets de un mismo binario
-// juntos -- si ese proceso truena, no se registra ninguno). Sin acceso a
-// una Mac no hay forma de ver el crash log del lado de Apple/iOS desde acá,
-// así que se aísla quitando el de pantalla de bloqueo del bundle (se deja
-// el código, solo no se registra) para confirmar en un build limpio si el
-// de Inicio vuelve a aparecer solo. Si vuelve, el bug está en el segundo
-// Widget y se retoma desde cero con más cuidado; si NO vuelve, el problema
-// nunca fue el código nuevo.
+// Build 7 (sin el widget de pantalla de bloqueo) confirmó que el de Inicio
+// vuelve a aparecer solo -- el bug real está en el segundo Widget, tumbando
+// el proceso de la extensión completa al arrancar. Sin Mac no hay forma de
+// ver el crash log real, así que este build 8 es un segundo experimento con
+// la única sospecha que queda sin descartar por revisión de código: los dos
+// widgets compartían el mismo `configurationDisplayName` ("Registrar
+// gasto") -- ahora cada uno tiene el suyo. Si esto tampoco lo arregla, el
+// widget de pantalla de bloqueo se vuelve a quitar y se deja pendiente
+// hasta tener acceso a una Mac/Xcode real para depurarlo con el debugger.
 @main
 struct RegistrarGastoWidgetBundle: WidgetBundle {
   var body: some Widget {
     RegistrarGastoWidget()
+    if #available(iOS 16.0, *) {
+      RegistrarGastoLockScreenWidget()
+    }
   }
 }
