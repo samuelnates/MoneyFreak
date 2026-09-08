@@ -2324,6 +2324,79 @@ async function cargarAnaliticaApple(forzar){
 // resto del panel) en vez de una tabla cruda de fecha × columna -- los
 // números exactos siguen ahí, pero plegados en un <details> para quien los
 // quiera.
+// Traducción de los términos técnicos que manda Apple (parte 225: "no
+// entiendo Territory, Sessions, etc." -- ya no eran cifras absurdas, pero
+// seguían en inglés y con nombres de campo de la API, no palabras que
+// alguien reconozca). Todo lo de abajo es best-effort por palabra clave
+// (no un diccionario exacto de los ~20 reportes que existen) -- lo que no
+// se reconoce se muestra tal cual viene de Apple en vez de fallar.
+function traducirNombreReporte(nombre){
+  if(!nombre) return nombre;
+  const esDetallado = /detailed/i.test(nombre);
+  const mapa = [
+    [/discovery and engagement/i, 'Descubrimiento y visitas a la ficha del App Store'],
+    [/installation and deletion/i, 'Instalaciones y eliminaciones'],
+    [/downloads/i, 'Descargas'],
+    [/sessions/i, 'Sesiones de uso'],
+    [/crashes/i, 'Fallos de la app (crashes)'],
+    [/purchases/i, 'Compras'],
+    [/commerce/i, 'Comercio (compras y pagos)'],
+    [/frameworks usage/i, 'Uso de frameworks (técnico, iOS)'],
+    [/application programming interface|api.*usage/i, 'Uso de APIs (técnico, iOS)'],
+    [/adoption/i, 'Adopción de versión'],
+  ];
+  for(const [regex, traduccion] of mapa){
+    if(regex.test(nombre)) return traduccion + (esDetallado ? ' (detallado)' : '');
+  }
+  return nombre;
+}
+function traducirColumna(col){
+  if(!col) return col;
+  const mapa = {
+    'counts': 'Cantidad', 'units': 'Unidades', 'sessions': 'Sesiones',
+    'unique devices': 'Dispositivos únicos', 'total session duration': 'Duración total (segundos)',
+    'impressions': 'Impresiones', 'product page views': 'Vistas de la ficha',
+    'installs': 'Instalaciones', 'deletions': 'Eliminaciones', 'redownloads': 'Vueltas a descargar',
+    'crashes': 'Fallos', 'proceeds': 'Ingresos', 'sales': 'Ventas',
+  };
+  return mapa[col.trim().toLowerCase()] || col;
+}
+function traducirDimension(dim){
+  if(!dim) return dim;
+  const mapa = [
+    [/territory|country/i, 'País'],
+    [/device/i, 'Dispositivo'],
+    [/platform version/i, 'Versión de iOS'],
+    [/app version/i, 'Versión de la app'],
+    [/page type/i, 'Tipo de página'],
+    [/content type/i, 'Tipo de contenido'],
+    [/source type/i, 'Origen del tráfico'],
+    [/download type/i, 'Tipo de descarga'],
+  ];
+  for(const [regex, traduccion] of mapa){
+    if(regex.test(dim)) return traduccion;
+  }
+  return dim;
+}
+// Territorios como código ISO de 2 letras (el mismo que usa App Store
+// Connect) -- los más relevantes para una app en español, el resto se
+// muestra tal cual (el código de 2 letras sigue siendo más legible que un
+// ID interno, así que no es un problema no tener los ~150 países).
+const PAISES_ISO = {
+  MX: 'México', US: 'Estados Unidos', ES: 'España', AR: 'Argentina', CO: 'Colombia',
+  CL: 'Chile', PE: 'Perú', EC: 'Ecuador', GT: 'Guatemala', HN: 'Honduras',
+  SV: 'El Salvador', NI: 'Nicaragua', CR: 'Costa Rica', PA: 'Panamá', DO: 'Rep. Dominicana',
+  PR: 'Puerto Rico', VE: 'Venezuela', BO: 'Bolivia', PY: 'Paraguay', UY: 'Uruguay',
+  CA: 'Canadá', GB: 'Reino Unido', FR: 'Francia', DE: 'Alemania', IT: 'Italia',
+  BR: 'Brasil', PT: 'Portugal', ML: 'Malí', NL: 'Países Bajos', AU: 'Australia',
+};
+function traducirValorDimension(dim, valor){
+  if(/territory|country/i.test(dim || '') && PAISES_ISO[(valor || '').toUpperCase()]){
+    return `${PAISES_ISO[valor.toUpperCase()]} (${valor})`;
+  }
+  return valor;
+}
+
 let chartsReportesApple = [];
 function pintarListaReportesApple(reportes){
   const lista = document.getElementById('analitica-apple-lista');
@@ -2357,9 +2430,9 @@ function pintarListaReportesApple(reportes){
         .slice(0, 8);
       const maxValor = filasDim[0]?.valor || 1;
       bloqueDimension = `<div style="margin:8px 0 12px;">
-        <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Por ${escapeHtmlAdmin(r.columnaDimension)} (todo el periodo)</div>
+        <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Por ${escapeHtmlAdmin(traducirDimension(r.columnaDimension))} (todo el periodo)</div>
         ${filasDim.map(f => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-          <div style="width:110px;font-size:11px;color:var(--texto-tenue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlAdmin(f.clave)}</div>
+          <div style="width:130px;font-size:11px;color:var(--texto-tenue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlAdmin(traducirValorDimension(r.columnaDimension, f.clave))}</div>
           <div style="flex:1;background:var(--borde);border-radius:3px;height:8px;overflow:hidden;"><div style="width:${Math.max(2, Math.round(f.valor / maxValor * 100))}%;height:100%;background:var(--acento);"></div></div>
           <div style="width:60px;text-align:right;font-size:11px;font-family:'JetBrains Mono';">${formatoNumero(f.valor)}</div>
         </div>`).join('')}
@@ -2371,12 +2444,15 @@ function pintarListaReportesApple(reportes){
     // El nombre del reporte y la columna que se grafica van como título y
     // subtítulo DENTRO de la gráfica (no como texto aparte arriba) -- así
     // se explica sola incluso si no trae desglose por dimensión abajo.
+    // Ambos pasan por traducirNombreReporte/traducirColumna -- Apple manda
+    // nombres de campo técnicos en inglés (Territory, Sessions, Counts...)
+    // que nadie que no conozca la API reconoce (parte 225).
     return `<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--borde);">
-      ${!colPrincipal ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>` : ''}
+      ${!colPrincipal ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;">${escapeHtmlAdmin(traducirNombreReporte(r.nombre) || r.categoria || '—')}</div>` : ''}
       ${bloqueDimension}
       ${colPrincipal ? `<div style="height:130px;margin-bottom:8px;"><canvas id="${idCanvas}"></canvas></div>` : ''}
       <details>
-        <summary style="cursor:pointer;font-size:11px;color:var(--texto-tenue);">Ver números exactos</summary>
+        <summary style="cursor:pointer;font-size:11px;color:var(--texto-tenue);">Ver números exactos (nombres originales de Apple)</summary>
         <div style="overflow-x:auto;margin-top:8px;"><table id="${idTabla}"><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
           dias.slice(-10).map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
         }</tbody></table></div>
@@ -2405,8 +2481,8 @@ function pintarListaReportesApple(reportes){
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          title: { display: true, text: r.nombre || r.categoria || '—', color: colorTexto, font: { family: 'JetBrains Mono', size: 11, weight: 'normal' }, align: 'start', padding: { bottom: 2 } },
-          subtitle: { display: true, text: `${colPrincipal} · últimos ${dias.length} días`, color: colorTexto, font: { family: 'JetBrains Mono', size: 9, style: 'italic' }, align: 'start', padding: { bottom: 8 } },
+          title: { display: true, text: traducirNombreReporte(r.nombre) || r.categoria || '—', color: colorTexto, font: { family: 'JetBrains Mono', size: 11, weight: 'normal' }, align: 'start', padding: { bottom: 2 } },
+          subtitle: { display: true, text: `${traducirColumna(colPrincipal)} · últimos ${dias.length} días`, color: colorTexto, font: { family: 'JetBrains Mono', size: 9, style: 'italic' }, align: 'start', padding: { bottom: 8 } },
         },
         scales: {
           x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false }, border: { color: colorBorde } },
@@ -2663,7 +2739,7 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   const pasos = [
     { key: 'impresiones', etiqueta: 'Impresiones App Store (30d)', valor: totalImpresiones30d },
     { key: 'descargas', etiqueta: 'Descargas Apple (30d)', valor: totalDescargas30d },
-    { key: 'registros', etiqueta: 'Sign in / registro (30d)', valor: totalRegistros30d },
+    { key: 'registros', etiqueta: 'Se registraron en la app (30d)', valor: totalRegistros30d },
     { key: 'cuenta', etiqueta: 'Creación de cuenta (total)', valor: totalActivados },
     { key: 'gasto', etiqueta: 'Registraron un gasto (total)', valor: totalConGasto },
     { key: 'activos', etiqueta: 'Activos reales (total)', valor: totalActivosReales },
