@@ -4405,6 +4405,8 @@ const TRADUCCIONES = {
     'flujo.estimado_pago_mensual': ' · estimado con pago mensual',
     'flujo.ya_se_cumplio': 'Ya se cumplió este mes',
     'flujo.ya_paso_corto': '¿Ya pasó?',
+    'flujo.corte_de': 'Corte: {0}',
+    'flujo.saldo_actual_corto': 'saldo actual',
     'flujo.cumplido_este_mes': 'Cumplido este mes -- no cuenta en el saldo proyectado',
     'flujo.ingresos_esperados': 'Ingresos este mes',
     'flujo.total_pagar': 'Total a pagar este mes',
@@ -5101,6 +5103,8 @@ const TRADUCCIONES = {
     'tarjeta.pago_mensual': 'Pago mensual: {0}',
     'tarjeta.uso_limite': 'Uso de tu límite: {0}%',
     'tarjeta.proximo_pago': 'Próximo pago: {0}',
+    'tarjeta.fecha_corte': 'Corte {0}',
+    'tarjeta.fecha_pago': 'Pago {0}',
     'accion.precio_desactualizado': 'Precio no actualizado (límite diario de la API)',
     'accion.precio_actualizado_el': 'Último precio disponible, actualizado: {0}',
     'accion.proximamente_tiempo_real': '* Próximamente: opción de pago para cotizaciones en tiempo real',
@@ -5388,6 +5392,8 @@ const TRADUCCIONES = {
     'flujo.estimado_pago_mensual': ' · estimated from monthly payment',
     'flujo.ya_se_cumplio': 'Already happened this month',
     'flujo.ya_paso_corto': 'Happened?',
+    'flujo.corte_de': 'Statement close: {0}',
+    'flujo.saldo_actual_corto': 'current balance',
     'flujo.cumplido_este_mes': "Already happened this month -- not counted in the projected balance",
     'flujo.ingresos_esperados': 'Income this month',
     'flujo.total_pagar': 'Total to pay this month',
@@ -6084,6 +6090,8 @@ const TRADUCCIONES = {
     'tarjeta.pago_mensual': 'Monthly payment: {0}',
     'tarjeta.uso_limite': 'Limit usage: {0}%',
     'tarjeta.proximo_pago': 'Next payment: {0}',
+    'tarjeta.fecha_corte': 'Close {0}',
+    'tarjeta.fecha_pago': 'Due {0}',
     'accion.precio_desactualizado': 'Price not updated (daily API limit)',
     'accion.precio_actualizado_el': 'Last available price, updated: {0}',
     'accion.proximamente_tiempo_real': '* Coming soon: a paid option for real-time quotes',
@@ -7820,7 +7828,11 @@ function simularEscenarioFlujo(items, activosLiquidos){
 
   const deltaPorDia = {};
   itemsConFecha.forEach(it => {
-    const signo = it.tipo === 'ingreso' ? 1 : -1;
+    // 'corte' (fecha de corte de una tarjeta) no es un movimiento de dinero
+    // real -- ver por qué en calcularFlujoEfectivo(). Sin esto, cada
+    // simulación restaría el saldo COMPLETO de la tarjeta como si fuera un
+    // gasto más, en la fecha de corte.
+    const signo = it.tipo === 'ingreso' ? 1 : (it.tipo === 'corte' ? 0 : -1);
     deltaPorDia[it.diasFaltan] = (deltaPorDia[it.diasFaltan] || 0) + signo * it.monto;
   });
 
@@ -10735,12 +10747,17 @@ async function cargarDeudas(){
     const pagoTxt = d.pago_mensual !== null && d.pago_mensual !== undefined ? ' · ' + tf('tarjeta.pago_mensual', formatoMonto(d.pago_mensual, d.moneda)) : '';
     const utilTxt = (d.tipo === 'Tarjeta de crédito' && d.limite_credito) ? ' · ' + tf('tarjeta.uso_limite', ((Number(d.saldo) / Number(d.limite_credito)) * 100).toFixed(0)) : '';
     const proximoPagoTxt = (d.tipo === 'Tarjeta de crédito' && d.monto_proximo_pago != null) ? ' · ' + tf('tarjeta.proximo_pago', formatoMonto(d.monto_proximo_pago, d.moneda)) : '';
+    // Pedido explícito del usuario: "en la tarjeta de cada tarjeta de
+    // crédito ver la fecha de corte y la fecha de pago", junto con el uso
+    // del límite y el próximo pago que ya se mostraban.
+    const corteFechaTxt = (d.tipo === 'Tarjeta de crédito' && d.dia_corte != null) ? ' · ' + tf('tarjeta.fecha_corte', fechaCortaDesdeDia(d.dia_corte)) : '';
+    const pagoFechaTxt = (d.tipo === 'Tarjeta de crédito' && d.dia_limite_pago != null) ? ' · ' + tf('tarjeta.fecha_pago', fechaCortaDesdeDia(d.dia_limite_pago)) : '';
     const historicoReciente = (historicoPorDeuda[d.id] || []).slice().reverse().map(h => ({ fecha: h.fecha, monto: h.saldo }));
     const sparklineHtml = renderSparkline(historicoReciente, true);
     btn.innerHTML = `
       <div>
         <div class="nombre">${escapeHtml(d.nombre)}</div>
-        <div class="detalle">${escapeHtml(nombreTipoDeuda(d.tipo))}${tasaTxt}${pagoTxt}${utilTxt}${proximoPagoTxt}</div>
+        <div class="detalle">${escapeHtml(nombreTipoDeuda(d.tipo))}${tasaTxt}${pagoTxt}${utilTxt}${proximoPagoTxt}${corteFechaTxt}${pagoFechaTxt}</div>
       </div>
       <div>
         <div class="monto">-${formatoMonto(d.saldo, d.moneda)}</div>
@@ -15844,6 +15861,24 @@ function diasHastaDia(diaDelMes){
   return Math.round((objetivo - hoy) / 86400000);
 }
 
+// Convierte "día del mes" (dia_corte/dia_limite_pago, mismo formato que ya
+// usa diasHastaDia de aquí arriba) en la fecha real de la próxima
+// ocurrencia -- pedido explícito del usuario: "ver la fecha de corte y la
+// fecha de pago" de cada tarjeta, no solo el número de día suelto.
+function fechaProximoDia(diaDelMes){
+  if(diaDelMes == null) return null;
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  let objetivo = new Date(hoy.getFullYear(), hoy.getMonth(), diaDelMes);
+  if(objetivo < hoy) objetivo = new Date(hoy.getFullYear(), hoy.getMonth() + 1, diaDelMes);
+  return objetivo;
+}
+
+function fechaCortaDesdeDia(diaDelMes){
+  const fecha = fechaProximoDia(diaDelMes);
+  return fecha ? `${fecha.getDate()} ${nombreMesCorto(fecha.getMonth())}` : null;
+}
+
 function mesesDePagoIngreso(ing){
   const periodicidad = ing.periodicidad || 'mensual';
   if(periodicidad === 'mensual') return null;
@@ -15891,6 +15926,23 @@ async function calcularFlujoEfectivo(){
       cumplidoEsteMes: cumplidoSet.has(`deuda:${d.id}`),
       ref: d
     });
+    // Fecha de corte -- pedido explícito del usuario: "quiero ver en el
+    // flujo cuando cortan mis tarjetas de crédito para revisar el saldo a
+    // pagar para no generar intereses". No es un movimiento de dinero de
+    // verdad (por eso queda excluido de totalEgresos/totalIngresos y de la
+    // gráfica de proyección más abajo) -- es informativo: el saldo actual
+    // de la tarjeta, para que el usuario lo revise justo antes del corte.
+    if(d.tipo === 'Tarjeta de crédito' && d.dia_corte != null){
+      items.push({
+        nombre: tf('flujo.corte_de', d.nombre),
+        tipo: 'corte',
+        monto: convertirAMXN(Number(d.saldo), d.moneda || 'MXN'),
+        dia: Number(d.dia_corte),
+        esEstimado: false,
+        cumplidoEsteMes: cumplidoSet.has(`corte:${d.id}`),
+        ref: d
+      });
+    }
   });
   (cuentas || []).forEach(c => {
     if(c.aportacion_mensual == null) return;
@@ -15928,7 +15980,10 @@ async function calcularFlujoEfectivo(){
   });
 
   const pendientes = items.filter(it => !it.cumplidoEsteMes);
-  const totalEgresos = pendientes.filter(it => it.tipo !== 'ingreso').reduce((sum, it) => sum + it.monto, 0);
+  // 'corte' no es un movimiento de dinero real (ver dónde se arma arriba) --
+  // se excluye de los totales y de la proyección de saldo, solo aparece
+  // como ítem informativo en la lista.
+  const totalEgresos = pendientes.filter(it => it.tipo !== 'ingreso' && it.tipo !== 'corte').reduce((sum, it) => sum + it.monto, 0);
   const totalIngresos = pendientes.filter(it => it.tipo === 'ingreso').reduce((sum, it) => sum + it.monto, 0);
   const saldoProyectado = s.activosLiquidos + totalIngresos - totalEgresos;
 
@@ -15985,7 +16040,11 @@ async function abrirFlujoEfectivo(){
     const diaTxt = it.dia == null ? t('flujo.sin_fecha') : (it.diasFaltan <= 0 ? t('flujo.hoy_vencido') : `${t('flujo.en')} ${it.diasFaltan} ${it.diasFaltan === 1 ? t('flujo.dia') : t('flujo.dias')} (${t('flujo.dia')} ${it.dia})`);
     const urgente = !it.cumplidoEsteMes && it.tipo !== 'ingreso' && it.dia != null && it.diasFaltan <= 3;
     const estimadoTxt = it.esEstimado ? t('flujo.estimado_pago_mensual') : '';
-    const signo = it.tipo === 'ingreso' ? '+' : '-';
+    // 'corte' no es un cobro ni un pago -- sin signo, y con una etiqueta
+    // aparte para que no se confunda con un movimiento de dinero real.
+    const esCorte = it.tipo === 'corte';
+    const signo = esCorte ? '' : (it.tipo === 'ingreso' ? '+' : '-');
+    const saldoActualHtml = esCorte ? `<div class="detalle" style="font-size:10.5px;margin-top:2px;">${t('flujo.saldo_actual_corto')}</div>` : '';
     // "A veces te pagan/pagas antes de la fecha esperada" (pedido real del
     // usuario): un check por ítem para marcarlo "ya se cumplió este mes" y
     // que el flujo deje de proyectarlo (ver calcularFlujoEfectivo). Solo
@@ -16009,6 +16068,7 @@ async function abrirFlujoEfectivo(){
         </div>
         <div class="flujo-monto-check">
           <div class="monto">${signo}${formatoMontoPrincipal(it.monto)}</div>
+          ${saldoActualHtml}
           ${checkCumplidoHtml}
         </div>
       </button>
@@ -16047,7 +16107,7 @@ async function abrirFlujoEfectivo(){
   cont.querySelectorAll('[data-movimiento-idx]').forEach(btn => {
     const it = f.items[Number(btn.dataset.movimientoIdx)];
     btn.onclick = () => {
-      if(it.tipo === 'deuda') abrirEditarDeuda(it.ref);
+      if(it.tipo === 'deuda' || it.tipo === 'corte') abrirEditarDeuda(it.ref);
       else if(it.tipo === 'aportacion') abrirEditarCuenta(it.ref);
       else if(it.tipo === 'ingreso') abrirEditarIngreso(it.ref);
     };
@@ -16065,7 +16125,8 @@ function construirSerieProyeccionLiquidez(items, activosLiquidos){
 
   const deltaPorDia = {};
   itemsConFecha.forEach(it => {
-    const signo = it.tipo === 'ingreso' ? 1 : -1;
+    // Mismo motivo que en simularEscenarioFlujo(): 'corte' no mueve dinero.
+    const signo = it.tipo === 'ingreso' ? 1 : (it.tipo === 'corte' ? 0 : -1);
     deltaPorDia[it.diasFaltan] = (deltaPorDia[it.diasFaltan] || 0) + signo * it.monto;
   });
 
@@ -17349,8 +17410,20 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 160;
+const VERSION_APP_ACTUAL = 161;
 const CHANGELOG_APP = [
+  {
+    version: 161,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Flujo de efectivo ahora avisa cuándo cortan tus tarjetas de crédito, con el saldo actual, para que lo revises antes y no generes intereses.',
+      'Cada tarjeta de crédito en Mis cuentas ahora muestra su fecha de corte y fecha de pago, junto con el uso del límite y el próximo pago.'
+    ],
+    cambios_en: [
+      'Cash flow now shows when your credit cards close their statement, with the current balance, so you can check it before the deadline and avoid interest.',
+      'Each credit card in My Accounts now shows its statement closing date and payment due date, along with limit usage and the next payment.'
+    ]
+  },
   {
     version: 160,
     fecha: '2026-09-08',
