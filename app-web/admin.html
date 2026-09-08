@@ -223,6 +223,7 @@
     <div class="tabs-admin" id="tabs-admin">
       <button class="tab-admin" data-seccion="resumen" onclick="mostrarSeccionAdmin('resumen')">Resumen diario</button>
       <button class="tab-admin" data-seccion="crecimiento" onclick="mostrarSeccionAdmin('crecimiento')">Crecimiento</button>
+      <button class="tab-admin" data-seccion="resenas" onclick="mostrarSeccionAdmin('resenas')">Reseñas</button>
       <button class="tab-admin" data-seccion="activacion" onclick="mostrarSeccionAdmin('activacion')">Activación y retención</button>
       <button class="tab-admin" data-seccion="salud" onclick="mostrarSeccionAdmin('salud')">Salud</button>
       <button class="tab-admin" data-seccion="audiencia" onclick="mostrarSeccionAdmin('audiencia')">Audiencia y perfil</button>
@@ -263,8 +264,8 @@
     <div id="resumen-embudo-debil" style="margin-bottom:18px;"></div>
 
     <div class="caja" style="margin-bottom:18px;">
-      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Reseñas recientes de App Store</div>
-      <div class="tarjeta-sub" style="margin-bottom:12px;">Las más nuevas primero. Responder es público -- lo ve cualquiera en la ficha.</div>
+      <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Reseñas por contestar</div>
+      <div class="tarjeta-sub" style="margin-bottom:12px;">Solo las que te faltan. Responder es público -- lo ve cualquiera en la ficha. El historial completo está en la pestaña "Reseñas".</div>
       <div id="resumen-reseñas"></div>
     </div>
 
@@ -314,6 +315,13 @@
       <div id="analitica-apple-lista" style="margin-top:14px;"></div>
     </div>
 
+    </div>
+
+    <div class="seccion-admin oculto" id="seccion-resenas">
+    <h2>Reseñas de App Store</h2>
+    <div class="tarjeta-sub" style="margin-bottom:16px;">Todas las reseñas guardadas, las más nuevas primero. Se refrescan solas una vez al día junto con el resto de la analítica de Apple.</div>
+    <div class="caja" id="resenas-resumen" style="margin-bottom:18px;"></div>
+    <div class="caja" id="resenas-lista-completa"></div>
     </div>
 
     <div class="seccion-admin oculto" id="seccion-activacion">
@@ -862,7 +870,7 @@ function mostrar(id){
 // separan en pestañas. Los datos se cargan una sola vez para todas (ver
 // cargarPanel) así que cambiar de pestaña es instantáneo, sin volver a
 // pedir nada al servidor.
-const SECCIONES_ADMIN = ['resumen', 'crecimiento', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'influencers', 'negocio', 'logs'];
+const SECCIONES_ADMIN = ['resumen', 'crecimiento', 'resenas', 'activacion', 'salud', 'audiencia', 'uso', 'usuarios', 'influencers', 'negocio', 'logs'];
 
 function mostrarSeccionAdmin(id){
   if(!SECCIONES_ADMIN.includes(id)) id = SECCIONES_ADMIN[0];
@@ -2345,6 +2353,61 @@ async function cargarAnaliticaApple(forzar){
 // App Store con la opción de responder ahí mismo. Se llama dos veces: una
 // vez con lo interno apenas carga el panel, y otra vez cuando llega la
 // respuesta de Apple (puede tardar), para no bloquear lo que ya se sabe.
+// Card de una reseña (estrellas + texto + responder si hace falta) --
+// compartida entre el Resumen diario (solo las que faltan por contestar) y
+// la pestaña "Reseñas" (todas), parte 207: "dame una sección donde estén
+// todas y si quieres solo ponerme las que no he contestado en el resumen
+// diario".
+function htmlListaReseñas(lista, prefijo){
+  prefijo = prefijo || 'r';
+  return lista.map(r => {
+    const estrellas = r.rating != null ? '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) : '';
+    const fecha = r.creadaEn ? r.creadaEn.slice(0, 10) : '';
+    // La misma reseña puede pintarse a la vez en el Resumen diario Y en la
+    // pestaña Reseñas -- el prefijo evita que los dos <textarea> compartan
+    // id (getElementById solo encontraría el primero, sin importar en cuál
+    // escribió el usuario).
+    const idSeguro = `${prefijo}-${String(r.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    return `<div style="border-bottom:1px solid var(--borde);padding:10px 0;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
+        <span style="color:var(--acento);font-size:13px;letter-spacing:1px;">${estrellas}</span>
+        <span style="font-size:11px;color:var(--texto-tenue);">${escapeHtmlAdmin(r.autor || 'anónimo')} · ${escapeHtmlAdmin(r.territorio || '')} · ${fecha}</span>
+      </div>
+      ${r.titulo ? `<div style="font-weight:600;font-size:13px;margin-top:4px;">${escapeHtmlAdmin(r.titulo)}</div>` : ''}
+      ${r.cuerpo ? `<div style="font-size:12.5px;color:var(--texto-tenue);margin-top:2px;">${escapeHtmlAdmin(r.cuerpo)}</div>` : ''}
+      ${r.tieneRespuesta
+        ? '<div style="font-size:11px;color:var(--texto-tenue);margin-top:4px;">✓ ya respondida</div>'
+        : `<div style="margin-top:6px;">
+            <textarea id="resp-texto-${idSeguro}" placeholder="Escribe una respuesta pública…" style="width:100%;min-height:44px;font-family:var(--sans);font-size:12px;border:1px solid var(--borde);border-radius:6px;padding:6px;background:transparent;color:var(--texto);box-sizing:border-box;"></textarea>
+            <button type="button" onclick="responderReseñaDesdeApple('${idSeguro}', '${escapeHtmlAdmin(r.id)}')" style="margin-top:4px;padding:5px 10px;border-radius:6px;border:none;background:var(--texto);color:var(--bg);font-size:11px;font-weight:600;cursor:pointer;">Responder (público)</button>
+            <span id="resp-estado-${idSeguro}" style="font-size:11px;color:var(--texto-tenue);margin-left:8px;"></span>
+          </div>`}
+    </div>`;
+  }).join('');
+}
+
+// Pestaña "Reseñas": todas, sin límite, con el mismo resumen de
+// calificación pública de arriba.
+function pintarSeccionReseñas(){
+  const todas = datosAppleGlobal?.reseñas?.reseñas || [];
+  const rating = datosAppleGlobal?.reseñas?.ratingPublico;
+  const resumenCont = document.getElementById('resenas-resumen');
+  if(resumenCont){
+    const sinContestar = todas.filter(r => !r.tieneRespuesta).length;
+    resumenCont.innerHTML = !datosAppleGlobal ? '<div class="tarjeta-sub">Cargando…</div>' : `
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div><div class="tarjeta-etiqueta">Calificación pública</div><div class="tarjeta-valor" style="font-size:26px;">${rating?.promedio != null ? rating.promedio.toFixed(1) : '—'}</div><div class="tarjeta-sub">${rating?.totalCalificaciones != null ? formatoNumero(rating.totalCalificaciones) + ' calificaciones' : ''}</div></div>
+        <div><div class="tarjeta-etiqueta">Reseñas guardadas</div><div class="tarjeta-valor" style="font-size:26px;">${formatoNumero(todas.length)}</div></div>
+        <div><div class="tarjeta-etiqueta">Sin contestar</div><div class="tarjeta-valor" style="font-size:26px;color:${sinContestar ? 'var(--alerta)' : 'inherit'};">${formatoNumero(sinContestar)}</div></div>
+      </div>`;
+  }
+  const listaCont = document.getElementById('resenas-lista-completa');
+  if(!listaCont) return;
+  listaCont.innerHTML = !datosAppleGlobal
+    ? '<div class="tarjeta-sub">Cargando…</div>'
+    : (todas.length ? htmlListaReseñas(todas, 'todas') : '<div class="tarjeta-sub">Sin reseñas guardadas todavía (se refrescan solas una vez al día, o dale "Actualizar ahora" en Crecimiento).</div>');
+}
+
 function pintarResumenDiario(){
   if(!datosKpiGlobal) return;
   const d = datosKpiGlobal;
@@ -2388,33 +2451,21 @@ function pintarResumenDiario(){
   }
 
   const reseñasCont = document.getElementById('resumen-reseñas');
-  const reseñas = datosAppleGlobal?.reseñas?.reseñas || [];
+  const todasLasReseñas = datosAppleGlobal?.reseñas?.reseñas || [];
+  const sinContestar = todasLasReseñas.filter(r => !r.tieneRespuesta);
   if(!datosAppleGlobal){
     reseñasCont.innerHTML = '<div class="tarjeta-sub">Cargando…</div>';
-  }else if(!reseñas.length){
+  }else if(!todasLasReseñas.length){
     reseñasCont.innerHTML = '<div class="tarjeta-sub">Sin reseñas guardadas todavía (se refrescan solas una vez al día).</div>';
+  }else if(!sinContestar.length){
+    reseñasCont.innerHTML = `<div class="tarjeta-sub">✓ Ya respondiste todas las reseñas guardadas (${formatoNumero(todasLasReseñas.length)}).</div>
+      <button type="button" onclick="mostrarSeccionAdmin('resenas')" style="margin-top:6px;background:none;border:none;color:var(--texto-tenue);font-weight:600;cursor:pointer;font-size:12px;padding:0;text-decoration:underline;">Ver todas →</button>`;
   }else{
-    reseñasCont.innerHTML = reseñas.slice(0, 5).map(r => {
-      const estrellas = r.rating != null ? '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) : '';
-      const fecha = r.creadaEn ? r.creadaEn.slice(0, 10) : '';
-      const idSeguro = String(r.id).replace(/[^a-zA-Z0-9_-]/g, '');
-      return `<div style="border-bottom:1px solid var(--borde);padding:10px 0;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">
-          <span style="color:var(--acento);font-size:13px;letter-spacing:1px;">${estrellas}</span>
-          <span style="font-size:11px;color:var(--texto-tenue);">${escapeHtmlAdmin(r.autor || 'anónimo')} · ${escapeHtmlAdmin(r.territorio || '')} · ${fecha}</span>
-        </div>
-        ${r.titulo ? `<div style="font-weight:600;font-size:13px;margin-top:4px;">${escapeHtmlAdmin(r.titulo)}</div>` : ''}
-        ${r.cuerpo ? `<div style="font-size:12.5px;color:var(--texto-tenue);margin-top:2px;">${escapeHtmlAdmin(r.cuerpo)}</div>` : ''}
-        ${r.tieneRespuesta
-          ? '<div style="font-size:11px;color:var(--texto-tenue);margin-top:4px;">✓ ya respondida</div>'
-          : `<div style="margin-top:6px;">
-              <textarea id="resp-texto-${idSeguro}" placeholder="Escribe una respuesta pública…" style="width:100%;min-height:44px;font-family:var(--sans);font-size:12px;border:1px solid var(--borde);border-radius:6px;padding:6px;background:transparent;color:var(--texto);box-sizing:border-box;"></textarea>
-              <button type="button" onclick="responderReseñaDesdeApple('${idSeguro}')" style="margin-top:4px;padding:5px 10px;border-radius:6px;border:none;background:var(--texto);color:var(--bg);font-size:11px;font-weight:600;cursor:pointer;">Responder (público)</button>
-              <span id="resp-estado-${idSeguro}" style="font-size:11px;color:var(--texto-tenue);margin-left:8px;"></span>
-            </div>`}
-      </div>`;
-    }).join('');
+    reseñasCont.innerHTML = htmlListaReseñas(sinContestar, 'resumen') +
+      `<button type="button" onclick="mostrarSeccionAdmin('resenas')" style="margin-top:10px;background:none;border:none;color:var(--texto-tenue);font-weight:600;cursor:pointer;font-size:12px;padding:0;text-decoration:underline;">Ver todas (${formatoNumero(todasLasReseñas.length)}) →</button>`;
   }
+
+  pintarSeccionReseñas();
 
   document.getElementById('resumen-otros').innerHTML = `
     <div><div class="tarjeta-etiqueta">Radiografías este mes</div><div class="tarjeta-valor" style="font-size:22px;">${formatoNumero(d.freaky?.reportesEsteMes ?? 0)}</div></div>
@@ -2426,15 +2477,12 @@ function pintarResumenDiario(){
 // Responder una reseña es público -- lo ve cualquiera en la ficha de la
 // app -- por eso pide confirmación explícita antes de mandarlo, aunque ya
 // haya un botón de por medio (parte 200).
-async function responderReseñaDesdeApple(idSeguro){
+async function responderReseñaDesdeApple(idSeguro, reviewIdReal){
   const textarea = document.getElementById(`resp-texto-${idSeguro}`);
   const estado = document.getElementById(`resp-estado-${idSeguro}`);
   const texto = (textarea.value || '').trim();
   if(!texto){ estado.textContent = 'Escribe algo primero.'; return; }
   if(!confirm('Esta respuesta se va a publicar en el App Store -- la ve cualquiera. ¿Confirmas?')) return;
-  const reseñas = datosAppleGlobal?.reseñas?.reseñas || [];
-  const reseña = reseñas.find(r => String(r.id).replace(/[^a-zA-Z0-9_-]/g, '') === idSeguro);
-  if(!reseña){ estado.textContent = 'No se encontró la reseña (recarga el panel).'; return; }
   estado.textContent = 'Enviando…';
   textarea.disabled = true;
   try{
@@ -2442,7 +2490,7 @@ async function responderReseñaDesdeApple(idSeguro){
     const resp = await fetch(`${window.SUPABASE_URL}/functions/v1/panel-admin-apple-analytics`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ accion: 'responder', reviewId: reseña.id, texto }),
+      body: JSON.stringify({ accion: 'responder', reviewId: reviewIdReal, texto }),
     });
     const cuerpo = await resp.json();
     if(!resp.ok){
@@ -2450,7 +2498,13 @@ async function responderReseñaDesdeApple(idSeguro){
       textarea.disabled = false;
       return;
     }
-    estado.textContent = '✓ Respondida.';
+    // Se marca como respondida localmente (sin esperar al próximo refresco
+    // del cron) y se repintan las dos vistas -- si la misma reseña estaba
+    // visible en Resumen diario Y en la pestaña Reseñas, las dos deben
+    // dejar de pedir respuesta de inmediato.
+    const reseña = (datosAppleGlobal?.reseñas?.reseñas || []).find(r => r.id === reviewIdReal);
+    if(reseña) reseña.tieneRespuesta = true;
+    pintarResumenDiario();
   }catch(e){
     estado.textContent = `No se pudo conectar: ${e.message || e}`;
     textarea.disabled = false;
