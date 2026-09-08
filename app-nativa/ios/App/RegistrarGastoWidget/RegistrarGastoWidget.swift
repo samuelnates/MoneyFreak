@@ -157,21 +157,23 @@ struct RegistrarGastoLockScreenWidget: Widget {
   }
 }
 
-// Build 7 (sin el widget de pantalla de bloqueo) confirmó que el de Inicio
-// vuelve a aparecer solo -- el bug real está en el segundo Widget, tumbando
-// el proceso de la extensión completa al arrancar. Sin Mac no hay forma de
-// ver el crash log real, así que este build 8 es un segundo experimento con
-// la única sospecha que queda sin descartar por revisión de código: los dos
-// widgets compartían el mismo `configurationDisplayName` ("Registrar
-// gasto") -- ahora cada uno tiene el suyo. Si esto tampoco lo arregla, el
-// widget de pantalla de bloqueo se vuelve a quitar y se deja pendiente
-// hasta tener acceso a una Mac/Xcode real para depurarlo con el debugger.
+// PENDIENTE BLOQUEADO -- dos intentos fallidos, no reintentar sin Mac real.
+// Build 6 (agrega RegistrarGastoLockScreenWidget) y build 8 (mismo, más
+// configurationDisplayName distinto entre los dos widgets) rompieron por
+// igual TODO el widget de "Registrar gasto", incluyendo el de Inicio que
+// nunca se tocó -- confirmado por el usuario en ambos casos, con reinicio
+// completo del teléfono de por medio. Build 5 y build 7 (sin este segundo
+// Widget) funcionan bien los dos. Eso descarta el nombre compartido como
+// causa y confirma que algo en `RegistrarGastoLockScreenWidget`/
+// `RegistrarGastoLockScreenView` (o en cómo WidgetKit resuelve dos
+// `Widget` con familias distintas en el mismo `WidgetBundle`) tumba el
+// proceso de la extensión al arrancar. La revisión estática del código no
+// encuentra nada incorrecto -- sin Mac/Xcode real no hay forma de ver el
+// crash log de WidgetKit para seguir. Se queda fuera del bundle hasta
+// tener ese acceso; el código no se borra por si sirve de referencia.
 @main
 struct RegistrarGastoWidgetBundle: WidgetBundle {
   var body: some Widget {
     RegistrarGastoWidget()
-    if #available(iOS 16.0, *) {
-      RegistrarGastoLockScreenWidget()
-    }
   }
 }
