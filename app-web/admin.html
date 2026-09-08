@@ -306,7 +306,18 @@
       <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas e impresiones reales de Apple, cruzadas con nuestros propios registros y con "usuarios activos reales" -- así se ve el camino completo: alguien ve la ficha en el App Store, la descarga, se registra, y de ahí si de verdad la usa. Se refresca sola una vez al día (cron); el botón solo fuerza un refresco inmediato.</div>
       <div id="analitica-apple-embudo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div id="analitica-apple-diagnostico" style="margin-bottom:14px;"></div>
-      <div id="analitica-apple-grafica-caja" style="height:180px;margin-bottom:14px;display:none;"><canvas id="grafica-embudo-apple"></canvas></div>
+      <div id="analitica-apple-grafica-caja" style="display:none;margin-bottom:14px;">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div id="caja-grafica-impresiones" style="flex:1;min-width:220px;">
+            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Impresiones (App Store)</div>
+            <div style="height:150px;"><canvas id="grafica-embudo-impresiones"></canvas></div>
+          </div>
+          <div id="caja-grafica-descargas" style="flex:1;min-width:220px;">
+            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Descargas vs. registros reales</div>
+            <div style="height:150px;"><canvas id="grafica-embudo-descargas"></canvas></div>
+          </div>
+        </div>
+      </div>
       <div id="analitica-apple-cohortes" style="margin-bottom:14px;"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button type="button" onclick="cargarAnaliticaApple(true)" id="btn-analitica-apple" style="padding:10px 18px;border-radius:8px;border:none;background:var(--texto);color:var(--bg);font-family:var(--sans);font-weight:600;font-size:13px;cursor:pointer;">Actualizar ahora</button>
@@ -2299,52 +2310,111 @@ async function cargarAnaliticaApple(forzar){
 
     pintarEmbudoApple(cuerpo.datos, cuerpo.registrosInternos || {});
 
-    const reportes = cuerpo.datos.reportes || [];
-    if(!reportes.length){
-      lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear -- Apple tarda 24-48h en generar los primeros datos).</div>';
-    }else{
-      lista.innerHTML = reportes.map(r => {
-        const dias = Object.keys(r.porFecha || {}).sort().slice(-10);
-        const cols = r.columnasNumericas || [];
-        if(!dias.length){
-          const errorTxt = (r.erroresParciales && r.erroresParciales[0]) ? ` -- ${escapeHtmlAdmin(r.erroresParciales[0])}` : '';
-          return `<div class="tarjeta-sub" style="margin-bottom:10px;"><strong>${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</strong>: sin datos todavía${errorTxt}.</div>`;
-        }
-        // Desglose por dimensión (territorio/dispositivo/tipo de página,
-        // parte 197) -- top 8 valores por la primera columna numérica, para
-        // saber DE DÓNDE viene el total, no solo cuánto es.
-        let bloqueDimension = '';
-        if(r.columnaDimension && r.porDimension && Object.keys(r.porDimension).length && cols.length){
-          const colPrincipal = cols[0];
-          const filasDim = Object.entries(r.porDimension)
-            .map(([clave, metricas]) => ({ clave, valor: metricas[colPrincipal] || 0 }))
-            .sort((a, b) => b.valor - a.valor)
-            .slice(0, 8);
-          const maxValor = filasDim[0]?.valor || 1;
-          bloqueDimension = `<div style="margin:8px 0 12px;">
-            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Por ${escapeHtmlAdmin(r.columnaDimension)} (${escapeHtmlAdmin(colPrincipal)}, todo el periodo)</div>
-            ${filasDim.map(f => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-              <div style="width:110px;font-size:11px;color:var(--texto-tenue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlAdmin(f.clave)}</div>
-              <div style="flex:1;background:var(--borde);border-radius:3px;height:8px;overflow:hidden;"><div style="width:${Math.max(2, Math.round(f.valor / maxValor * 100))}%;height:100%;background:var(--acento);"></div></div>
-              <div style="width:60px;text-align:right;font-size:11px;font-family:'JetBrains Mono';">${formatoNumero(f.valor)}</div>
-            </div>`).join('')}
-          </div>`;
-        }
-        return `<div style="margin-bottom:16px;">
-          <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>
-          ${bloqueDimension}
-          <div style="overflow-x:auto;"><table><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
-            dias.map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
-          }</tbody></table></div>
-        </div>`;
-      }).join('');
-    }
+    pintarListaReportesApple(cuerpo.datos.reportes || []);
     pintarResumenDiario();
   }catch(e){
     estado.innerHTML = `<span style="color:var(--alerta);">No se pudo conectar: ${escapeHtmlAdmin(e.message || String(e))}</span>`;
   }finally{
     btn.disabled = false;
   }
+}
+
+// Lista de reportes crudos de Apple (parte 218: "las gráficas están
+// pésimas, no se entiende nada, y hay muchos renglones ahí sin información
+// que nada más estorban"). Apple manda ~20 tipos de reporte bajo la misma
+// solicitud y la enorme mayoría no trae datos casi nunca (categorías que no
+// aplican a esta app, o que Apple simplemente no llena) -- antes cada uno
+// de esos imprimía su propia línea "sin datos todavía", una tras otra. Ahora
+// los reportes sin datos se cuentan en una sola línea al final, y los que sí
+// traen datos se muestran como una gráfica de línea (mismo estilo que el
+// resto del panel) en vez de una tabla cruda de fecha × columna -- los
+// números exactos siguen ahí, pero plegados en un <details> para quien los
+// quiera.
+let chartsReportesApple = [];
+function pintarListaReportesApple(reportes){
+  const lista = document.getElementById('analitica-apple-lista');
+  chartsReportesApple.forEach(c => c.destroy());
+  chartsReportesApple = [];
+  if(!reportes.length){
+    lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear -- Apple tarda 24-48h en generar los primeros datos).</div>';
+    return;
+  }
+  const conDatos = reportes.filter(r => Object.keys(r.porFecha || {}).length);
+  const sinDatos = reportes.filter(r => !Object.keys(r.porFecha || {}).length);
+
+  if(!conDatos.length){
+    lista.innerHTML = `<div class="tarjeta-sub">Ningún reporte trae datos todavía -- ${formatoNumero(sinDatos.length)} reporte${sinDatos.length === 1 ? '' : 's'} en total, normal dentro de las primeras 24-48h de la solicitud.</div>`;
+    return;
+  }
+
+  lista.innerHTML = conDatos.map((r, i) => {
+    const dias = Object.keys(r.porFecha || {}).sort().slice(-30);
+    const cols = r.columnasNumericas || [];
+    const colPrincipal = cols[0];
+
+    // Desglose por dimensión (territorio/dispositivo/tipo de página, parte
+    // 197) -- top 8 valores por la primera columna numérica, para saber DE
+    // DÓNDE viene el total, no solo cuánto es.
+    let bloqueDimension = '';
+    if(r.columnaDimension && r.porDimension && Object.keys(r.porDimension).length && colPrincipal){
+      const filasDim = Object.entries(r.porDimension)
+        .map(([clave, metricas]) => ({ clave, valor: metricas[colPrincipal] || 0 }))
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 8);
+      const maxValor = filasDim[0]?.valor || 1;
+      bloqueDimension = `<div style="margin:8px 0 12px;">
+        <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Por ${escapeHtmlAdmin(r.columnaDimension)} (todo el periodo)</div>
+        ${filasDim.map(f => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <div style="width:110px;font-size:11px;color:var(--texto-tenue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlAdmin(f.clave)}</div>
+          <div style="flex:1;background:var(--borde);border-radius:3px;height:8px;overflow:hidden;"><div style="width:${Math.max(2, Math.round(f.valor / maxValor * 100))}%;height:100%;background:var(--acento);"></div></div>
+          <div style="width:60px;text-align:right;font-size:11px;font-family:'JetBrains Mono';">${formatoNumero(f.valor)}</div>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    const idCanvas = `grafica-reporte-apple-${i}`;
+    const idTabla = `tabla-reporte-apple-${i}`;
+    return `<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--borde);">
+      <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>
+      ${colPrincipal ? `<div style="font-size:11px;color:var(--texto-tenue);margin-bottom:8px;">${escapeHtmlAdmin(colPrincipal)}, últimos ${dias.length} días</div>` : ''}
+      ${bloqueDimension}
+      ${colPrincipal ? `<div style="height:110px;margin-bottom:8px;"><canvas id="${idCanvas}"></canvas></div>` : ''}
+      <details>
+        <summary style="cursor:pointer;font-size:11px;color:var(--texto-tenue);">Ver números exactos</summary>
+        <div style="overflow-x:auto;margin-top:8px;"><table id="${idTabla}"><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
+          dias.slice(-10).map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
+        }</tbody></table></div>
+      </details>
+    </div>`;
+  }).join('') + (sinDatos.length
+    ? `<div class="tarjeta-sub">${formatoNumero(sinDatos.length)} reporte${sinDatos.length === 1 ? '' : 's'} más sin datos todavía (normal -- se llenan solos en las primeras 24-48h).</div>`
+    : '');
+
+  const estilos = getComputedStyle(document.documentElement);
+  const colorAcento = estilos.getPropertyValue('--acento').trim();
+  const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
+  const colorBorde = estilos.getPropertyValue('--borde').trim();
+  conDatos.forEach((r, i) => {
+    const cols = r.columnasNumericas || [];
+    const colPrincipal = cols[0];
+    if(!colPrincipal) return;
+    const dias = Object.keys(r.porFecha || {}).sort().slice(-30);
+    const valores = dias.map(d => (r.porFecha[d] && r.porFecha[d][colPrincipal]) || 0);
+    const ctx = document.getElementById(`grafica-reporte-apple-${i}`);
+    if(!ctx) return;
+    chartsReportesApple.push(new Chart(ctx, {
+      type: 'line',
+      data: { labels: dias.map(d => d.slice(5)), datasets: [{ data: valores, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false }, border: { color: colorBorde } },
+          y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
+        },
+      },
+    }));
+  });
 }
 
 // Resumen diario (parte 200) -- pensado para revisarse en menos de un
@@ -2695,8 +2765,10 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     cohortes.innerHTML = '';
   }
 
-  if(chartEmbudoApple){ chartEmbudoApple.destroy(); chartEmbudoApple = null; }
-  if((!serieDescargas || !serieDescargas.some(v => v > 0)) && (!serieImpresiones || !serieImpresiones.some(v => v > 0))){
+  if(chartEmbudoApple){ chartEmbudoApple.impresiones?.destroy(); chartEmbudoApple.descargas?.destroy(); chartEmbudoApple = null; }
+  const hayImpresiones = serieImpresiones && serieImpresiones.some(v => v > 0);
+  const hayDescargas = serieDescargas && serieDescargas.some(v => v > 0);
+  if(!hayDescargas && !hayImpresiones){
     cajaGrafica.style.display = 'none';
     return;
   }
@@ -2706,35 +2778,46 @@ function pintarEmbudoApple(datosApple, registrosInternos){
   const colorAlerta = estilos.getPropertyValue('--alerta').trim();
   const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
   const colorBorde = estilos.getPropertyValue('--borde').trim();
-  const ctx = document.getElementById('grafica-embudo-apple');
-  const datasets = [];
-  // Las impresiones suelen ser un orden de magnitud más grandes que
-  // descargas/registros -- van en su propio eje derecho (y1) para que no
-  // aplasten a las otras dos líneas contra el piso de la gráfica.
-  if(serieImpresiones && serieImpresiones.some(v => v > 0)){
-    datasets.push({ label: 'Impresiones (Apple)', data: serieImpresiones, borderColor: colorAlerta, backgroundColor: colorAlerta, tension: .3, pointRadius: 0, yAxisID: 'y1' });
-  }
-  if(serieDescargas && serieDescargas.some(v => v > 0)){
-    datasets.push({ label: 'Descargas (Apple)', data: serieDescargas, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0, yAxisID: 'y' });
-  }
-  datasets.push({ label: 'Registros reales', data: serieRegistros, borderColor: colorTexto, backgroundColor: colorTexto, tension: .3, pointRadius: 0, borderDash: [4, 3], yAxisID: 'y' });
-
-  const escalas = {
+  const etiquetasDias = dias.map(d => d.slice(5));
+  const escalasBase = () => ({
     x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
-    y: { beginAtZero: true, position: 'left', ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
-  };
-  if(serieImpresiones && serieImpresiones.some(v => v > 0)){
-    escalas.y1 = { beginAtZero: true, position: 'right', ticks: { color: colorAlerta, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { display: false }, border: { display: false } };
-  }
-  chartEmbudoApple = new Chart(ctx, {
-    type: 'line',
-    data: { labels: dias.map(d => d.slice(5)), datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 } } } },
-      scales: escalas,
-    },
+    y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
   });
+  const opcionesBase = (mostrarLeyenda) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: mostrarLeyenda, labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 } } } },
+    scales: escalasBase(),
+  });
+  // Dos gráficas de un solo eje cada una en vez de una con doble eje --
+  // un eje dual mezcla escalas que no se comparan (impresiones es un orden
+  // de magnitud más grande que descargas/registros) y termina siendo
+  // ilegible (parte 218: "las gráficas... no se entiende nada").
+  chartEmbudoApple = {};
+  const cajaImpresiones = document.getElementById('caja-grafica-impresiones');
+  const cajaDescargas = document.getElementById('caja-grafica-descargas');
+  if(hayImpresiones){
+    cajaImpresiones.style.display = '';
+    chartEmbudoApple.impresiones = new Chart(document.getElementById('grafica-embudo-impresiones'), {
+      type: 'line',
+      data: { labels: etiquetasDias, datasets: [{ label: 'Impresiones', data: serieImpresiones, borderColor: colorAlerta, backgroundColor: colorAlerta, tension: .3, pointRadius: 0 }] },
+      options: opcionesBase(false),
+    });
+  }else{
+    cajaImpresiones.style.display = 'none';
+  }
+  if(hayDescargas || serieRegistros.some(v => v > 0)){
+    cajaDescargas.style.display = '';
+    const datasetsDescargas = [];
+    if(hayDescargas) datasetsDescargas.push({ label: 'Descargas', data: serieDescargas, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 });
+    datasetsDescargas.push({ label: 'Registros', data: serieRegistros, borderColor: colorTexto, backgroundColor: colorTexto, tension: .3, pointRadius: 0, borderDash: [4, 3] });
+    chartEmbudoApple.descargas = new Chart(document.getElementById('grafica-embudo-descargas'), {
+      type: 'line',
+      data: { labels: etiquetasDias, datasets: datasetsDescargas },
+      options: opcionesBase(true),
+    });
+  }else{
+    cajaDescargas.style.display = 'none';
+  }
 }
 
 // Modal genérico de detalle de KPI (parte 192) -- cualquier tarjeta con una
