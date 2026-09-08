@@ -304,18 +304,12 @@
     <div class="caja" style="margin-bottom:24px;">
       <div class="tarjeta-etiqueta" style="margin-bottom:2px;">Embudo real: App Store → registro → uso</div>
       <div class="tarjeta-sub" style="margin-bottom:12px;">Descargas e impresiones reales de Apple, cruzadas con nuestros propios registros y con "usuarios activos reales" -- así se ve el camino completo: alguien ve la ficha en el App Store, la descarga, se registra, y de ahí si de verdad la usa. Se refresca sola una vez al día (cron); el botón solo fuerza un refresco inmediato.</div>
-      <div id="analitica-apple-embudo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+      <div id="analitica-apple-embudo" style="margin-bottom:10px;"></div>
       <div id="analitica-apple-diagnostico" style="margin-bottom:14px;"></div>
       <div id="analitica-apple-grafica-caja" style="display:none;margin-bottom:14px;">
         <div style="display:flex;gap:14px;flex-wrap:wrap;">
-          <div id="caja-grafica-impresiones" style="flex:1;min-width:220px;">
-            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Impresiones (App Store)</div>
-            <div style="height:150px;"><canvas id="grafica-embudo-impresiones"></canvas></div>
-          </div>
-          <div id="caja-grafica-descargas" style="flex:1;min-width:220px;">
-            <div style="font-size:11px;color:var(--texto-tenue);margin-bottom:4px;">Descargas vs. registros reales</div>
-            <div style="height:150px;"><canvas id="grafica-embudo-descargas"></canvas></div>
-          </div>
+          <div id="caja-grafica-impresiones" style="flex:1;min-width:220px;height:170px;"><canvas id="grafica-embudo-impresiones"></canvas></div>
+          <div id="caja-grafica-descargas" style="flex:1;min-width:220px;height:170px;"><canvas id="grafica-embudo-descargas"></canvas></div>
         </div>
       </div>
       <div id="analitica-apple-cohortes" style="margin-bottom:14px;"></div>
@@ -2374,11 +2368,13 @@ function pintarListaReportesApple(reportes){
 
     const idCanvas = `grafica-reporte-apple-${i}`;
     const idTabla = `tabla-reporte-apple-${i}`;
+    // El nombre del reporte y la columna que se grafica van como título y
+    // subtítulo DENTRO de la gráfica (no como texto aparte arriba) -- así
+    // se explica sola incluso si no trae desglose por dimensión abajo.
     return `<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--borde);">
-      <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>
-      ${colPrincipal ? `<div style="font-size:11px;color:var(--texto-tenue);margin-bottom:8px;">${escapeHtmlAdmin(colPrincipal)}, últimos ${dias.length} días</div>` : ''}
+      ${!colPrincipal ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;">${escapeHtmlAdmin(r.nombre || r.categoria || '—')}</div>` : ''}
       ${bloqueDimension}
-      ${colPrincipal ? `<div style="height:110px;margin-bottom:8px;"><canvas id="${idCanvas}"></canvas></div>` : ''}
+      ${colPrincipal ? `<div style="height:130px;margin-bottom:8px;"><canvas id="${idCanvas}"></canvas></div>` : ''}
       <details>
         <summary style="cursor:pointer;font-size:11px;color:var(--texto-tenue);">Ver números exactos</summary>
         <div style="overflow-x:auto;margin-top:8px;"><table id="${idTabla}"><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
@@ -2407,7 +2403,11 @@ function pintarListaReportesApple(reportes){
       data: { labels: dias.map(d => d.slice(5)), datasets: [{ data: valores, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: r.nombre || r.categoria || '—', color: colorTexto, font: { family: 'JetBrains Mono', size: 11, weight: 'normal' }, align: 'start', padding: { bottom: 2 } },
+          subtitle: { display: true, text: `${colPrincipal} · últimos ${dias.length} días`, color: colorTexto, font: { family: 'JetBrains Mono', size: 9, style: 'italic' }, align: 'start', padding: { bottom: 8 } },
+        },
         scales: {
           x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false }, border: { color: colorBorde } },
           y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
@@ -2682,26 +2682,43 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     }
   }
 
-  embudo.innerHTML = escalones.map((e, i) => {
+  // Embudo de verdad (parte 220: "que la gráfica se explique por sí sola,
+  // sin texto adicional") -- barras horizontales que se van angostando,
+  // el ancho de cada una ES el dato (proporción de lo que queda del primer
+  // escalón), en vez de una fila de tarjetas con números sueltos que hay
+  // que comparar a mano. El % junto a cada barra es la conversión contra el
+  // paso INMEDIATO anterior (el dato que importa para diagnosticar dónde se
+  // cae la gente); el ancho de la barra es contra el PRIMER escalón (la
+  // forma visual de embudo). Son dos números distintos a propósito, cada
+  // uno con su propia etiqueta para no confundirlos.
+  const primerValor = escalones[0]?.valor || 1;
+  embudo.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">` + escalones.map((e, i) => {
     const anterior = i > 0 ? escalones[i - 1].valor : null;
     const pct = (anterior && anterior > 0) ? Math.round((e.valor / anterior) * 100) : null;
     const esDebil = transicionMasDebil && transicionMasDebil.actual.key === e.key;
-    return `<div style="flex:1;min-width:130px;background:var(--fondo-tarjeta,transparent);border:1px solid ${esDebil ? 'var(--alerta)' : 'var(--borde)'};border-radius:10px;padding:10px 12px;">
-      <div style="font-size:10px;color:var(--texto-tenue);text-transform:uppercase;letter-spacing:.03em;">${escapeHtmlAdmin(e.etiqueta)}</div>
-      <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${formatoNumero(e.valor)}</div>
-      ${pct !== null ? `<div style="font-size:11px;color:${esDebil ? 'var(--alerta)' : 'var(--texto-tenue)'};">${pct}% del paso anterior${esDebil ? ' ⚠️' : ''}</div>` : ''}
+    const anchoPct = Math.max(4, Math.round((e.valor / primerValor) * 100));
+    return `<div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px;">
+        <span style="font-size:11px;color:var(--texto-tenue);">${escapeHtmlAdmin(e.etiqueta)}</span>
+        <span style="display:flex;align-items:baseline;gap:6px;white-space:nowrap;">
+          <span style="font-size:15px;font-weight:700;font-family:'JetBrains Mono';">${formatoNumero(e.valor)}</span>
+          ${pct !== null ? `<span style="font-size:11px;font-family:'JetBrains Mono';color:${esDebil ? 'var(--alerta)' : 'var(--texto-tenue)'};">${esDebil ? '⚠️ ' : '↓ '}${pct}%</span>` : ''}
+        </span>
+      </div>
+      <div style="background:var(--borde);border-radius:6px;height:20px;overflow:hidden;">
+        <div style="width:${anchoPct}%;height:100%;border-radius:6px;background:${esDebil ? 'var(--alerta)' : 'var(--acento)'};"></div>
+      </div>
     </div>`;
-  }).join('');
+  }).join('') + `</div>`;
   // "Instalaciones fantasma": de quienes bajan la app, cuántos nunca ni se
   // registran -- una sola cifra que junta las dos fuentes (Apple + interna)
   // para señalar un problema de onboarding/primera impresión, no de
   // marketing (eso ya lo distingue el paso anterior del embudo).
   if(totalDescargas30d && totalDescargas30d > 0 && totalRegistros30d !== null && totalRegistros30d !== undefined){
     const pctFantasma = Math.max(0, Math.round((1 - Math.min(totalRegistros30d, totalDescargas30d) / totalDescargas30d) * 100));
-    embudo.innerHTML += `<div style="flex:1;min-width:200px;background:var(--fondo-tarjeta,transparent);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;">
-      <div style="font-size:10px;color:var(--texto-tenue);text-transform:uppercase;letter-spacing:.03em;">Descargan y nunca se registran</div>
-      <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${pctFantasma}%</div>
-      <div style="font-size:11px;color:var(--texto-tenue);">de las descargas de los últimos 30 días</div>
+    embudo.innerHTML += `<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--borde);display:flex;align-items:baseline;gap:8px;">
+      <span style="font-size:20px;font-weight:700;font-family:'JetBrains Mono';">${pctFantasma}%</span>
+      <span style="font-size:11px;color:var(--texto-tenue);">de las descargas de los últimos 30 días bajan la app y nunca llegan a registrarse</span>
     </div>`;
   }
 
@@ -2783,9 +2800,15 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false }, border: { color: colorBorde } },
     y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
   });
-  const opcionesBase = (mostrarLeyenda) => ({
+  // El título va DENTRO de la gráfica (plugin nativo de Chart.js) en vez de
+  // en un texto aparte arriba -- así la gráfica se explica sola aunque se
+  // recorte o se vea sin el resto de la página alrededor (parte 220).
+  const opcionesBase = (titulo, mostrarLeyenda) => ({
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: mostrarLeyenda, labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 } } } },
+    plugins: {
+      title: { display: true, text: titulo, color: colorTexto, font: { family: 'JetBrains Mono', size: 11, weight: 'normal' }, padding: { bottom: 10 } },
+      legend: { display: mostrarLeyenda, position: 'bottom', labels: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, boxWidth: 12 } },
+    },
     scales: escalasBase(),
   });
   // Dos gráficas de un solo eje cada una en vez de una con doble eje --
@@ -2800,7 +2823,7 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     chartEmbudoApple.impresiones = new Chart(document.getElementById('grafica-embudo-impresiones'), {
       type: 'line',
       data: { labels: etiquetasDias, datasets: [{ label: 'Impresiones', data: serieImpresiones, borderColor: colorAlerta, backgroundColor: colorAlerta, tension: .3, pointRadius: 0 }] },
-      options: opcionesBase(false),
+      options: opcionesBase('Impresiones en el App Store, por día', false),
     });
   }else{
     cajaImpresiones.style.display = 'none';
@@ -2813,7 +2836,7 @@ function pintarEmbudoApple(datosApple, registrosInternos){
     chartEmbudoApple.descargas = new Chart(document.getElementById('grafica-embudo-descargas'), {
       type: 'line',
       data: { labels: etiquetasDias, datasets: datasetsDescargas },
-      options: opcionesBase(true),
+      options: opcionesBase('Descargas (Apple) vs. registros reales, por día', true),
     });
   }else{
     cajaDescargas.style.display = 'none';
