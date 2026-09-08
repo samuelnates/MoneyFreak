@@ -1514,7 +1514,16 @@
 
   .nav-inferior-movil{display:none;}
   body.con-sesion .nav-inferior-movil{
-    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:5;
+    /* z-index:10, no 5: bug real reportado por un usuario (captura real, en
+       el chat con Freaky) -- los botones de la barra inferior no
+       respondían al toque estando en .pantalla-chat. Mismo apilamiento que
+       el bug de .btn-config-flotante ya documentado más abajo: .pantalla-chat
+       sube a z-index:9 para ganarle a #freaky-personaje (z-index:8), y esa
+       pantalla ocupa con su padding-bottom invisible toda la franja donde
+       vive esta barra (position:fixed, bottom:0) -- con z-index:5 quedaba
+       por DEBAJO de ese padding invisible y los toques nunca la alcanzaban,
+       aunque se viera encima. */
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:10;
     align-items:center;justify-content:space-evenly;padding:8px 6px calc(10px + env(safe-area-inset-bottom));
     background:var(--bg);border-top:1px solid var(--borde);
   }
@@ -17321,8 +17330,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 158;
+const VERSION_APP_ACTUAL = 159;
 const CHANGELOG_APP = [
+  {
+    version: 159,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Se corrigió un bug: dentro del chat con Freaky, los botones de la barra inferior (Inicio, Cuentas, Gastos, Flujo, Balance) no respondían al toque.'
+    ],
+    cambios_en: [
+      'Fixed a bug: inside the chat with Freaky, the bottom navigation buttons (Home, Accounts, Expenses, Cash Flow, Balance) didn\'t respond to taps.'
+    ]
+  },
   {
     version: 158,
     fecha: '2026-09-08',
