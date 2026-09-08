@@ -6399,6 +6399,23 @@ async function init(){
     }
   });
 
+  // Bug real reportado por el usuario ("le pico al widget, abre Registrar
+  // gasto, y después de un segundo se sale solo a Inicio"): al abrir la app
+  // en frío desde el widget de iOS, el listener de appUrlOpen (más abajo)
+  // recibe la URL casi de inmediato y abre "Registrar gasto" -- pero el
+  // arranque normal de esta misma función sigue corriendo en paralelo
+  // (sb.auth.getSession() tarda su rato en resolver) y, al terminar, decide
+  // por su cuenta a dónde navegar (entrarAlPanelConOnboarding() -> Inicio),
+  // sin saber que el usuario ya estaba en otro lado por el widget -- le
+  // ganaba la carrera al widget casi siempre. appListaPromesa se resuelve
+  // hasta que este arranque normal ya decidió y navegó a algún lado; el
+  // listener de appUrlOpen espera a que se resuelva antes de mandar a
+  // "Registrar gasto", así siempre navega DESPUÉS del arranque normal y
+  // nunca se lo pisa (y si la app ya estaba abierta de antes, la promesa ya
+  // está resuelta, así que no se nota ningún retraso).
+  let resolverAppLista;
+  const appListaPromesa = new Promise((resolver) => { resolverAppLista = resolver; });
+
   if(window.Capacitor?.isNativePlatform?.()){
     window.Capacitor.Plugins.App.addListener('appUrlOpen', async ({ url }) => {
       const parametros = new URL(url).searchParams;
@@ -6418,6 +6435,7 @@ async function init(){
         return;
       }
       if(parametros.get('widget') === 'gasto'){
+        await appListaPromesa;
         const { data: { session } } = await sb.auth.getSession();
         if(session) abrirAgregarGasto();
       }
@@ -6508,6 +6526,7 @@ async function init(){
     if(errorAuth) await mostrarAlerta(t('login.alert_error_link'));
     else if(codigoAtorado) await mostrarAlerta(t('login.alert_confirmado_otro_navegador'));
   }
+  resolverAppLista();
 }
 
 let origenAvisoLegal = 'registro';
@@ -17330,8 +17349,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 159;
+const VERSION_APP_ACTUAL = 160;
 const CHANGELOG_APP = [
+  {
+    version: 160,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Se corrigió un bug: al abrir la app desde el widget "Registrar gasto" de iOS, a veces abría esa pantalla y un segundo después regresaba sola a Inicio.'
+    ],
+    cambios_en: [
+      'Fixed a bug: opening the app from the iOS "Registrar gasto" widget sometimes opened that screen and then bounced back to Home a second later.'
+    ]
+  },
   {
     version: 159,
     fecha: '2026-09-08',
