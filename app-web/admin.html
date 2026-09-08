@@ -2397,24 +2397,63 @@ function traducirValorDimension(dim, valor){
   return valor;
 }
 
-let chartsReportesApple = [];
+// Total del periodo reciente (hasta 7 días) de una métrica, con % de
+// cambio contra el mismo tamaño de ventana justo antes -- SOLO si hay
+// suficiente historia para que la comparación signifique algo. Con menos
+// de eso, se muestra el total sin comparación en vez de un porcentaje
+// engañoso calculado sobre pocos días.
+function calcularTendenciaReporte(porFecha, columna){
+  const dias = Object.keys(porFecha || {}).sort();
+  if(!dias.length) return null;
+  const valores = dias.map(d => (porFecha[d] && porFecha[d][columna]) || 0);
+  const ventana = Math.min(7, dias.length);
+  const recientes = valores.slice(-ventana);
+  const totalReciente = recientes.reduce((a, b) => a + b, 0);
+  let tendenciaTxt = null;
+  if(dias.length > ventana){
+    const anteriores = valores.slice(-ventana * 2, -ventana);
+    const totalAnterior = anteriores.reduce((a, b) => a + b, 0);
+    if(totalAnterior > 0){
+      const pct = Math.round((totalReciente - totalAnterior) / totalAnterior * 100);
+      tendenciaTxt = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs. los ${ventana} días de antes`;
+    }
+  }
+  return { totalReciente, ventana, tendenciaTxt, diasTotales: dias.length };
+}
 function pintarListaReportesApple(reportes){
   const lista = document.getElementById('analitica-apple-lista');
-  chartsReportesApple.forEach(c => c.destroy());
-  chartsReportesApple = [];
   if(!reportes.length){
     lista.innerHTML = '<div class="tarjeta-sub">Todavía no hay ningún reporte disponible (normal si la solicitud se acaba de crear -- Apple tarda 24-48h en generar los primeros datos).</div>';
     return;
   }
-  const conDatos = reportes.filter(r => Object.keys(r.porFecha || {}).length);
-  const sinDatos = reportes.filter(r => !Object.keys(r.porFecha || {}).length);
+  const conDatos = reportes.filter(r => Object.keys(r.porFecha || {}).length && (r.columnasNumericas || []).length);
+  const sinDatos = reportes.length - conDatos.length;
 
   if(!conDatos.length){
-    lista.innerHTML = `<div class="tarjeta-sub">Ningún reporte trae datos todavía -- ${formatoNumero(sinDatos.length)} reporte${sinDatos.length === 1 ? '' : 's'} en total, normal dentro de las primeras 24-48h de la solicitud.</div>`;
+    lista.innerHTML = `<div class="tarjeta-sub">Ningún reporte trae datos todavía -- ${formatoNumero(reportes.length)} reporte${reportes.length === 1 ? '' : 's'} en total, normal dentro de las primeras 24-48h de la solicitud.</div>`;
     return;
   }
 
-  lista.innerHTML = conDatos.map((r, i) => {
+  // Parte 226: "no sé si esas gráficas sean lo mejor para dar a entender
+  // el KPI, realmente no lo entiendo" -- las gráficas de línea por reporte
+  // se cambian por la misma tarjeta de número grande que ya usa el resto
+  // del panel (Nuevos hoy, Activos hoy...), con una sola frase de
+  // tendencia en vez de un eje X/Y que hay que interpretar.
+  const tarjetas = conDatos.map(r => {
+    const cols = r.columnasNumericas || [];
+    const colPrincipal = cols[0];
+    const stat = calcularTendenciaReporte(r.porFecha, colPrincipal);
+    const periodoTxt = stat.diasTotales < stat.ventana + 1
+      ? `en ${stat.diasTotales} día${stat.diasTotales === 1 ? '' : 's'} de datos`
+      : `en los últimos ${stat.ventana} días`;
+    return `<div class="tarjeta">
+      <div class="tarjeta-etiqueta">${escapeHtmlAdmin(traducirNombreReporte(r.nombre) || r.categoria || '—')}</div>
+      <div class="tarjeta-valor">${formatoNumero(stat.totalReciente)}</div>
+      <div class="tarjeta-sub">${escapeHtmlAdmin(traducirColumna(colPrincipal))} ${periodoTxt}${stat.tendenciaTxt ? ` · ${stat.tendenciaTxt}` : ''}</div>
+    </div>`;
+  }).join('');
+
+  const detalles = conDatos.map((r, i) => {
     const dias = Object.keys(r.porFecha || {}).sort().slice(-30);
     const cols = r.columnasNumericas || [];
     const colPrincipal = cols[0];
@@ -2439,58 +2478,22 @@ function pintarListaReportesApple(reportes){
       </div>`;
     }
 
-    const idCanvas = `grafica-reporte-apple-${i}`;
     const idTabla = `tabla-reporte-apple-${i}`;
-    // El nombre del reporte y la columna que se grafica van como título y
-    // subtítulo DENTRO de la gráfica (no como texto aparte arriba) -- así
-    // se explica sola incluso si no trae desglose por dimensión abajo.
-    // Ambos pasan por traducirNombreReporte/traducirColumna -- Apple manda
-    // nombres de campo técnicos en inglés (Territory, Sessions, Counts...)
-    // que nadie que no conozca la API reconoce (parte 225).
-    return `<div style="margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--borde);">
-      ${!colPrincipal ? `<div style="font-weight:600;font-size:13px;margin-bottom:8px;">${escapeHtmlAdmin(traducirNombreReporte(r.nombre) || r.categoria || '—')}</div>` : ''}
-      ${bloqueDimension}
-      ${colPrincipal ? `<div style="height:130px;margin-bottom:8px;"><canvas id="${idCanvas}"></canvas></div>` : ''}
-      <details>
-        <summary style="cursor:pointer;font-size:11px;color:var(--texto-tenue);">Ver números exactos (nombres originales de Apple)</summary>
-        <div style="overflow-x:auto;margin-top:8px;"><table id="${idTabla}"><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
+    return `<details style="margin-bottom:10px;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--texto-tenue);">${escapeHtmlAdmin(traducirNombreReporte(r.nombre) || r.categoria || '—')} -- ver desglose y números exactos</summary>
+      <div style="margin-top:8px;">
+        ${bloqueDimension}
+        <div style="overflow-x:auto;"><table id="${idTabla}"><thead><tr><th>Fecha</th>${cols.map(c => `<th>${escapeHtmlAdmin(c)}</th>`).join('')}</tr></thead><tbody>${
           dias.slice(-10).map(d => `<tr><td>${d}</td>${cols.map(c => `<td>${formatoNumero(r.porFecha[d][c] || 0)}</td>`).join('')}</tr>`).join('')
         }</tbody></table></div>
-      </details>
-    </div>`;
-  }).join('') + (sinDatos.length
-    ? `<div class="tarjeta-sub">${formatoNumero(sinDatos.length)} reporte${sinDatos.length === 1 ? '' : 's'} más sin datos todavía (normal -- se llenan solos en las primeras 24-48h).</div>`
-    : '');
+        <div style="font-size:10px;color:var(--texto-tenue);margin-top:4px;">Nombres originales de Apple, sin traducir.</div>
+      </div>
+    </details>`;
+  }).join('');
 
-  const estilos = getComputedStyle(document.documentElement);
-  const colorAcento = estilos.getPropertyValue('--acento').trim();
-  const colorTexto = estilos.getPropertyValue('--texto-tenue').trim();
-  const colorBorde = estilos.getPropertyValue('--borde').trim();
-  conDatos.forEach((r, i) => {
-    const cols = r.columnasNumericas || [];
-    const colPrincipal = cols[0];
-    if(!colPrincipal) return;
-    const dias = Object.keys(r.porFecha || {}).sort().slice(-30);
-    const valores = dias.map(d => (r.porFecha[d] && r.porFecha[d][colPrincipal]) || 0);
-    const ctx = document.getElementById(`grafica-reporte-apple-${i}`);
-    if(!ctx) return;
-    chartsReportesApple.push(new Chart(ctx, {
-      type: 'line',
-      data: { labels: dias.map(d => d.slice(5)), datasets: [{ data: valores, borderColor: colorAcento, backgroundColor: colorAcento, tension: .3, pointRadius: 0 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: traducirNombreReporte(r.nombre) || r.categoria || '—', color: colorTexto, font: { family: 'JetBrains Mono', size: 11, weight: 'normal' }, align: 'start', padding: { bottom: 2 } },
-          subtitle: { display: true, text: `${traducirColumna(colPrincipal)} · últimos ${dias.length} días`, color: colorTexto, font: { family: 'JetBrains Mono', size: 9, style: 'italic' }, align: 'start', padding: { bottom: 8 } },
-        },
-        scales: {
-          x: { ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false }, border: { color: colorBorde } },
-          y: { beginAtZero: true, ticks: { color: colorTexto, font: { family: 'JetBrains Mono', size: 9 }, precision: 0 }, grid: { color: colorBorde }, border: { display: false } },
-        },
-      },
-    }));
-  });
+  lista.innerHTML = `<div class="grid-kpis" style="margin-bottom:14px;">${tarjetas}</div>${detalles}` + (sinDatos
+    ? `<div class="tarjeta-sub">${formatoNumero(sinDatos)} reporte${sinDatos === 1 ? '' : 's'} más sin datos todavía (normal -- se llenan solos en las primeras 24-48h).</div>`
+    : '');
 }
 
 // Resumen diario (parte 200) -- pensado para revisarse en menos de un
