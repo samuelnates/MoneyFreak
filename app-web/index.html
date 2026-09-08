@@ -15916,23 +15916,22 @@ async function calcularFlujoEfectivo(){
   (deudas || []).forEach(d => {
     const tieneMontoProximo = d.monto_proximo_pago != null;
     const monto = tieneMontoProximo ? Number(d.monto_proximo_pago) : (d.pago_mensual != null ? Number(d.pago_mensual) : null);
-    if(monto == null) return;
-    items.push({
-      nombre: d.nombre,
-      tipo: 'deuda',
-      monto: convertirAMXN(monto, d.moneda || 'MXN'),
-      dia: d.dia_limite_pago != null ? Number(d.dia_limite_pago) : null,
-      esEstimado: !tieneMontoProximo,
-      cumplidoEsteMes: cumplidoSet.has(`deuda:${d.id}`),
-      ref: d
-    });
-    // Fecha de corte -- pedido explícito del usuario: "quiero ver en el
-    // flujo cuando cortan mis tarjetas de crédito para revisar el saldo a
-    // pagar para no generar intereses". No es un movimiento de dinero de
-    // verdad (por eso queda excluido de totalEgresos/totalIngresos y de la
-    // gráfica de proyección más abajo) -- es informativo: el saldo actual
-    // de la tarjeta, para que el usuario lo revise justo antes del corte.
+    // Bug real reportado por el usuario: "solo vino al flujo una de mis
+    // tres tarjetas de crédito en fecha corte". El `return` de aquí abajo
+    // (para deudas sin monto de pago conocido) también se saltaba el ítem
+    // de corte de esa misma tarjeta -- una tarjeta puede tener día de corte
+    // configurado sin tener `monto_proximo_pago`/`pago_mensual` capturado
+    // (2 de sus 3 tarjetas reales estaban así), y aun así el corte se debe
+    // mostrar. Por eso el ítem de corte vive FUERA del `if(monto == null)`,
+    // no depende de si se conoce el monto del próximo pago.
     if(d.tipo === 'Tarjeta de crédito' && d.dia_corte != null){
+      // Fecha de corte -- pedido explícito del usuario: "quiero ver en el
+      // flujo cuando cortan mis tarjetas de crédito para revisar el saldo a
+      // pagar para no generar intereses". No es un movimiento de dinero de
+      // verdad (por eso queda excluido de totalEgresos/totalIngresos y de
+      // la gráfica de proyección más abajo) -- es informativo: el saldo
+      // actual de la tarjeta, para que el usuario lo revise justo antes
+      // del corte.
       items.push({
         nombre: tf('flujo.corte_de', d.nombre),
         tipo: 'corte',
@@ -15943,6 +15942,16 @@ async function calcularFlujoEfectivo(){
         ref: d
       });
     }
+    if(monto == null) return;
+    items.push({
+      nombre: d.nombre,
+      tipo: 'deuda',
+      monto: convertirAMXN(monto, d.moneda || 'MXN'),
+      dia: d.dia_limite_pago != null ? Number(d.dia_limite_pago) : null,
+      esEstimado: !tieneMontoProximo,
+      cumplidoEsteMes: cumplidoSet.has(`deuda:${d.id}`),
+      ref: d
+    });
   });
   (cuentas || []).forEach(c => {
     if(c.aportacion_mensual == null) return;
@@ -17410,8 +17419,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 161;
+const VERSION_APP_ACTUAL = 162;
 const CHANGELOG_APP = [
+  {
+    version: 162,
+    fecha: '2026-09-08',
+    cambios_es: [
+      'Se corrigió un bug: en Flujo de efectivo solo aparecía el corte de una tarjeta de crédito si las demás no tenían capturado el monto de su próximo pago -- ahora aparecen todas las que tengan día de corte, aunque no tengan ese monto.'
+    ],
+    cambios_en: [
+      'Fixed a bug: Cash Flow only showed the statement close date for a credit card if the others had no next-payment amount captured -- now every card with a close date shows up, even without that amount.'
+    ]
+  },
   {
     version: 161,
     fecha: '2026-09-08',
