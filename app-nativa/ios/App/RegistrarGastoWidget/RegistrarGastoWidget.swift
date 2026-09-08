@@ -157,12 +157,22 @@ struct RegistrarGastoLockScreenWidget: Widget {
   }
 }
 
+// El widget de Inicio funcionaba confirmado (build 5); en cuanto se agregó
+// el de pantalla de bloqueo (build 6) el usuario dejó de encontrar CUALQUIER
+// widget en su iPhone -- ni el nuevo ni el de Inicio que ya le funcionaba,
+// incluso después de borrar la app y reinstalarla de cero. Eso apunta a que
+// algo en el segundo Widget está tumbando el proceso de la extensión
+// completa al arrancar (WidgetKit registra los widgets de un mismo binario
+// juntos -- si ese proceso truena, no se registra ninguno). Sin acceso a
+// una Mac no hay forma de ver el crash log del lado de Apple/iOS desde acá,
+// así que se aísla quitando el de pantalla de bloqueo del bundle (se deja
+// el código, solo no se registra) para confirmar en un build limpio si el
+// de Inicio vuelve a aparecer solo. Si vuelve, el bug está en el segundo
+// Widget y se retoma desde cero con más cuidado; si NO vuelve, el problema
+// nunca fue el código nuevo.
 @main
 struct RegistrarGastoWidgetBundle: WidgetBundle {
   var body: some Widget {
     RegistrarGastoWidget()
-    if #available(iOS 16.0, *) {
-      RegistrarGastoLockScreenWidget()
-    }
   }
 }
