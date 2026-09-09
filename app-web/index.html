@@ -15159,6 +15159,79 @@ function cambiarRangoHistoricoGastos(rango){
   else renderHistoricoGastosPresupuesto(rango);
 }
 
+// Paleta categórica fija para la tendencia de gasto por categoría (parte
+// 229: probado en escala de grises -- pedido explícito, parte 228 -- pero
+// "no se entiende nada... vas a necesitar colores" en la práctica, con 4-8
+// líneas a la vez el gris no alcanza para distinguirlas). Colores del
+// método de dataviz (8 tonos categóricos, orden fijo por separación
+// CVD/visión normal), validados con el script de la skill CONTRA los dos
+// fondos reales de la app (claro #F7F5EF, oscuro #000000) -- los 8 pasan
+// en ambos modos.
+//
+// El color se asigna por NOMBRE de categoría, no por qué tan grande es su
+// gasto en el rango elegido -- si se asignara por posición (1er lugar =
+// azul, 2do = naranja...), "Vivienda" cambiaría de color cada vez que deja
+// de ser la categoría más grande al cambiar de 3M a 1A, lo cual confunde
+// más de lo que ayuda. Las categorías fuera de las 8 con color propio
+// (Cuidado personal, Mascotas, Otros, o cualquier categoría personalizada)
+// comparten un gris neutro -- son las de uso típicamente menos frecuente
+// en el catálogo.
+const PALETA_CATEGORIAS_GASTO = {
+  'Vivienda':                   { light: '#2a78d6', dark: '#3987e5' },
+  'Transporte':                 { light: '#eb6834', dark: '#d95926' },
+  'Alimentación':                { light: '#1baf7a', dark: '#199e70' },
+  'Servicios y suscripciones':   { light: '#eda100', dark: '#c98500' },
+  'Entretenimiento':             { light: '#e87ba4', dark: '#d55181' },
+  'Salud':                       { light: '#008300', dark: '#008300' },
+  'Ahorro e inversión':          { light: '#4a3aa7', dark: '#9085e9' },
+  'Educación':                   { light: '#e34948', dark: '#e66767' },
+};
+function esTemaOscuro(){
+  return colorTema('--bg').toLowerCase() === '#000000';
+}
+function colorCategoriaGasto(nombreCategoria){
+  const par = PALETA_CATEGORIAS_GASTO[nombreCategoria];
+  if(!par) return colorTema('--texto-tenue-2');
+  return par[esTemaOscuro() ? 'dark' : 'light'];
+}
+
+// Etiqueta directa al final de cada línea (nombre de categoría, en el
+// color de su línea) -- pedido explícito ("que las etiquetas estén en la
+// gráfica porque abajo no se entiende"): antes solo había leyenda debajo
+// del canvas, desconectada visualmente de cuál línea es cuál. Con
+// separación vertical mínima entre etiquetas para que no se encimen
+// cuando dos categorías terminan con montos parecidos.
+function crearPluginEtiquetasFinales(){
+  return {
+    id: 'etiquetasFinalesLinea',
+    afterDatasetsDraw(chart){
+      const { ctx, chartArea: area } = chart;
+      if(!area) return;
+      const puntos = [];
+      chart.data.datasets.forEach((ds, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if(meta.hidden) return;
+        const ultimo = meta.data[meta.data.length - 1];
+        if(!ultimo) return;
+        puntos.push({ y: ultimo.y, label: ds.label, color: ds.borderColor });
+      });
+      puntos.sort((a, b) => a.y - b.y);
+      const separacionMinima = 13;
+      for(let i = 1; i < puntos.length; i++){
+        if(puntos[i].y - puntos[i - 1].y < separacionMinima) puntos[i].y = puntos[i - 1].y + separacionMinima;
+      }
+      ctx.save();
+      ctx.font = "600 10px 'JetBrains Mono', monospace";
+      ctx.textBaseline = 'middle';
+      puntos.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.label, area.right + 8, p.y);
+      });
+      ctx.restore();
+    }
+  };
+}
+
 // Mismo cálculo que calcularHistoricoGastosPresupuesto, pero agrupado por
 // categoría en vez de sumado todo junto -- una serie mensual por
 // categoría en vez de un solo total.
@@ -15207,7 +15280,7 @@ async function renderHistoricoGastosPorCategoria(rango){
   const ctx = document.getElementById('grafica-historico-gastos');
   if(!ctx) return;
 
-  const colores = generarEscalaGrises(categorias.length);
+  const colores = categorias.map(c => colorCategoriaGasto(c.nombre));
   const leyenda = document.getElementById('leyenda-historico-gastos-categoria');
   if(leyenda){
     leyenda.innerHTML = categorias.length
@@ -15216,9 +15289,10 @@ async function renderHistoricoGastosPorCategoria(rango){
   }
 
   // Sin relleno con degradado a propósito (a diferencia de las gráficas de
-  // una sola línea de la app) -- con 6-8 categorías a la vez, rellenar cada
-  // una encima de la otra se vuelve ilegible; solo el trazo, distinguible
-  // por la leyenda de texto.
+  // una sola línea de la app) -- con varias categorías a la vez, rellenar
+  // cada una encima de la otra se vuelve ilegible; solo el trazo. Espacio
+  // reservado a la derecha (layout.padding.right) para las etiquetas
+  // directas de crearPluginEtiquetasFinales().
   graficaHistoricoGastosCategoria = new Chart(ctx, {
     type: 'line',
     data: {
@@ -15235,6 +15309,7 @@ async function renderHistoricoGastosPorCategoria(rango){
     },
     options: {
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: 130 } },
       plugins: {
         legend: { display: false },
         tooltip: tooltipEstiloApp((ctx) => `${ctx.dataset.label}: ${formatoMontoPrincipal(ctx.parsed.y)}`)
@@ -15243,7 +15318,8 @@ async function renderHistoricoGastosPorCategoria(rango){
         x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
         y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMontoPrincipal(v) }, grid: { color: colorTema('--borde') } }
       }
-    }
+    },
+    plugins: [crearPluginEtiquetasFinales()]
   });
 }
 
@@ -17549,8 +17625,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 163;
+const VERSION_APP_ACTUAL = 164;
 const CHANGELOG_APP = [
+  {
+    version: 164,
+    fecha: '2026-09-09',
+    cambios_es: [
+      'La gráfica de "Gasto por categoría en el tiempo" (Gastos) ahora usa un color distinto por categoría y muestra el nombre directo junto a cada línea, en vez de solo escala de grises con leyenda aparte -- mucho más fácil de leer de un vistazo.'
+    ],
+    cambios_en: [
+      'The "Spending by category over time" chart (Expenses) now uses a distinct color per category and shows the name directly next to each line, instead of only grayscale with a separate legend -- much easier to read at a glance.'
+    ]
+  },
   {
     version: 163,
     fecha: '2026-09-09',
