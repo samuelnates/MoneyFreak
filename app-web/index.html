@@ -4428,6 +4428,9 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Gastado vs presupuesto total',
     'gastos.de': 'de {0}',
     'gastos.vs_tiempo': 'Gasto vs presupuesto en el tiempo',
+    'gastos.vs_tiempo_categoria': 'Gasto por categoría en el tiempo',
+    'gastos.vista_unificado': 'Unificado',
+    'gastos.vista_categoria': 'Por categoría',
     'gastos.grafica_categoria': 'Gasto por categoría',
     'gastos.seccion_categoria': 'Por categoría',
     'gastos.movimientos_mes': 'Movimientos del mes',
@@ -5415,6 +5418,9 @@ const TRADUCCIONES = {
     'gastos.gastado_vs_ppt_total': 'Spent vs total budget',
     'gastos.de': 'of {0}',
     'gastos.vs_tiempo': 'Spending vs budget over time',
+    'gastos.vs_tiempo_categoria': 'Spending by category over time',
+    'gastos.vista_unificado': 'Unified',
+    'gastos.vista_categoria': 'By category',
     'gastos.grafica_categoria': 'Spending by category',
     'gastos.seccion_categoria': 'By category',
     'gastos.movimientos_mes': "This month's activity",
@@ -14677,13 +14683,18 @@ function renderGastosGraficasInline(r){
   const cont = document.getElementById('gastos-graficas-contenido');
   cont.innerHTML = `
     <div class="chart-caja" id="historico-gastos-caja">
-      <h2 style="margin-top:0;">${t('gastos.vs_tiempo')}</h2>
+      <h2 style="margin-top:0;" id="historico-gastos-titulo">${t('gastos.vs_tiempo')}</h2>
+      <div class="rango-botones" id="vista-historico-gastos" style="margin-bottom:8px;">
+        <button type="button" data-vista="unificado" onclick="cambiarVistaHistoricoGastos('unificado')">${t('gastos.vista_unificado')}</button>
+        <button type="button" data-vista="categoria" onclick="cambiarVistaHistoricoGastos('categoria')">${t('gastos.vista_categoria')}</button>
+      </div>
       <div class="rango-botones" id="rango-historico-gastos">
         <button type="button" data-rango="3m" onclick="cambiarRangoHistoricoGastos('3m')">3M</button>
         <button type="button" data-rango="6m" onclick="cambiarRangoHistoricoGastos('6m')">6M</button>
         <button type="button" data-rango="1a" onclick="cambiarRangoHistoricoGastos('1a')">1A</button>
       </div>
       <canvas id="grafica-historico-gastos" height="220"></canvas>
+      <div class="leyenda" id="leyenda-historico-gastos-categoria" style="display:none;"></div>
     </div>
     ${r.categorias.length > 0 ? `
       <div class="chart-caja">
@@ -14699,7 +14710,32 @@ function renderGastosGraficasInline(r){
 
   const rangoGuardadoHistorico = localStorage.getItem('pro_rango_historico_gastos') || '6m';
   document.querySelectorAll('#rango-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.rango === rangoGuardadoHistorico));
-  renderHistoricoGastosPresupuesto(rangoGuardadoHistorico);
+  const vistaGuardadaHistorico = localStorage.getItem('pro_vista_historico_gastos') || 'unificado';
+  document.querySelectorAll('#vista-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.vista === vistaGuardadaHistorico));
+  if(vistaGuardadaHistorico === 'categoria'){
+    document.getElementById('historico-gastos-titulo').textContent = t('gastos.vs_tiempo_categoria');
+    document.getElementById('leyenda-historico-gastos-categoria').style.display = 'flex';
+    renderHistoricoGastosPorCategoria(rangoGuardadoHistorico);
+  }else{
+    renderHistoricoGastosPresupuesto(rangoGuardadoHistorico);
+  }
+}
+
+// Pedido del usuario (referencia visual de otra app): tendencia mensual de
+// gasto por categoría, alternando con la gráfica ya existente de gasto vs.
+// presupuesto -- mismo canvas, mismo grupo de botones de rango (3M/6M/1A),
+// solo cambia qué se dibuja ahí. Colores en escala de grises (no colores
+// nuevos por categoría) para quedar consistente con el resto de la
+// app -- misma decisión que ya tomaba la dona de "Gasto por categoría"
+// (generarEscalaGrises), confirmado explícitamente con el usuario.
+function cambiarVistaHistoricoGastos(vista){
+  localStorage.setItem('pro_vista_historico_gastos', vista);
+  document.querySelectorAll('#vista-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.vista === vista));
+  document.getElementById('historico-gastos-titulo').textContent = t(vista === 'categoria' ? 'gastos.vs_tiempo_categoria' : 'gastos.vs_tiempo');
+  document.getElementById('leyenda-historico-gastos-categoria').style.display = vista === 'categoria' ? 'flex' : 'none';
+  const rango = localStorage.getItem('pro_rango_historico_gastos') || '6m';
+  if(vista === 'categoria') renderHistoricoGastosPorCategoria(rango);
+  else renderHistoricoGastosPresupuesto(rango);
 }
 
 function renderGastosCategoriasInline(r){
@@ -15086,6 +15122,10 @@ async function renderHistoricoGastosPresupuesto(rango){
   const mesesAtras = { '3m': 3, '6m': 6, '1a': 12 }[rango] || 6;
   const { labels, gastado, presupuestado } = await calcularHistoricoGastosPresupuesto(mesesAtras);
   if(graficaHistoricoGastos) graficaHistoricoGastos.destroy();
+  // Mismo canvas que la vista "Por categoría" (cambiarVistaHistoricoGastos)
+  // -- hay que destruir esa instancia también si estaba activa, o Chart.js
+  // truena con "canvas already in use".
+  if(graficaHistoricoGastosCategoria){ graficaHistoricoGastosCategoria.destroy(); graficaHistoricoGastosCategoria = null; }
   const ctx = document.getElementById('grafica-historico-gastos');
   if(!ctx) return;
   graficaHistoricoGastos = new Chart(ctx, {
@@ -15114,7 +15154,97 @@ async function renderHistoricoGastosPresupuesto(rango){
 function cambiarRangoHistoricoGastos(rango){
   localStorage.setItem('pro_rango_historico_gastos', rango);
   document.querySelectorAll('#rango-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.rango === rango));
-  renderHistoricoGastosPresupuesto(rango);
+  const vista = localStorage.getItem('pro_vista_historico_gastos') || 'unificado';
+  if(vista === 'categoria') renderHistoricoGastosPorCategoria(rango);
+  else renderHistoricoGastosPresupuesto(rango);
+}
+
+// Mismo cálculo que calcularHistoricoGastosPresupuesto, pero agrupado por
+// categoría en vez de sumado todo junto -- una serie mensual por
+// categoría en vez de un solo total.
+async function calcularHistoricoGastosPorCategoria(mesesAtras){
+  const hoy = new Date();
+  const meses = [];
+  for(let i = mesesAtras - 1; i >= 0; i--){
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    meses.push({ anio: d.getFullYear(), mes: d.getMonth() });
+  }
+  const primerMes = meses[0];
+  const primerDia = `${primerMes.anio}-${String(primerMes.mes + 1).padStart(2, '0')}-01`;
+  const ultimoMesInfo = meses[meses.length - 1];
+  const ultimoDiaNum = new Date(ultimoMesInfo.anio, ultimoMesInfo.mes + 1, 0).getDate();
+  const ultimoDia = `${ultimoMesInfo.anio}-${String(ultimoMesInfo.mes + 1).padStart(2, '0')}-${String(ultimoDiaNum).padStart(2, '0')}`;
+
+  const { data: gastos } = await sb.from('gastos').select('*').gte('fecha', primerDia).lte('fecha', ultimoDia);
+
+  const porCategoria = {};
+  (gastos || []).forEach(g => {
+    const [anioG, mesG] = g.fecha.split('-').map(Number);
+    const idx = meses.findIndex(m => m.anio === anioG && (m.mes + 1) === mesG);
+    if(idx === -1) return;
+    const montoMXN = convertirAMXN(Number(g.monto), g.moneda || 'MXN');
+    if(!porCategoria[g.categoria]) porCategoria[g.categoria] = meses.map(() => 0);
+    porCategoria[g.categoria][idx] += montoMXN;
+  });
+
+  const categorias = Object.entries(porCategoria)
+    .map(([nombre, valores]) => ({ nombre, valores, total: valores.reduce((a, b) => a + b, 0) }))
+    .filter(c => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    labels: meses.map(m => `${nombreMesCorto(m.mes)} ${String(m.anio).slice(2)}`),
+    categorias
+  };
+}
+
+let graficaHistoricoGastosCategoria = null;
+async function renderHistoricoGastosPorCategoria(rango){
+  const mesesAtras = { '3m': 3, '6m': 6, '1a': 12 }[rango] || 6;
+  const { labels, categorias } = await calcularHistoricoGastosPorCategoria(mesesAtras);
+  if(graficaHistoricoGastosCategoria) graficaHistoricoGastosCategoria.destroy();
+  if(graficaHistoricoGastos){ graficaHistoricoGastos.destroy(); graficaHistoricoGastos = null; }
+  const ctx = document.getElementById('grafica-historico-gastos');
+  if(!ctx) return;
+
+  const colores = generarEscalaGrises(categorias.length);
+  const leyenda = document.getElementById('leyenda-historico-gastos-categoria');
+  if(leyenda){
+    leyenda.innerHTML = categorias.length
+      ? categorias.map((c, i) => `<div class="leyenda-fila"><span class="leyenda-punto" style="background:${colores[i]}"></span><span>${escapeHtml(nombreGasto(c.nombre))}</span></div>`).join('')
+      : `<div class="mensaje">${t('gastos.sin_datos_mes')}</div>`;
+  }
+
+  // Sin relleno con degradado a propósito (a diferencia de las gráficas de
+  // una sola línea de la app) -- con 6-8 categorías a la vez, rellenar cada
+  // una encima de la otra se vuelve ilegible; solo el trazo, distinguible
+  // por la leyenda de texto.
+  graficaHistoricoGastosCategoria = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: categorias.map((c, i) => ({
+        label: nombreGasto(c.nombre),
+        data: c.valores,
+        borderColor: colores[i],
+        backgroundColor: colores[i],
+        borderWidth: 2,
+        tension: 0.3,
+        ...PUNTOS_INTERACTIVOS_LINEA
+      }))
+    },
+    options: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipEstiloApp((ctx) => `${ctx.dataset.label}: ${formatoMontoPrincipal(ctx.parsed.y)}`)
+      },
+      scales: {
+        x: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: colorTema('--texto-tenue'), font: { family: 'JetBrains Mono', size: 10 }, callback: v => formatoMontoPrincipal(v) }, grid: { color: colorTema('--borde') } }
+      }
+    }
+  });
 }
 
 let graficaGastos = null;
@@ -17419,8 +17549,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 162;
+const VERSION_APP_ACTUAL = 163;
 const CHANGELOG_APP = [
+  {
+    version: 163,
+    fecha: '2026-09-09',
+    cambios_es: [
+      'Nueva vista en Gastos: la gráfica de "Gasto vs presupuesto en el tiempo" ahora tiene un botón para ver el gasto mensual desglosado por categoría (una línea por categoría), además de la vista de siempre.'
+    ],
+    cambios_en: [
+      'New view in Expenses: the "Spending vs budget over time" chart now has a toggle to see monthly spending broken down by category (one line per category), alongside the existing view.'
+    ]
+  },
   {
     version: 162,
     fecha: '2026-09-08',
