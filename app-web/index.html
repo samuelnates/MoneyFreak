@@ -14724,10 +14724,9 @@ function renderGastosGraficasInline(r){
 // Pedido del usuario (referencia visual de otra app): tendencia mensual de
 // gasto por categoría, alternando con la gráfica ya existente de gasto vs.
 // presupuesto -- mismo canvas, mismo grupo de botones de rango (3M/6M/1A),
-// solo cambia qué se dibuja ahí. Colores en escala de grises (no colores
-// nuevos por categoría) para quedar consistente con el resto de la
-// app -- misma decisión que ya tomaba la dona de "Gasto por categoría"
-// (generarEscalaGrises), confirmado explícitamente con el usuario.
+// solo cambia qué se dibuja ahí. Colores por categoría (colorCategoriaGasto,
+// parte 229) -- mismos colores que la dona de "Gasto por categoría", para
+// que una misma categoría se vea igual en toda la sección de Gastos.
 function cambiarVistaHistoricoGastos(vista){
   localStorage.setItem('pro_vista_historico_gastos', vista);
   document.querySelectorAll('#vista-historico-gastos button').forEach(b => b.classList.toggle('activo', b.dataset.vista === vista));
@@ -15325,26 +15324,14 @@ async function renderHistoricoGastosPorCategoria(rango){
 
 let graficaGastos = null;
 
-function hexARgbArray(hex){
-  const h = hex.replace('#', '');
-  return [parseInt(h.substring(0,2), 16), parseInt(h.substring(2,4), 16), parseInt(h.substring(4,6), 16)];
-}
-
-function generarEscalaGrises(n){
-  const inicio = hexARgbArray(colorTema('--texto'));
-  const fin = hexARgbArray(colorTema('--texto-tenue-2'));
-  const colores = [];
-  for(let i = 0; i < n; i++){
-    const t = n <= 1 ? 0 : i / (n - 1);
-    const rgb = inicio.map((c, idx) => Math.round(c + (fin[idx] - c) * t));
-    colores.push(`rgb(${rgb.join(',')})`);
-  }
-  return colores;
-}
-
 function renderGraficaGastos(categorias){
   if(graficaGastos) graficaGastos.destroy();
-  const colores = generarEscalaGrises(categorias.length);
+  // Mismos colores por categoría que la gráfica de tendencia mensual
+  // (colorCategoriaGasto, parte 229) -- pedido explícito del usuario
+  // ("dame colores en el pay también") + consistencia: la misma categoría
+  // se ve del mismo color en toda la sección de Gastos, no solo en una
+  // gráfica sí y otra no.
+  const colores = categorias.map(c => colorCategoriaGasto(c.nombre));
   const leyenda = document.getElementById('leyenda-gastos');
   leyenda.innerHTML = '';
   categorias.forEach((c, i) => {
@@ -17625,8 +17612,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 164;
+const VERSION_APP_ACTUAL = 165;
 const CHANGELOG_APP = [
+  {
+    version: 165,
+    fecha: '2026-09-09',
+    cambios_es: [
+      'La dona de "Gasto por categoría" también usa ahora los mismos colores por categoría que la gráfica de tendencia mensual, en vez de escala de grises -- una misma categoría se ve del mismo color en toda la sección de Gastos.'
+    ],
+    cambios_en: [
+      'The "Spending by category" donut now also uses the same per-category colors as the monthly trend chart, instead of grayscale -- a category looks the same color throughout the Expenses section.'
+    ]
+  },
   {
     version: 164,
     fecha: '2026-09-09',
