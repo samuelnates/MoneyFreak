@@ -15165,7 +15165,12 @@ function cambiarRangoHistoricoGastos(rango){
 // método de dataviz (8 tonos categóricos, orden fijo por separación
 // CVD/visión normal), validados con el script de la skill CONTRA los dos
 // fondos reales de la app (claro #F7F5EF, oscuro #000000) -- los 8 pasan
-// en ambos modos.
+// en ambos modos. Parte 231: la primera versión (colores llenos del
+// método) salió "payasada" según el usuario -- se bajó la saturación
+// ~20% (manteniendo el mismo tono/orden, solo menos vívido) y se
+// revalidó contra los mismos dos fondos -- sigue pasando los mismos
+// checks de separación, ahora en un punto medio entre eso y la escala de
+// grises de antes.
 //
 // El color se asigna por NOMBRE de categoría, no por qué tan grande es su
 // gasto en el rango elegido -- si se asignara por posición (1er lugar =
@@ -15176,14 +15181,14 @@ function cambiarRangoHistoricoGastos(rango){
 // comparten un gris neutro -- son las de uso típicamente menos frecuente
 // en el catálogo.
 const PALETA_CATEGORIAS_GASTO = {
-  'Vivienda':                   { light: '#2a78d6', dark: '#3987e5' },
-  'Transporte':                 { light: '#eb6834', dark: '#d95926' },
-  'Alimentación':                { light: '#1baf7a', dark: '#199e70' },
-  'Servicios y suscripciones':   { light: '#eda100', dark: '#c98500' },
-  'Entretenimiento':             { light: '#e87ba4', dark: '#d55181' },
-  'Salud':                       { light: '#008300', dark: '#008300' },
-  'Ahorro e inversión':          { light: '#4a3aa7', dark: '#9085e9' },
-  'Educación':                   { light: '#e34948', dark: '#e66767' },
+  'Vivienda':                   { light: '#3b7ac5', dark: '#4a89d4' },
+  'Transporte':                 { light: '#d97046', dark: '#c76138' },
+  'Alimentación':                { light: '#2aa076', dark: '#26916c' },
+  'Servicios y suscripciones':   { light: '#d59918', dark: '#b57f14' },
+  'Entretenimiento':             { light: '#dd86a7', dark: '#c85e85' },
+  'Salud':                       { light: '#0d760d', dark: '#0d760d' },
+  'Ahorro e inversión':          { light: '#52459c', dark: '#7e73d7' },
+  'Educación':                   { light: '#d45857', dark: '#d35c5c' },
 };
 function esTemaOscuro(){
   return colorTema('--bg').toLowerCase() === '#000000';
@@ -17612,8 +17617,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 165;
+const VERSION_APP_ACTUAL = 166;
 const CHANGELOG_APP = [
+  {
+    version: 166,
+    fecha: '2026-09-09',
+    cambios_es: [
+      'Colores por categoría en Gastos más apagados/serios -- mismo tono y orden de antes, con menos saturación, un punto medio entre los colores muy vivos y la escala de grises original.'
+    ],
+    cambios_en: [
+      'Toned-down per-category colors in Expenses -- same hues and order as before, less saturated, a middle ground between the very vivid colors and the original grayscale.'
+    ]
+  },
   {
     version: 165,
     fecha: '2026-09-09',
