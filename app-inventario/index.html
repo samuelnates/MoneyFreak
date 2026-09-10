@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de Ventas vs Inventario — Cole Collection</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div id="mensaje-global" class="mensaje" hidden></div>
+
+  <!-- ======================= LOGIN ======================= -->
+  <section id="vista-login" class="seccion">
+    <form id="form-login" class="tarjeta-login">
+      <h1>Histórico de Ventas vs Inventario</h1>
+      <p>Cole Collection — acceso por palabra clave</p>
+      <input type="password" id="input-palabra-clave" placeholder="Palabra clave" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+    </form>
+  </section>
+
+  <!-- ======================= APP ======================= -->
+  <section id="vista-app" class="seccion" hidden>
+    <header id="barra-superior">
+      <h1>Histórico de Ventas vs Inventario</h1>
+      <div id="info-usuario">
+        <span id="usuario-nombre"></span>
+        <span id="usuario-rol"></span>
+        <button id="btn-cerrar-sesion">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <nav id="nav-tabs">
+      <button data-tab="dashboard" class="activo">Dashboard</button>
+      <button data-tab="carga" class="solo-editor">Cargar reporte</button>
+      <button data-tab="alertas">Alertas</button>
+      <button data-tab="usuarios" class="solo-editor">Usuarios</button>
+    </nav>
+
+    <main>
+      <!-- ---- Dashboard ---- -->
+      <div class="panel-tab" data-tab="dashboard">
+        <div class="fila-filtros">
+          <div>
+            <label style="display:block;font-size:.75rem;color:var(--texto-tenue);margin-bottom:.35rem;">Marcas</label>
+            <div id="filtro-marcas"></div>
+          </div>
+          <div class="filtro-periodo">
+            <label for="filtro-periodo-desde">Desde</label>
+            <select id="filtro-periodo-desde"></select>
+          </div>
+          <div class="filtro-periodo">
+            <label for="filtro-periodo-hasta">Hasta</label>
+            <select id="filtro-periodo-hasta"></select>
+          </div>
+        </div>
+
+        <p id="dashboard-vacio" class="texto-tenue" hidden>Todavía no hay ningún reporte cargado. Ve a "Cargar reporte" para subir el primero.</p>
+
+        <div class="fila-kpis">
+          <div class="kpi"><div class="valor" id="kpi-unidades">—</div><div class="etiqueta">Unidades vendidas</div></div>
+          <div class="kpi"><div class="valor" id="kpi-costo-inv">—</div><div class="etiqueta">Costo de inventario</div></div>
+          <div class="kpi"><div class="valor" id="kpi-moi">—</div><div class="etiqueta">MOI promedio (meses de inventario)</div></div>
+          <div class="kpi"><div class="valor" id="kpi-tiendas">—</div><div class="etiqueta">Tiendas con datos</div></div>
+        </div>
+
+        <div class="fila-graficas">
+          <div class="contenedor-grafica"><canvas id="grafica-serie-mensual"></canvas></div>
+          <div class="contenedor-grafica"><canvas id="grafica-barras-marca"></canvas></div>
+        </div>
+
+        <h2>Detalle por tienda y periodo</h2>
+        <div class="contenedor-tabla">
+          <table id="tabla-historico">
+            <thead>
+              <tr>
+                <th>Periodo</th><th>Marca</th><th>Tienda</th><th>Canal</th>
+                <th>Uds. vendidas</th><th>Costo inventario</th><th>MOI (cto)</th><th>Margen vta.</th><th>Año vs Año</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ---- Cargar reporte ---- -->
+      <div class="panel-tab solo-editor" data-tab="carga" hidden>
+        <h2>Cargar reporte mensual</h2>
+        <p class="texto-tenue">Arrastra el archivo .xlsx del reporte de ventas vs inventario del mes, o haz clic para elegirlo. Primero se muestra una vista previa con las alertas encontradas — nada se guarda hasta que confirmes.</p>
+        <div id="dropzone">
+          <p>Suelta aquí el archivo .xlsx, o haz clic para elegirlo</p>
+          <input type="file" id="input-archivo" accept=".xlsx" hidden>
+        </div>
+
+        <div id="resultado-carga" hidden>
+          <div id="carga-estado"></div>
+          <h2>Advertencias de lectura del archivo</h2>
+          <div id="carga-advertencias"></div>
+          <h2>Alertas de validación (vs. histórico y tiendas similares)</h2>
+          <div id="carga-alertas"></div>
+          <div class="acciones-carga">
+            <button id="btn-confirmar-carga" disabled>Confirmar y guardar carga</button>
+            <button id="btn-cancelar-carga" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- Alertas ---- -->
+      <div class="panel-tab" data-tab="alertas" hidden>
+        <h2>Alertas</h2>
+        <label class="filtro-linea"><input type="checkbox" id="filtro-alertas-abiertas" checked onchange="refrescarAlertas()"> Mostrar solo alertas abiertas</label>
+        <div class="contenedor-tabla">
+          <table id="tabla-alertas-global">
+            <thead><tr><th>Periodo</th><th>Marca</th><th>Tienda</th><th>Severidad</th><th>Mensaje</th><th>Estado</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ---- Usuarios ---- -->
+      <div class="panel-tab solo-editor" data-tab="usuarios" hidden>
+        <h2>Usuarios y accesos</h2>
+        <p class="texto-tenue">Cada usuario entra con su propia palabra clave. "Viewer" solo puede consultar el dashboard y alertas; "Editor" además puede cargar reportes, resolver alertas y administrar usuarios.</p>
+        <form id="form-nuevo-usuario">
+          <div><label for="nuevo-usuario-nombre">Nombre</label><input id="nuevo-usuario-nombre" required></div>
+          <div><label for="nuevo-usuario-rol">Rol</label>
+            <select id="nuevo-usuario-rol">
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+          </div>
+          <div><label for="nuevo-usuario-palabra-clave">Palabra clave (mín. 8 caracteres)</label><input id="nuevo-usuario-palabra-clave" type="text" minlength="8" required></div>
+          <button type="submit">Crear usuario</button>
+        </form>
+        <div class="contenedor-tabla">
+          <table id="tabla-usuarios">
+            <thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/graficas.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
