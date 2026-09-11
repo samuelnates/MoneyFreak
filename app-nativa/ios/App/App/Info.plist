@@ -14,6 +14,8 @@
 	<string>Money Freak usa la cámara para fotografiar tickets y recibos, y así llenar el gasto por ti.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Money Freak usa el micrófono para que grabes una nota de voz al registrar un gasto.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Money Freak usa tus contactos para que elijas rápido a quién agregar como aportante de un fondo compartido, sin tener que escribir su teléfono a mano.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

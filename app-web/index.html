@@ -2546,7 +2546,10 @@
   </div>
   <div class="campo">
     <label for="input-telefono-aportante" data-i18n="fondos.telefono_label">Teléfono (opcional, para WhatsApp)</label>
-    <input type="text" id="input-telefono-aportante" placeholder="Ej. +52 55 1234 5678">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="input-telefono-aportante" placeholder="Ej. +52 55 1234 5678" style="flex:1;min-width:0;">
+      <button type="button" id="btn-elegir-contacto-aportante" class="btn-link-tenue" style="display:none;flex:none;white-space:nowrap;" onclick="elegirContactoAportante()" data-i18n="fondos.elegir_contacto">Elegir de contactos</button>
+    </div>
   </div>
   <div id="aviso-error-aportante" class="aviso estado-riesgo" style="display:none;"></div>
   <button class="btn-link-tenue" id="btn-eliminar-aportante" onclick="eliminarAportanteActual()" style="display:none;" data-i18n="fondos.eliminar_aportante">Eliminar aportante</button>
@@ -4382,6 +4385,7 @@ const TRADUCCIONES = {
     'fondos.monto_label': 'Monto',
     'fondos.porcentaje_label': 'Porcentaje de la meta',
     'fondos.telefono_label': 'Teléfono (opcional, para WhatsApp)',
+    'fondos.elegir_contacto': 'Elegir de contactos',
     'fondos.eliminar_aportante': 'Eliminar aportante',
     'fondos.aportante_eliminado_aviso': 'Aportante eliminado',
     'fondos.error_nombre': 'Ponle un nombre.',
@@ -4390,6 +4394,7 @@ const TRADUCCIONES = {
     'fondos.ver_mensaje': 'Ver mensaje para avisarle →',
     'fondos.ocultar_mensaje': 'Ocultar mensaje ↑',
     'fondos.copiar': 'Copiar',
+    'fondos.restablecer_mensaje': 'Restablecer al mensaje original',
     'fondos.mensaje_whatsapp': '¡Hola! 👋\n\nTe escribo para avisarte que este mes te toca aportar {0} para "{1}".\n\n¿Me confirmas cuando lo deposites? ¡Gracias!',
     'panel.configuracion.titulo': 'Configuración y privacidad',
     'panel.configuracion.sub': 'Tema, tus datos, exportar o borrar',
@@ -5421,6 +5426,7 @@ const TRADUCCIONES = {
     'fondos.monto_label': 'Amount',
     'fondos.porcentaje_label': 'Percentage of the goal',
     'fondos.telefono_label': 'Phone (optional, for WhatsApp)',
+    'fondos.elegir_contacto': 'Choose from contacts',
     'fondos.eliminar_aportante': 'Delete contributor',
     'fondos.aportante_eliminado_aviso': 'Contributor deleted',
     'fondos.error_nombre': 'Give them a name.',
@@ -5429,6 +5435,7 @@ const TRADUCCIONES = {
     'fondos.ver_mensaje': 'See reminder message →',
     'fondos.ocultar_mensaje': 'Hide message ↑',
     'fondos.copiar': 'Copy',
+    'fondos.restablecer_mensaje': 'Reset to the original message',
     'fondos.mensaje_whatsapp': 'Hi! 👋\n\nJust a reminder that this month it\'s your turn to contribute {0} to "{1}".\n\nCan you confirm once you deposit it? Thanks!',
     'panel.configuracion.titulo': 'Settings & privacy',
     'panel.configuracion.sub': 'Theme, your data, export or delete',
@@ -16509,6 +16516,7 @@ async function abrirFondoDetalle(id){
   const { data: fondo } = await sb.from('fondos_compartidos').select('*').eq('id', id).single();
   if(!fondo){ mostrar('vista-fondos'); return; }
   fondoActual = fondo;
+  mensajesPersonalizados = {};
   aportanteMensajeAbiertoId = null;
   document.getElementById('fondo-detalle-nombre').textContent = fondo.nombre;
 
@@ -16524,6 +16532,18 @@ async function abrirFondoDetalle(id){
 
 function mensajeRecordatorioAportante(monto){
   return tf('fondos.mensaje_whatsapp', formatoMonto(monto), fondoActual.nombre);
+}
+
+// Mensajes editados a mano en la pantalla de detalle (parte 233, pedido
+// explícito del usuario tras ver el mensaje generado: "también quiero que
+// puedan editar el mensaje"). Vive solo en memoria mientras se está en esta
+// pantalla -- no se guarda en la base de datos, porque el monto que calcula
+// el mensaje puede cambiar de un mes a otro y un texto editado hace meses ya
+// no aplicaría. abrirFondoDetalle() la limpia cada vez que se entra de nuevo.
+let mensajesPersonalizados = {};
+
+function textoMensajeAportante(id, monto){
+  return mensajesPersonalizados[id] ?? mensajeRecordatorioAportante(monto);
 }
 
 function renderFondoDetalle(){
@@ -16549,9 +16569,7 @@ function renderFondoDetalle(){
   const filasAportantes = aportantes.length ? aportantes.map(a => {
     const monto = calc.montoPorId[a.id];
     const mensajeAbierto = aportanteMensajeAbiertoId === a.id;
-    const tel = (a.telefono || '').replace(/[^0-9]/g, '');
-    const mensajeTexto = mensajeRecordatorioAportante(monto);
-    const linkWhatsapp = tel ? `https://wa.me/${tel}?text=${encodeURIComponent(mensajeTexto)}` : `https://wa.me/?text=${encodeURIComponent(mensajeTexto)}`;
+    const mensajeTexto = textoMensajeAportante(a.id, monto);
     return `
       <div class="tarjeta" style="cursor:default;">
         <div style="display:flex;align-items:center;gap:11px;min-width:0;flex:1;">
@@ -16569,10 +16587,12 @@ function renderFondoDetalle(){
         </div>
       </div>
       ${mensajeAbierto ? `
-        <div class="aviso" style="white-space:pre-line;margin-top:-10px;margin-bottom:14px;">${escapeHtml(mensajeTexto)}
+        <div class="aviso" style="margin-top:-10px;margin-bottom:14px;">
+          <textarea id="mensaje-texto-${a.id}" oninput="mensajesPersonalizados['${a.id}'] = this.value;" style="width:100%;min-height:110px;font-family:inherit;font-size:12.5px;line-height:1.55;color:var(--texto);background:var(--bg);border:1px solid var(--borde);border-radius:3px;padding:10px;resize:vertical;">${escapeHtml(mensajeTexto)}</textarea>
+          <button type="button" class="btn-link-tenue" style="font-size:11px;margin-top:4px;" onclick="restablecerMensajeAportante('${a.id}')">${t('fondos.restablecer_mensaje')}</button>
           <div style="display:flex;gap:8px;margin-top:10px;">
             <button type="button" class="btn-grande secundario" style="padding:9px 12px;font-size:12px;" onclick="copiarMensajeAportante('${a.id}')">${t('fondos.copiar')}</button>
-            <a href="${linkWhatsapp}" target="_blank" class="btn-grande" style="padding:9px 12px;font-size:12px;text-decoration:none;text-align:center;">WhatsApp</a>
+            <button type="button" class="btn-grande" style="padding:9px 12px;font-size:12px;" onclick="enviarMensajeWhatsapp('${a.id}')">WhatsApp</button>
           </div>
         </div>
       ` : ''}
@@ -16618,11 +16638,27 @@ function toggleMensajeAportante(id){
 }
 
 function copiarMensajeAportante(id){
+  const textarea = document.getElementById('mensaje-texto-' + id);
+  const mensajeTexto = textarea ? textarea.value : mensajesPersonalizados[id];
+  if(mensajeTexto == null) return;
+  if(navigator.clipboard) navigator.clipboard.writeText(mensajeTexto).catch(() => {});
+  haptic('toque');
+}
+
+function enviarMensajeWhatsapp(id){
   const a = fondoActualAportantes.find(x => x.id === id);
   if(!a) return;
-  const calc = calcularMontosFondo(fondoActual, fondoActualAportantes);
-  const mensajeTexto = mensajeRecordatorioAportante(calc.montoPorId[id]);
-  if(navigator.clipboard) navigator.clipboard.writeText(mensajeTexto).catch(() => {});
+  const textarea = document.getElementById('mensaje-texto-' + id);
+  const mensajeTexto = textarea ? textarea.value : mensajesPersonalizados[id];
+  if(mensajeTexto == null) return;
+  const tel = (a.telefono || '').replace(/[^0-9]/g, '');
+  const link = tel ? `https://wa.me/${tel}?text=${encodeURIComponent(mensajeTexto)}` : `https://wa.me/?text=${encodeURIComponent(mensajeTexto)}`;
+  window.open(link, '_blank');
+}
+
+function restablecerMensajeAportante(id){
+  delete mensajesPersonalizados[id];
+  renderFondoDetalle();
 }
 
 function volverAFondoDetalle(){
@@ -16636,6 +16672,33 @@ function actualizarCampoValorAportante(){
   document.getElementById('label-valor-aportante').textContent = tipo === 'porcentaje' ? t('fondos.porcentaje_label') : t('fondos.monto_label');
 }
 
+// El picker nativo de contactos (plugin @capacitor-community/contacts) solo
+// existe dentro de la app -- en la web no hay forma de leer la libreta de
+// contactos real, así que el botón se queda oculto ahí (se sigue escribiendo
+// el teléfono a mano).
+function actualizarVisibilidadBotonContactoAportante(){
+  const btn = document.getElementById('btn-elegir-contacto-aportante');
+  if(!btn) return;
+  btn.style.display = window.Capacitor?.isNativePlatform?.() ? '' : 'none';
+}
+
+async function elegirContactoAportante(){
+  const Contacts = window.Capacitor?.Plugins?.Contacts;
+  if(!Contacts) return;
+  try{
+    const { contact } = await Contacts.pickContact({ projection: { name: true, phones: true } });
+    if(!contact) return;
+    const nombre = contact.name?.display || contact.name?.given || '';
+    const telefono = contact.phones?.find(p => p.number)?.number || '';
+    if(nombre) document.getElementById('input-nombre-aportante').value = nombre;
+    if(telefono) document.getElementById('input-telefono-aportante').value = telefono;
+    haptic('toque');
+  }catch(e){
+    // Usuario canceló el picker, o negó el permiso de contactos -- no es un
+    // error real, se queda como estaba (puede seguir escribiendo a mano).
+  }
+}
+
 function abrirAgregarAportante(){
   aportanteEditando = null;
   document.getElementById('agregar-aportante-titulo').textContent = t('fondos.nuevo_aportante_titulo');
@@ -16646,6 +16709,7 @@ function abrirAgregarAportante(){
   document.getElementById('aviso-error-aportante').style.display = 'none';
   document.getElementById('btn-eliminar-aportante').style.display = 'none';
   actualizarCampoValorAportante();
+  actualizarVisibilidadBotonContactoAportante();
   mostrar('vista-agregar-aportante');
 }
 
@@ -16661,6 +16725,7 @@ function abrirEditarAportante(id){
   document.getElementById('aviso-error-aportante').style.display = 'none';
   document.getElementById('btn-eliminar-aportante').style.display = '';
   actualizarCampoValorAportante();
+  actualizarVisibilidadBotonContactoAportante();
   mostrar('vista-agregar-aportante');
 }
 
@@ -18125,8 +18190,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 167;
+const VERSION_APP_ACTUAL = 168;
 const CHANGELOG_APP = [
+  {
+    version: 168,
+    fecha: '2026-09-11',
+    cambios_es: [
+      'Fondos compartidos: el mensaje de recordatorio para cada aportante ahora se puede editar antes de copiarlo o mandarlo por WhatsApp, en vez de ser un texto fijo. En la app nativa (iOS/Android) también se puede elegir el nombre y teléfono directo de tus Contactos en vez de escribirlos a mano.'
+    ],
+    cambios_en: [
+      'Shared funds: the reminder message for each contributor can now be edited before copying it or sending it on WhatsApp, instead of being fixed text. In the native app (iOS/Android) you can also pick the name and phone straight from your Contacts instead of typing them.'
+    ]
+  },
   {
     version: 167,
     fecha: '2026-09-11',
