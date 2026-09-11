@@ -1679,6 +1679,7 @@
   <button data-vista="vista-flujo" onclick="abrirFlujoEfectivo()" data-i18n="sidebar.flujo">Flujo de efectivo</button>
   <button data-vista="vista-gastos" onclick="abrirGastos()" data-i18n="sidebar.gastos">Gastos y presupuesto</button>
   <button data-vista="vista-simulador" onclick="ajustarPlazosSimulador(); mostrar('vista-simulador');" data-i18n="sidebar.simulador">Simulador de crédito</button>
+  <button data-vista="vista-fondos" onclick="abrirFondos()" data-i18n="sidebar.fondos">Fondos compartidos</button>
   <button data-vista="vista-privacidad" onclick="mostrar('vista-privacidad')" data-i18n="sidebar.configuracion">Configuración y privacidad</button>
   <div class="sidebar-spacer"></div>
   <button class="sidebar-salir" onclick="manejarSalir()" data-i18n="sidebar.salir">Salir</button>
@@ -2466,6 +2467,90 @@
     <button class="btn-grande" onclick="calcularSimulador()" data-i18n="simulador.calcular">Calcular</button>
   </div>
   <div id="simulador-resultado" data-i18n-attr-data-placeholder="simulador.placeholder_vacio"></div>
+</div>
+
+<div id="vista-fondos" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-inicio')">‹</button>
+    <h1 data-i18n="sidebar.fondos">Fondos compartidos</h1>
+  </div>
+  <div class="instructivo" data-i18n="fondos.instructivo">Dinero que llega de varias personas para un mismo gasto -- beca repartida, renta compartida, pensión -- lleva el registro de quién aporta cuánto y avísales cuando les toque.</div>
+  <div id="fondos-lista"></div>
+  <button class="btn-grande" onclick="abrirAgregarFondo()" data-i18n="fondos.nuevo_fondo">+ Nuevo fondo</button>
+</div>
+
+<div id="vista-agregar-fondo" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-fondos')">‹</button>
+    <h1 data-i18n="fondos.nuevo_fondo_titulo">Nuevo fondo</h1>
+  </div>
+  <div class="barra-guardar-superior">
+    <button class="btn-grande" onclick="guardarFondo()" data-i18n="comun.guardar">Guardar</button>
+  </div>
+  <div class="campo requerido">
+    <label for="input-nombre-fondo" data-i18n="fondos.nombre_label">Nombre del fondo</label>
+    <input type="text" id="input-nombre-fondo" placeholder="Ej. Universidad de Ana, Renta departamento..." data-i18n-placeholder="fondos.nombre_placeholder">
+  </div>
+  <div class="campo requerido">
+    <label for="input-meta-fondo" data-i18n="fondos.meta_label">Meta mensual</label>
+    <input type="text" id="input-meta-fondo" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 18500">
+  </div>
+  <div class="campo">
+    <label for="input-dialimite-fondo" data-i18n="fondos.dia_limite_label">Día límite del mes (1-28)</label>
+    <input type="number" id="input-dialimite-fondo" min="1" max="28" value="28">
+  </div>
+  <div class="campo">
+    <label for="select-diasaviso-fondo" data-i18n="fondos.dias_aviso_label">Avisar a quien falte confirmar</label>
+    <select id="select-diasaviso-fondo">
+      <option value="1" data-i18n="fondos.dias_aviso_1">1 día antes</option>
+      <option value="3" selected data-i18n="fondos.dias_aviso_3">3 días antes</option>
+      <option value="5" data-i18n="fondos.dias_aviso_5">5 días antes</option>
+      <option value="7" data-i18n="fondos.dias_aviso_7">7 días antes</option>
+    </select>
+  </div>
+  <button class="btn-grande secundario" onclick="mostrar('vista-fondos')" data-i18n="comun.cancelar">Cancelar</button>
+</div>
+
+<div id="vista-fondo-detalle" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="mostrar('vista-fondos')">‹</button>
+    <h1 id="fondo-detalle-nombre">Fondo</h1>
+  </div>
+  <div id="fondo-detalle-contenido"></div>
+  <button class="btn-link-tenue" id="btn-eliminar-fondo" onclick="eliminarFondoActual()" data-i18n="fondos.eliminar_fondo">Eliminar este fondo</button>
+</div>
+
+<div id="vista-agregar-aportante" class="pantalla">
+  <div class="encabezado">
+    <button class="btn-volver" onclick="volverAFondoDetalle()">‹</button>
+    <h1 id="agregar-aportante-titulo" data-i18n="fondos.nuevo_aportante_titulo">Nuevo aportante</h1>
+  </div>
+  <div class="barra-guardar-superior">
+    <button class="btn-grande" onclick="guardarAportante()" data-i18n="comun.guardar">Guardar</button>
+  </div>
+  <div class="campo requerido">
+    <label for="input-nombre-aportante" data-i18n="fondos.aportante_nombre_label">Nombre</label>
+    <input type="text" id="input-nombre-aportante" placeholder="Ej. Papá, Tío Ricardo..." data-i18n-placeholder="fondos.aportante_nombre_placeholder">
+  </div>
+  <div class="campo">
+    <label for="select-tipo-aportante" data-i18n="fondos.tipo_aporte_label">Tipo de aporte</label>
+    <select id="select-tipo-aportante" onchange="actualizarCampoValorAportante()">
+      <option value="fijo" data-i18n="fondos.tipo_fijo">Monto fijo</option>
+      <option value="porcentaje" data-i18n="fondos.tipo_porcentaje">% de la meta</option>
+      <option value="resto" data-i18n="fondos.tipo_resto">Cubre el resto</option>
+    </select>
+  </div>
+  <div class="campo" id="campo-valor-aportante">
+    <label for="input-valor-aportante" id="label-valor-aportante" data-i18n="fondos.monto_label">Monto</label>
+    <input type="text" id="input-valor-aportante" inputmode="decimal" oninput="manejarInputMonto(this, event)" placeholder="Ej. 5000">
+  </div>
+  <div class="campo">
+    <label for="input-telefono-aportante" data-i18n="fondos.telefono_label">Teléfono (opcional, para WhatsApp)</label>
+    <input type="text" id="input-telefono-aportante" placeholder="Ej. +52 55 1234 5678">
+  </div>
+  <div id="aviso-error-aportante" class="aviso estado-riesgo" style="display:none;"></div>
+  <button class="btn-link-tenue" id="btn-eliminar-aportante" onclick="eliminarAportanteActual()" style="display:none;" data-i18n="fondos.eliminar_aportante">Eliminar aportante</button>
+  <button class="btn-grande secundario" onclick="volverAFondoDetalle()" data-i18n="comun.cancelar">Cancelar</button>
 </div>
 
 <div id="vista-gastos" class="pantalla">
@@ -4241,6 +4326,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Flujo de efectivo',
     'sidebar.gastos': 'Gastos y presupuesto',
     'sidebar.simulador': 'Simulador de crédito',
+    'sidebar.fondos': 'Fondos compartidos',
     'sidebar.configuracion': 'Configuración',
     'sidebar.salir': 'Salir',
     'sidebar.salir_muestra': 'Salir de la muestra',
@@ -4257,6 +4343,54 @@ const TRADUCCIONES = {
     'panel.gastos.titulo': 'Gastos y presupuesto',
     'panel.simulador.titulo': 'Simulador de crédito',
     'panel.simulador.sub': 'Simula un crédito nuevo antes de pedirlo',
+    'panel.fondos.titulo': 'Fondos compartidos',
+    'panel.fondos.sub': 'Dinero que llega de varias personas',
+    'fondos.instructivo': 'Dinero que llega de varias personas para un mismo gasto -- beca repartida, renta compartida, pensión -- lleva el registro de quién aporta cuánto y avísales cuando les toque.',
+    'fondos.nuevo_fondo': '+ Nuevo fondo',
+    'fondos.nuevo_fondo_titulo': 'Nuevo fondo',
+    'fondos.nombre_label': 'Nombre del fondo',
+    'fondos.nombre_placeholder': 'Ej. Universidad de Ana, Renta departamento...',
+    'fondos.meta_label': 'Meta mensual',
+    'fondos.dia_limite_label': 'Día límite del mes (1-28)',
+    'fondos.dias_aviso_label': 'Avisar a quien falte confirmar',
+    'fondos.dias_aviso_1': '1 día antes',
+    'fondos.dias_aviso_3': '3 días antes',
+    'fondos.dias_aviso_5': '5 días antes',
+    'fondos.dias_aviso_7': '7 días antes',
+    'fondos.sin_fondos_mensaje': 'Aún no tienes ningún fondo compartido. Crea uno para llevar el control de quién aporta cuánto.',
+    'fondos.aportantes_contador': '{0} aportantes',
+    'fondos.pct_confirmado': 'confirmado {0}% este mes',
+    'fondos.eliminar_fondo': 'Eliminar este fondo',
+    'fondos.fondo_eliminado_aviso': 'Fondo eliminado',
+    'fondos.error_guardar': 'No se pudo guardar el fondo. Intenta de nuevo.',
+    'fondos.confirmado_este_mes': 'Confirmado este mes',
+    'fondos.falta_cubrir': '⚠ Falta cubrir {0} de la meta -- nadie está asignado a esa parte todavía.',
+    'fondos.sobrante': 'Entre todos suman {0} más de la meta -- revisa los montos fijos.',
+    'fondos.aviso_hoy': 'Hoy es el día de pago --',
+    'fondos.aviso_dias': 'Faltan {0} días para el pago --',
+    'fondos.aviso_falta': 'aún falta confirmar con {0}.',
+    'fondos.sin_aportantes_mensaje': 'Todavía no hay aportantes en este fondo.',
+    'fondos.nuevo_aportante': '+ Agregar aportante',
+    'fondos.nuevo_aportante_titulo': 'Nuevo aportante',
+    'fondos.editar_aportante_titulo': 'Editar aportante',
+    'fondos.aportante_nombre_label': 'Nombre',
+    'fondos.aportante_nombre_placeholder': 'Ej. Papá, Tío Ricardo...',
+    'fondos.tipo_aporte_label': 'Tipo de aporte',
+    'fondos.tipo_fijo': 'Monto fijo',
+    'fondos.tipo_porcentaje': '% de la meta',
+    'fondos.tipo_resto': 'Cubre el resto',
+    'fondos.monto_label': 'Monto',
+    'fondos.porcentaje_label': 'Porcentaje de la meta',
+    'fondos.telefono_label': 'Teléfono (opcional, para WhatsApp)',
+    'fondos.eliminar_aportante': 'Eliminar aportante',
+    'fondos.aportante_eliminado_aviso': 'Aportante eliminado',
+    'fondos.error_nombre': 'Ponle un nombre.',
+    'fondos.error_valor': 'Pon un monto válido.',
+    'fondos.error_ya_hay_resto': 'Ya hay alguien cubriendo el resto -- solo puede haber uno.',
+    'fondos.ver_mensaje': 'Ver mensaje para avisarle →',
+    'fondos.ocultar_mensaje': 'Ocultar mensaje ↑',
+    'fondos.copiar': 'Copiar',
+    'fondos.mensaje_whatsapp': '¡Hola! 👋\n\nTe escribo para avisarte que este mes te toca aportar {0} para "{1}".\n\n¿Me confirmas cuando lo deposites? ¡Gracias!',
     'panel.configuracion.titulo': 'Configuración y privacidad',
     'panel.configuracion.sub': 'Tema, tus datos, exportar o borrar',
     'panel.saludo_sub': 'Esto es lo que pasa con tu dinero hoy',
@@ -5231,6 +5365,7 @@ const TRADUCCIONES = {
     'sidebar.flujo': 'Cash flow',
     'sidebar.gastos': 'Expenses & budget',
     'sidebar.simulador': 'Credit simulator',
+    'sidebar.fondos': 'Shared funds',
     'sidebar.configuracion': 'Settings',
     'sidebar.salir': 'Sign out',
     'sidebar.salir_muestra': 'Exit sample',
@@ -5247,6 +5382,54 @@ const TRADUCCIONES = {
     'panel.gastos.titulo': 'Expenses & budget',
     'panel.simulador.titulo': 'Credit simulator',
     'panel.simulador.sub': 'Simulate a new loan before applying',
+    'panel.fondos.titulo': 'Shared funds',
+    'panel.fondos.sub': 'Money coming in from several people',
+    'fondos.instructivo': 'Money that comes from several people for the same recurring expense -- a shared scholarship, split rent, alimony -- track who owes what and remind them when it is their turn.',
+    'fondos.nuevo_fondo': '+ New fund',
+    'fondos.nuevo_fondo_titulo': 'New fund',
+    'fondos.nombre_label': 'Fund name',
+    'fondos.nombre_placeholder': 'E.g. Ana\'s tuition, Shared rent...',
+    'fondos.meta_label': 'Monthly goal',
+    'fondos.dia_limite_label': 'Due day of the month (1-28)',
+    'fondos.dias_aviso_label': 'Remind whoever is missing',
+    'fondos.dias_aviso_1': '1 day before',
+    'fondos.dias_aviso_3': '3 days before',
+    'fondos.dias_aviso_5': '5 days before',
+    'fondos.dias_aviso_7': '7 days before',
+    'fondos.sin_fondos_mensaje': "You don't have any shared funds yet. Create one to track who contributes how much.",
+    'fondos.aportantes_contador': '{0} contributors',
+    'fondos.pct_confirmado': '{0}% confirmed this month',
+    'fondos.eliminar_fondo': 'Delete this fund',
+    'fondos.fondo_eliminado_aviso': 'Fund deleted',
+    'fondos.error_guardar': 'Could not save the fund. Try again.',
+    'fondos.confirmado_este_mes': 'Confirmed this month',
+    'fondos.falta_cubrir': '⚠ {0} of the goal is still uncovered -- no one is assigned to that part yet.',
+    'fondos.sobrante': 'Together they add up to {0} more than the goal -- check the fixed amounts.',
+    'fondos.aviso_hoy': "Today is payment day --",
+    'fondos.aviso_dias': '{0} days left until payment --',
+    'fondos.aviso_falta': 'still waiting to confirm with {0}.',
+    'fondos.sin_aportantes_mensaje': "This fund doesn't have any contributors yet.",
+    'fondos.nuevo_aportante': '+ Add contributor',
+    'fondos.nuevo_aportante_titulo': 'New contributor',
+    'fondos.editar_aportante_titulo': 'Edit contributor',
+    'fondos.aportante_nombre_label': 'Name',
+    'fondos.aportante_nombre_placeholder': "E.g. Dad, Uncle Ricky...",
+    'fondos.tipo_aporte_label': 'Contribution type',
+    'fondos.tipo_fijo': 'Fixed amount',
+    'fondos.tipo_porcentaje': '% of the goal',
+    'fondos.tipo_resto': 'Covers the rest',
+    'fondos.monto_label': 'Amount',
+    'fondos.porcentaje_label': 'Percentage of the goal',
+    'fondos.telefono_label': 'Phone (optional, for WhatsApp)',
+    'fondos.eliminar_aportante': 'Delete contributor',
+    'fondos.aportante_eliminado_aviso': 'Contributor deleted',
+    'fondos.error_nombre': 'Give them a name.',
+    'fondos.error_valor': 'Enter a valid amount.',
+    'fondos.error_ya_hay_resto': 'Someone is already covering the rest -- there can only be one.',
+    'fondos.ver_mensaje': 'See reminder message →',
+    'fondos.ocultar_mensaje': 'Hide message ↑',
+    'fondos.copiar': 'Copy',
+    'fondos.mensaje_whatsapp': 'Hi! 👋\n\nJust a reminder that this month it\'s your turn to contribute {0} to "{1}".\n\nCan you confirm once you deposit it? Thanks!',
     'panel.configuracion.titulo': 'Settings & privacy',
     'panel.configuracion.sub': 'Theme, your data, export or delete',
     'panel.saludo_sub': "Here's what's happening with your money today",
@@ -8704,7 +8887,8 @@ const ICONOS_PANEL = {
   simulador: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7.5h8"/><path d="M8 12h1.5M11.25 12h1.5M14.5 12h1.5M8 16h1.5M11.25 16h1.5M14.5 16h1.5"/>',
   privacidad: '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 17.09a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 6.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9.5a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09c0 .68.39 1.29 1 1.51.6.24 1.3.11 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.44.44-.57 1.1-.33 1.82.22.61.83 1 1.51 1H21a2 2 0 0 1 0 4h-.09c-.68 0-1.29.39-1.51 1Z"/>',
   gastos: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h4"/>',
-  score: '<path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 18l4-5"/><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"/>'
+  score: '<path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 18l4-5"/><circle cx="12" cy="18" r="1.3" fill="currentColor" stroke="none"/>',
+  fondos: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
 };
 
 function iconoPanel(nombre){
@@ -9165,7 +9349,7 @@ function activarSwipeInsights(contenedor){
   contenedor.addEventListener('touchcancel', soltar, { passive: true });
 }
 
-const PANEL_GRID_IDS_DEFECTO = ['cuentas', 'flujo', 'gastos', 'simulador'];
+const PANEL_GRID_IDS_DEFECTO = ['cuentas', 'flujo', 'gastos', 'simulador', 'fondos'];
 
 function ordenPanelGrid(){
   let guardado;
@@ -9694,6 +9878,11 @@ async function abrirPanel(){
             <div class="panel-icono">${iconoPanel('simulador')}</div>
             <div class="panel-tarjeta-titulo">${t('panel.simulador.titulo')}</div>
             <div class="panel-tarjeta-sub">${t('panel.simulador.sub')}</div>
+          </button>`,
+          fondos: `<button type="button" class="panel-tarjeta entrada-escalonada" data-id="fondos" onclick="abrirFondos()">
+            <div class="panel-icono">${iconoPanel('fondos')}</div>
+            <div class="panel-tarjeta-titulo">${t('panel.fondos.titulo')}</div>
+            <div class="panel-tarjeta-sub">${t('panel.fondos.sub')}</div>
           </button>`
         };
         return ordenPanelGrid().map(id => tarjetasPanelGrid[id]).join('');
@@ -11581,6 +11770,7 @@ const DESTINOS_CHAT = {
   balance: { fn: () => abrirBalance(), etiquetaKey: 'sidebar.balance' },
   salud: { fn: () => abrirSaludFinanciera(), etiquetaKey: 'panel.salud.titulo' },
   simulador: { fn: () => { ajustarPlazosSimulador(); mostrar('vista-simulador'); }, etiquetaKey: 'sidebar.simulador' },
+  fondos: { fn: () => abrirFondos(), etiquetaKey: 'sidebar.fondos' },
   configuracion: { fn: () => mostrar('vista-privacidad'), etiquetaKey: 'sidebar.configuracion' },
   agregar_cuenta: { fn: () => mostrar('vista-agregar-cuenta'), etiquetaKey: 'cuenta.nueva_titulo' },
   agregar_deuda: { fn: () => mostrar('vista-agregar-deuda'), etiquetaKey: 'deuda.nueva_titulo' },
@@ -16213,6 +16403,324 @@ async function toggleFlujoCumplido(it, marcado){
   await abrirFlujoEfectivo();
 }
 
+// ---------- Fondos compartidos ----------
+// Dinero que llega de varias personas para un mismo gasto recurrente (beca
+// repartida, renta compartida, pensión). "Confirmado este mes" usa el mismo
+// patrón que flujo_cumplido (fondos_confirmaciones por aportante+año+mes) --
+// se resetea solo porque solo se consulta el periodo actual. Sin campo de
+// moneda por ahora (v1): todo se captura y muestra en MXN.
+let fondosData = [];
+let fondoActual = null;
+let fondoActualAportantes = [];
+let aportanteEditando = null;
+let aportanteMensajeAbiertoId = null;
+
+function calcularMontosFondo(fondo, aportantes){
+  const meta = Number(fondo.meta_mensual) || 0;
+  const sumaFijos = aportantes.filter(a => a.tipo === 'fijo').reduce((s, a) => s + (Number(a.valor) || 0), 0);
+  const sumaPorcentaje = aportantes.filter(a => a.tipo === 'porcentaje').reduce((s, a) => s + ((Number(a.valor) || 0) / 100) * meta, 0);
+  const restoCalculado = meta - sumaFijos - sumaPorcentaje;
+  const hayResto = aportantes.some(a => a.tipo === 'resto');
+  const montoPorId = {};
+  aportantes.forEach(a => {
+    let m;
+    if(a.tipo === 'fijo') m = Number(a.valor) || 0;
+    else if(a.tipo === 'porcentaje') m = ((Number(a.valor) || 0) / 100) * meta;
+    else m = Math.max(0, restoCalculado);
+    montoPorId[a.id] = m;
+  });
+  return { meta, sumaFijos, sumaPorcentaje, restoCalculado, hayResto, montoPorId };
+}
+
+async function abrirFondos(){
+  mostrar('vista-fondos');
+  const cont = document.getElementById('fondos-lista');
+  cont.innerHTML = `<div class="mensaje"><span class="spinner"></span>${t('comun.cargando')}</div>`;
+  const { data: fondos } = await sb.from('fondos_compartidos').select('*').order('creado_en');
+  const { anio, mes } = flujoCicloActual();
+  const idsFondos = (fondos || []).map(f => f.id);
+  let aportantesPorFondo = {};
+  let confirmSet = new Set();
+  if(idsFondos.length){
+    const [{ data: aportantes }, { data: confirmaciones }] = await Promise.all([
+      sb.from('fondos_aportantes').select('*').in('fondo_id', idsFondos).order('orden'),
+      sb.from('fondos_confirmaciones').select('aportante_id').eq('anio', anio).eq('mes', mes)
+    ]);
+    (aportantes || []).forEach(a => { (aportantesPorFondo[a.fondo_id] = aportantesPorFondo[a.fondo_id] || []).push(a); });
+    confirmSet = new Set((confirmaciones || []).map(c => c.aportante_id));
+  }
+  fondosData = (fondos || []).map(f => {
+    const aportantes = aportantesPorFondo[f.id] || [];
+    const calc = calcularMontosFondo(f, aportantes);
+    const confirmadoTotal = aportantes.filter(a => confirmSet.has(a.id)).reduce((s, a) => s + calc.montoPorId[a.id], 0);
+    return {
+      ...f,
+      aportantesCount: aportantes.length,
+      pctConfirmado: f.meta_mensual > 0 ? Math.max(0, Math.min(100, Math.round(confirmadoTotal / f.meta_mensual * 100))) : 0
+    };
+  });
+  renderFondosLista();
+}
+
+function renderFondosLista(){
+  const cont = document.getElementById('fondos-lista');
+  if(!fondosData.length){
+    cont.innerHTML = `<div class="mensaje">${t('fondos.sin_fondos_mensaje')}</div>`;
+    return;
+  }
+  cont.innerHTML = `<div class="lista">${fondosData.map(f => `
+    <button type="button" class="tarjeta" onclick="abrirFondoDetalle('${f.id}')">
+      <div>
+        <div class="nombre">${escapeHtml(f.nombre)}</div>
+        <div class="detalle">${tf('fondos.aportantes_contador', f.aportantesCount)} · ${tf('fondos.pct_confirmado', f.pctConfirmado)}</div>
+      </div>
+      <div class="monto">${formatoMonto(f.meta_mensual)}</div>
+    </button>
+  `).join('')}</div>`;
+}
+
+function abrirAgregarFondo(){
+  document.getElementById('input-nombre-fondo').value = '';
+  document.getElementById('input-meta-fondo').value = '';
+  document.getElementById('input-dialimite-fondo').value = '28';
+  document.getElementById('select-diasaviso-fondo').value = '3';
+  mostrar('vista-agregar-fondo');
+}
+
+async function guardarFondo(){
+  const nombre = document.getElementById('input-nombre-fondo').value.trim();
+  const metaValor = limpiarValorMonto(document.getElementById('input-meta-fondo').value);
+  const meta = metaValor === '' ? NaN : Number(metaValor);
+  const diaLimite = Math.min(28, Math.max(1, Number(document.getElementById('input-dialimite-fondo').value) || 28));
+  const diasAviso = Number(document.getElementById('select-diasaviso-fondo').value) || 3;
+  if(!nombre || isNaN(meta) || meta < 0) return;
+
+  const { error } = await sb.from('fondos_compartidos').insert({
+    nombre, meta_mensual: meta, dia_limite: diaLimite, dias_aviso: diasAviso
+  });
+  if(error){ await mostrarAlerta(t('fondos.error_guardar')); return; }
+  await abrirFondos();
+}
+
+async function abrirFondoDetalle(id){
+  mostrar('vista-fondo-detalle');
+  const cont = document.getElementById('fondo-detalle-contenido');
+  cont.innerHTML = `<div class="mensaje"><span class="spinner"></span>${t('comun.cargando')}</div>`;
+  const { data: fondo } = await sb.from('fondos_compartidos').select('*').eq('id', id).single();
+  if(!fondo){ mostrar('vista-fondos'); return; }
+  fondoActual = fondo;
+  aportanteMensajeAbiertoId = null;
+  document.getElementById('fondo-detalle-nombre').textContent = fondo.nombre;
+
+  const { anio, mes } = flujoCicloActual();
+  const [{ data: aportantes }, { data: confirmaciones }] = await Promise.all([
+    sb.from('fondos_aportantes').select('*').eq('fondo_id', id).order('orden'),
+    sb.from('fondos_confirmaciones').select('aportante_id').eq('anio', anio).eq('mes', mes)
+  ]);
+  const confirmSet = new Set((confirmaciones || []).map(c => c.aportante_id));
+  fondoActualAportantes = (aportantes || []).map(a => ({ ...a, confirmado: confirmSet.has(a.id) }));
+  renderFondoDetalle();
+}
+
+function mensajeRecordatorioAportante(monto){
+  return tf('fondos.mensaje_whatsapp', formatoMonto(monto), fondoActual.nombre);
+}
+
+function renderFondoDetalle(){
+  const cont = document.getElementById('fondo-detalle-contenido');
+  const f = fondoActual;
+  const aportantes = fondoActualAportantes;
+  const calc = calcularMontosFondo(f, aportantes);
+  const confirmadoTotal = aportantes.filter(a => a.confirmado).reduce((s, a) => s + calc.montoPorId[a.id], 0);
+  const pctConfirmado = f.meta_mensual > 0 ? Math.max(0, Math.min(100, Math.round(confirmadoTotal / f.meta_mensual * 100))) : 0;
+  const hayFaltante = !calc.hayResto && (calc.sumaFijos + calc.sumaPorcentaje) < calc.meta;
+  const haySobrante = calc.restoCalculado < 0;
+
+  const hoy = new Date();
+  let venc = new Date(hoy.getFullYear(), hoy.getMonth(), f.dia_limite);
+  if(venc < hoy) venc = new Date(hoy.getFullYear(), hoy.getMonth() + 1, f.dia_limite);
+  const diasRestantes = Math.max(0, Math.ceil((venc - hoy) / 86400000));
+  const pendientes = aportantes.filter(a => !a.confirmado).map(a => a.nombre.split(' ')[0]);
+  const hayAviso = diasRestantes <= f.dias_aviso && pendientes.length > 0;
+  const avisoTexto = (diasRestantes === 0 ? t('fondos.aviso_hoy') : tf('fondos.aviso_dias', diasRestantes)) + ' ' + tf('fondos.aviso_falta', pendientes.join(', '));
+
+  const TIPO_LABEL = { fijo: t('fondos.tipo_fijo'), porcentaje: t('fondos.tipo_porcentaje'), resto: t('fondos.tipo_resto') };
+
+  const filasAportantes = aportantes.length ? aportantes.map(a => {
+    const monto = calc.montoPorId[a.id];
+    const mensajeAbierto = aportanteMensajeAbiertoId === a.id;
+    const tel = (a.telefono || '').replace(/[^0-9]/g, '');
+    const mensajeTexto = mensajeRecordatorioAportante(monto);
+    const linkWhatsapp = tel ? `https://wa.me/${tel}?text=${encodeURIComponent(mensajeTexto)}` : `https://wa.me/?text=${encodeURIComponent(mensajeTexto)}`;
+    return `
+      <div class="tarjeta" style="cursor:default;">
+        <div style="display:flex;align-items:center;gap:11px;min-width:0;flex:1;">
+          <label style="flex:none;" onclick="event.stopPropagation();">
+            <input type="checkbox" ${a.confirmado ? 'checked' : ''} onchange="toggleAportanteConfirmado('${a.id}')">
+          </label>
+          <button type="button" onclick="abrirEditarAportante('${a.id}')" style="background:none;border:none;text-align:left;padding:0;min-width:0;flex:1;cursor:pointer;">
+            <div class="nombre">${escapeHtml(a.nombre)}</div>
+            <div class="detalle">${TIPO_LABEL[a.tipo]}</div>
+          </button>
+        </div>
+        <div style="text-align:right;flex:none;">
+          <div class="monto">${formatoMonto(monto)}</div>
+          <button type="button" class="btn-link-tenue" style="font-size:11px;" onclick="toggleMensajeAportante('${a.id}')">${mensajeAbierto ? t('fondos.ocultar_mensaje') : t('fondos.ver_mensaje')}</button>
+        </div>
+      </div>
+      ${mensajeAbierto ? `
+        <div class="aviso" style="white-space:pre-line;margin-top:-10px;margin-bottom:14px;">${escapeHtml(mensajeTexto)}
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" class="btn-grande secundario" style="padding:9px 12px;font-size:12px;" onclick="copiarMensajeAportante('${a.id}')">${t('fondos.copiar')}</button>
+            <a href="${linkWhatsapp}" target="_blank" class="btn-grande" style="padding:9px 12px;font-size:12px;text-decoration:none;text-align:center;">WhatsApp</a>
+          </div>
+        </div>
+      ` : ''}
+    `;
+  }).join('') : `<div class="mensaje">${t('fondos.sin_aportantes_mensaje')}</div>`;
+
+  cont.innerHTML = `
+    <div style="margin-bottom:20px;">
+      <div class="presupuesto-fila-cabecera" style="cursor:default;">
+        <span class="presupuesto-fila-nombre">${t('fondos.confirmado_este_mes')}</span>
+        <span class="presupuesto-fila-cifras">${formatoMonto(confirmadoTotal)} / ${formatoMonto(f.meta_mensual)}</span>
+      </div>
+      <div class="presupuesto-barra"><div class="presupuesto-barra-relleno" style="width:${pctConfirmado}%"></div></div>
+      ${hayFaltante ? `<div class="detalle-explica estado-riesgo">${tf('fondos.falta_cubrir', formatoMonto(calc.meta - calc.sumaFijos - calc.sumaPorcentaje))}</div>` : ''}
+      ${haySobrante ? `<div class="detalle-explica estado-atencion">${tf('fondos.sobrante', formatoMonto(Math.abs(calc.restoCalculado)))}</div>` : ''}
+      ${hayAviso ? `<div class="detalle-explica estado-atencion">⏰ ${avisoTexto}</div>` : ''}
+    </div>
+    <div class="lista">${filasAportantes}</div>
+    <button type="button" class="btn-grande secundario" style="margin-top:6px;" onclick="abrirAgregarAportante()">${t('fondos.nuevo_aportante')}</button>
+  `;
+}
+
+async function toggleAportanteConfirmado(id){
+  const a = fondoActualAportantes.find(x => x.id === id);
+  if(!a) return;
+  a.confirmado = !a.confirmado;
+  renderFondoDetalle();
+  haptic('toque');
+  const { anio, mes } = flujoCicloActual();
+  if(a.confirmado){
+    await sb.from('fondos_confirmaciones').upsert(
+      { aportante_id: id, anio, mes },
+      { onConflict: 'aportante_id,anio,mes' }
+    );
+  } else {
+    await sb.from('fondos_confirmaciones').delete().eq('aportante_id', id).eq('anio', anio).eq('mes', mes);
+  }
+}
+
+function toggleMensajeAportante(id){
+  aportanteMensajeAbiertoId = aportanteMensajeAbiertoId === id ? null : id;
+  renderFondoDetalle();
+}
+
+function copiarMensajeAportante(id){
+  const a = fondoActualAportantes.find(x => x.id === id);
+  if(!a) return;
+  const calc = calcularMontosFondo(fondoActual, fondoActualAportantes);
+  const mensajeTexto = mensajeRecordatorioAportante(calc.montoPorId[id]);
+  if(navigator.clipboard) navigator.clipboard.writeText(mensajeTexto).catch(() => {});
+}
+
+function volverAFondoDetalle(){
+  mostrar('vista-fondo-detalle');
+  renderFondoDetalle();
+}
+
+function actualizarCampoValorAportante(){
+  const tipo = document.getElementById('select-tipo-aportante').value;
+  document.getElementById('campo-valor-aportante').style.display = tipo === 'resto' ? 'none' : '';
+  document.getElementById('label-valor-aportante').textContent = tipo === 'porcentaje' ? t('fondos.porcentaje_label') : t('fondos.monto_label');
+}
+
+function abrirAgregarAportante(){
+  aportanteEditando = null;
+  document.getElementById('agregar-aportante-titulo').textContent = t('fondos.nuevo_aportante_titulo');
+  document.getElementById('input-nombre-aportante').value = '';
+  document.getElementById('select-tipo-aportante').value = 'fijo';
+  document.getElementById('input-valor-aportante').value = '';
+  document.getElementById('input-telefono-aportante').value = '';
+  document.getElementById('aviso-error-aportante').style.display = 'none';
+  document.getElementById('btn-eliminar-aportante').style.display = 'none';
+  actualizarCampoValorAportante();
+  mostrar('vista-agregar-aportante');
+}
+
+function abrirEditarAportante(id){
+  const a = fondoActualAportantes.find(x => x.id === id);
+  if(!a) return;
+  aportanteEditando = a;
+  document.getElementById('agregar-aportante-titulo').textContent = t('fondos.editar_aportante_titulo');
+  document.getElementById('input-nombre-aportante').value = a.nombre;
+  document.getElementById('select-tipo-aportante').value = a.tipo;
+  document.getElementById('input-valor-aportante').value = a.valor != null ? a.valor : '';
+  document.getElementById('input-telefono-aportante').value = a.telefono || '';
+  document.getElementById('aviso-error-aportante').style.display = 'none';
+  document.getElementById('btn-eliminar-aportante').style.display = '';
+  actualizarCampoValorAportante();
+  mostrar('vista-agregar-aportante');
+}
+
+async function guardarAportante(){
+  const nombre = document.getElementById('input-nombre-aportante').value.trim();
+  const tipo = document.getElementById('select-tipo-aportante').value;
+  const valorTxt = limpiarValorMonto(document.getElementById('input-valor-aportante').value);
+  const valorNum = valorTxt === '' ? NaN : Number(valorTxt);
+  const telefono = document.getElementById('input-telefono-aportante').value.trim() || null;
+  const avisoErr = document.getElementById('aviso-error-aportante');
+  avisoErr.style.display = 'none';
+
+  if(!nombre){ avisoErr.textContent = t('fondos.error_nombre'); avisoErr.style.display = 'block'; return; }
+  if(tipo !== 'resto' && (isNaN(valorNum) || valorNum <= 0)){ avisoErr.textContent = t('fondos.error_valor'); avisoErr.style.display = 'block'; return; }
+  const yaHayResto = fondoActualAportantes.some(a => a.tipo === 'resto' && (!aportanteEditando || a.id !== aportanteEditando.id));
+  if(tipo === 'resto' && yaHayResto){ avisoErr.textContent = t('fondos.error_ya_hay_resto'); avisoErr.style.display = 'block'; return; }
+
+  const payload = { nombre, tipo, valor: tipo === 'resto' ? null : valorNum, telefono };
+  let error;
+  if(aportanteEditando){
+    ({ error } = await sb.from('fondos_aportantes').update(payload).eq('id', aportanteEditando.id));
+  } else {
+    ({ error } = await sb.from('fondos_aportantes').insert({ ...payload, fondo_id: fondoActual.id, orden: fondoActualAportantes.length }));
+  }
+  if(error){ avisoErr.textContent = t('comun.no_conectar'); avisoErr.style.display = 'block'; return; }
+  await abrirFondoDetalle(fondoActual.id);
+}
+
+function eliminarAportanteActual(){
+  if(!aportanteEditando) return;
+  const a = aportanteEditando;
+  fondoActualAportantes = fondoActualAportantes.filter(x => x.id !== a.id);
+  volverAFondoDetalle();
+  haptic('toque');
+  const timeoutId = setTimeout(async () => {
+    await sb.from('fondos_aportantes').delete().eq('id', a.id);
+  }, BORRADO_GASTO_ESPERA_MS);
+  mostrarAvisoDeshacer(t('fondos.aportante_eliminado_aviso'), () => {
+    clearTimeout(timeoutId);
+    fondoActualAportantes.push(a);
+    renderFondoDetalle();
+  });
+}
+
+function eliminarFondoActual(){
+  if(!fondoActual) return;
+  const f = fondoActual;
+  mostrar('vista-fondos');
+  fondosData = fondosData.filter(x => x.id !== f.id);
+  renderFondosLista();
+  haptic('toque');
+  const timeoutId = setTimeout(async () => {
+    await sb.from('fondos_compartidos').delete().eq('id', f.id);
+  }, BORRADO_GASTO_ESPERA_MS);
+  mostrarAvisoDeshacer(t('fondos.fondo_eliminado_aviso'), async () => {
+    clearTimeout(timeoutId);
+    await abrirFondos();
+  });
+}
+
 let flujoDetalleData = null;
 
 async function abrirFlujoEfectivo(){
@@ -17617,8 +18125,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 166;
+const VERSION_APP_ACTUAL = 167;
 const CHANGELOG_APP = [
+  {
+    version: 167,
+    fecha: '2026-09-11',
+    cambios_es: [
+      'Nueva sección "Fondos compartidos" -- para dinero que llega de varias personas para un mismo gasto recurrente (beca repartida entre familiares, renta compartida, pensión): registra quién aporta cuánto (monto fijo, % de la meta, o cubre el resto), marca quién ya confirmó cada mes, y arma un recordatorio de WhatsApp con el monto ya calculado.'
+    ],
+    cambios_en: [
+      'New "Shared funds" section -- for money that comes from several people for the same recurring expense (a scholarship split between relatives, shared rent, alimony): track who contributes how much (fixed amount, % of the goal, or covers the rest), mark who has confirmed each month, and build a WhatsApp reminder with the amount already calculated.'
+    ]
+  },
   {
     version: 166,
     fecha: '2026-09-09',
