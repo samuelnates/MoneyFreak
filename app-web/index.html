@@ -4426,9 +4426,10 @@ const TRADUCCIONES = {
     'panel.insight_todo_bien': 'Tus números están en orden esta semana. Sigue así.',
     'panel.insight_sin_datos': 'Todavía no tienes nada capturado -- empieza por agregar tus cuentas, ingresos y gastos para que pueda darte consejos reales. Si tienes dudas de cómo hacerlo, pregúntale a Freaky.',
     'panel.checklist_titulo': 'Primeros pasos',
-    'panel.checklist_contador': '{0} de 4',
+    'panel.checklist_contador': '{0} de 5',
     'panel.checklist_cerrar_aria': 'Ocultar por unos días',
     'panel.checklist_cuenta': 'Agrega tu primera cuenta',
+    'panel.checklist_tarjeta': 'Agrega tu tarjeta de crédito',
     'panel.checklist_ingreso': 'Registra un ingreso',
     'panel.checklist_gasto': 'Registra tu primer gasto',
     'panel.checklist_score': 'Descubre tu Score Money Freak',
@@ -5468,9 +5469,10 @@ const TRADUCCIONES = {
     'panel.insight_todo_bien': 'Your numbers look good this week. Keep it up.',
     'panel.insight_sin_datos': "You haven't added anything yet -- start by adding your accounts, income, and expenses so I can give you real advice. If you're not sure how, just ask Freaky.",
     'panel.checklist_titulo': 'First steps',
-    'panel.checklist_contador': '{0} of 4',
+    'panel.checklist_contador': '{0} of 5',
     'panel.checklist_cerrar_aria': 'Hide for a few days',
     'panel.checklist_cuenta': 'Add your first account',
+    'panel.checklist_tarjeta': 'Add your credit card',
     'panel.checklist_ingreso': 'Log an income',
     'panel.checklist_gasto': 'Log your first expense',
     'panel.checklist_score': 'Discover your Money Freak Score',
@@ -9767,14 +9769,24 @@ async function abrirPanel(){
     ? `${escapeHtml(masUrgente.nombre)}: ${masUrgente.diasFaltan <= 0 ? t('flujo.hoy_vencido').toLowerCase() : `${t('flujo.en').toLowerCase()} ${masUrgente.diasFaltan} ${masUrgente.diasFaltan === 1 ? t('flujo.dia') : t('flujo.dias')}`}`
     : t('panel.sin_pagos_proximos');
 
-  // Checklist de "primeros pasos" (parte 202) -- acompañamiento activo para
-  // usuarios nuevos que no saben por dónde empezar. Se oculta sola al
-  // completar los 4 pasos, o si el usuario la cierra a mano (localStorage,
-  // con vencimiento -- no desaparece para siempre, solo unos días).
+  // Checklist de "primeros pasos" (parte 202, +tarjeta en parte 235) --
+  // acompañamiento activo para usuarios nuevos que no saben por dónde
+  // empezar. Se oculta sola al completar los 5 pasos, o si el usuario la
+  // cierra a mano (localStorage, con vencimiento -- no desaparece para
+  // siempre, solo unos días).
   const pasoCuenta = b.detalleCuentas.length > 0;
+  // La tarjeta de crédito importa aparte de la cuenta porque un gasto solo
+  // acumula deuda de verdad si se paga con una deuda tipo "Tarjeta de
+  // crédito" registrada (ver ajustarSaldoDeudaPorGasto) -- sin este paso,
+  // el selector de método de pago de un gasto nunca ofrece esa opción.
+  const pasoTarjeta = (b.detalleDeudas || []).some(d => d.tipo === 'Tarjeta de crédito');
   const pasoIngreso = !!s.ingreso;
   const pasoGasto = g.totalGastado > 0;
   const pasoScore = score.general !== null;
+  // pasoTarjeta cuenta para el "x de 5" pero NO es requisito para que la
+  // tarjeta se oculte sola -- a diferencia de los otros 4, no todo mundo
+  // tiene o quiere tarjeta de crédito, y obligarlo dejaría el checklist
+  // pegado para siempre a quien paga solo en efectivo/débito.
   const checklistCompleta = pasoCuenta && pasoIngreso && pasoGasto && pasoScore;
   let checklistOcultaAMano = false;
   try{
@@ -9784,6 +9796,7 @@ async function abrirPanel(){
   const htmlChecklistPrimerosPasos = (modoDemo || checklistCompleta || checklistOcultaAMano) ? '' : (() => {
     const pasos = [
       { hecho: pasoCuenta, texto: t('panel.checklist_cuenta'), accion: "mostrar('vista-agregar-cuenta')" },
+      { hecho: pasoTarjeta, texto: t('panel.checklist_tarjeta'), accion: "mostrar('vista-agregar-deuda')" },
       { hecho: pasoIngreso, texto: t('panel.checklist_ingreso'), accion: "mostrar('vista-agregar-ingreso')" },
       { hecho: pasoGasto, texto: t('panel.checklist_gasto'), accion: 'abrirAgregarGasto()' },
       { hecho: pasoScore, texto: t('panel.checklist_score'), accion: 'abrirScore()' },
@@ -18193,8 +18206,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 168;
+const VERSION_APP_ACTUAL = 169;
 const CHANGELOG_APP = [
+  {
+    version: 169,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'Nuevo paso "Agrega tu tarjeta de crédito" en la tarjeta de Primeros pasos de Inicio -- sin una deuda tipo tarjeta de crédito registrada, un gasto no tiene forma de sumarse solo a esa deuda. No es obligatorio para que la tarjeta desaparezca (no todo mundo usa tarjeta de crédito), pero si la registras, cuenta.'
+    ],
+    cambios_en: [
+      'New "Add your credit card" step in the Home First Steps card -- without a credit-card debt on file, an expense has no way to add itself to that balance automatically. It is not required for the card to disappear (not everyone uses a credit card), but it counts if you add one.'
+    ]
+  },
   {
     version: 168,
     fecha: '2026-09-11',
