@@ -4478,7 +4478,7 @@ const TRADUCCIONES = {
     'panel.checklist_ingreso_explicacion': 'El ingreso puede ser tu sueldo que entra cada quincena, una renta mensual que te paguen, o cualquier dinero que entra a tus cuentas. Esto sirve para que yo pueda planear tu mes y decirte la mejor forma de manejarlo.',
     'panel.checklist_gasto_explicacion': 'Si registras cada gasto que haces, puedo ayudarte a analizar dónde se va tu dinero, hacer un plan y lograr que rinda más.',
     'panel.checklist_score_explicacion': 'Tu Score Money Freak es una calificación que resume tu salud financiera completa: deudas, ahorro y gasto, en un solo número. Entra para conocer dónde consultarlo y los premios que puedes tener al mejorarlo.',
-    'panel.checklist_explica_inicial': 'Toca ▶ para escuchar a Freaky',
+    'panel.checklist_explica_inicial': 'Freaky va a explicarte…',
     'panel.checklist_explica_hablando': 'Freaky está hablando…',
     'panel.checklist_explica_fin': 'Toca ▶ para escucharlo de nuevo',
     'panel.checklist_explica_ir': 'Vamos a hacerlo →',
@@ -5531,7 +5531,7 @@ const TRADUCCIONES = {
     'panel.checklist_ingreso_explicacion': "Your income can be your paycheck that comes in every two weeks, a monthly rent payment you receive, or any money that comes into your accounts. This helps me plan out your month and tell you the best way to manage it.",
     'panel.checklist_gasto_explicacion': "If you log every expense you make, I can help you see where your money's going, build a plan, and make it stretch further.",
     'panel.checklist_score_explicacion': "Your Money Freak Score is a rating that sums up your entire financial health: debt, savings, and spending, in one number. Check it out to see where to find yours and the rewards you can earn as you improve it.",
-    'panel.checklist_explica_inicial': 'Tap ▶ to hear Freaky',
+    'panel.checklist_explica_inicial': 'Freaky is about to explain…',
     'panel.checklist_explica_hablando': 'Freaky is talking…',
     'panel.checklist_explica_fin': 'Tap ▶ to hear it again',
     'panel.checklist_explica_ir': "Let's do it →",
@@ -10074,9 +10074,15 @@ function htmlItemsChecklistPrimerosPasos(pasos){
 function toggleExplicacionPasoChecklist(id){
   const audio = document.getElementById('audio-checklist-explica');
   if(audio) audio.pause(); // cambiar de paso, o cerrar el que está abierto, siempre corta el audio en curso
-  pasoExplicacionAbierto = (pasoExplicacionAbierto === id) ? null : id;
+  const abriendo = pasoExplicacionAbierto !== id;
+  pasoExplicacionAbierto = abriendo ? id : null;
   const cont = document.getElementById('lista-checklist-primeros-pasos');
   if(cont) cont.innerHTML = htmlItemsChecklistPrimerosPasos(pasosChecklistCache);
+  // Autoplay a propósito, disparado aquí mismo (síncrono, sin await ni
+  // setTimeout de por medio) -- todo pasa dentro del mismo gesto de tap
+  // del usuario, que es justo lo que los navegadores exigen para permitir
+  // sonido automático sin bloquearlo.
+  if(abriendo) alternarAudioExplicaPaso(id);
 }
 
 function alternarAudioExplicaPaso(id){
@@ -18398,8 +18404,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 170;
+const VERSION_APP_ACTUAL = 171;
 const CHANGELOG_APP = [
+  {
+    version: 171,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'La explicación de Freaky en "Primeros pasos" ahora suena sola al abrir un paso, en vez de esperar a que toques el botón de reproducir -- sigue habiendo un botón para pausar o repetirla.'
+    ],
+    cambios_en: [
+      'Freaky\'s explanation in "First steps" now plays automatically when you open a step, instead of waiting for you to tap play -- a button to pause or replay it is still there.'
+    ]
+  },
   {
     version: 170,
     fecha: '2026-09-13',
