@@ -1025,6 +1025,9 @@
     background:none;border:none;color:var(--texto-tenue-2);
     font-size:16px;cursor:pointer;padding:0;flex:none;line-height:1;
   }
+  .score-explica-ej{display:block;margin-top:4px;font-family:var(--mono);font-size:12.5px;color:var(--texto-tenue);}
+  .score-explica-ej b{color:var(--texto);}
+
   .panel-checklist-item.activo{background:var(--bg);}
   .panel-checklist-item.activo .panel-checklist-flecha{transform:rotate(90deg);color:var(--texto);}
 
@@ -4587,11 +4590,18 @@ const TRADUCCIONES = {
     'score.constancia': 'Constancia',
     'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
     'score.ver_salud_completa': 'Ver salud financiera completa y editar umbrales ›',
-    'score.explica_intro': 'Es el promedio de estos 5 rubros. Apenas tengas datos para alguno, ese rubro empieza a contar solo -- no hace falta completarlos todos para ver un número.',
-    'score.explica_liquidez': 'Compara cuántos meses de gastos cubres con tu dinero disponible contra tu meta de colchón (6 meses por default, puedes cambiarla en Configuración). Si ya cubres tu meta completa, llega a 100.',
-    'score.explica_endeudamiento': 'Qué tan lejos estás del límite de deuda que consideramos riesgoso (50% de tus ingresos por default). Entre menos debas respecto a ese límite, más alto este número.',
-    'score.explica_presupuesto': 'Proyecta cuánto vas a terminar gastando este mes según tu ritmo actual, y lo compara contra lo que presupuestaste. Si vas a quedarte dentro, es 100; si te vas a pasar, baja.',
-    'score.explica_tendencia': 'Ve si tu patrimonio neto lleva varios meses seguidos subiendo o bajando. Entre más meses seguidos mejorando, más alto; sin una racha clara todavía, queda en 50.',
+    'score.explica_intro': 'Es el promedio de estos 5 rubros -- cada uno cuenta solo en cuanto tengas datos para calcularlo.',
+    'score.explica_liquidez': 'meses que cubres con tu dinero disponible ÷ tu meta de colchón (6 meses por default) × 100.',
+    'score.ejemplo_liquidez': 'Ejemplo: cubres 3 de 6 meses → <b>50</b>',
+    'score.explica_endeudamiento': '100 − (tu % de deuda ÷ 50% de tus ingresos) × 100.',
+    'score.ejemplo_endeudamiento': 'Ejemplo: debes el 25% de tus ingresos → <b>50</b>',
+    'score.explica_presupuesto': '100 si no te pasas del presupuesto proyectado a fin de mes; si te pasas, baja rápido.',
+    'score.ejemplo_presupuesto': 'Ejemplo: te vas a pasar 10% → <b>85</b>',
+    'score.explica_tendencia': '50 de base. +10 por cada mes seguido que tu patrimonio sube (máx. 5 meses); −10 si baja.',
+    'score.ejemplo_tendencia': 'Ejemplo: 3 meses seguidos subiendo → <b>80</b>',
+    'score.ejemplo_constancia': 'Ejemplo: activo 2 de 4 semanas, saldos sin actualizar → <b>30</b>',
+    'score.ejemplo_completo_titulo': 'Así se vería',
+    'score.ejemplo_completo': 'Si tus 5 rubros dieran justo estos ejemplos (50, 50, 85, 80 y 30), tu Score sería <b>59</b> -- el promedio de los cinco.',
     'score.premios_titulo': 'Y hay premios',
     'score.premios_texto': 'Conforme tu Score sube, vas desbloqueando personajes nuevos para Freaky -- una vez que lo alcanzas, es tuyo para siempre, aunque el score baje después. Otros personajes se desbloquean invitando amigos.',
     'flujo.liquido_disponible': 'Disponible ahora',
@@ -5647,11 +5657,18 @@ const TRADUCCIONES = {
     'score.constancia': 'Consistency',
     'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
     'score.ver_salud_completa': 'See full financial health and edit thresholds ›',
-    'score.explica_intro': "It's the average of these 5 areas. As soon as you have data for one, that area starts counting on its own -- you don't need to fill in every single one to see a number.",
-    'score.explica_liquidez': 'Compares how many months of expenses you can cover with your available money against your cushion goal (6 months by default, you can change it in Settings). If you already cover your full goal, it hits 100.',
-    'score.explica_endeudamiento': 'How far you are from the debt ratio we consider risky (50% of your income by default). The less you owe relative to that ceiling, the higher this number.',
-    'score.explica_presupuesto': "Projects what you'll end up spending this month at your current pace, and compares it against what you budgeted. If you're on track to stay within budget, it's 100; if you're set to go over, it drops.",
-    'score.explica_tendencia': "Looks at whether your net worth has been rising or falling for several months in a row. The longer the improving streak, the higher; with no clear streak yet, it sits at 50.",
+    'score.explica_intro': "It's the average of these 5 areas -- each one counts as soon as there's data to calculate it.",
+    'score.explica_liquidez': 'months you can cover with your available money ÷ your cushion goal (6 months by default) × 100.',
+    'score.ejemplo_liquidez': 'Example: you cover 3 of 6 months → <b>50</b>',
+    'score.explica_endeudamiento': '100 − (your debt % ÷ 50% of your income) × 100.',
+    'score.ejemplo_endeudamiento': 'Example: you owe 25% of your income → <b>50</b>',
+    'score.explica_presupuesto': "100 if you're on track to stay within budget by month-end; if you're set to go over, it drops fast.",
+    'score.ejemplo_presupuesto': "Example: you're on track to go 10% over → <b>85</b>",
+    'score.explica_tendencia': "50 as a baseline. +10 for each month in a row your net worth rises (max 5 months); −10 if it falls.",
+    'score.ejemplo_tendencia': 'Example: 3 months in a row rising → <b>80</b>',
+    'score.ejemplo_constancia': "Example: active 2 of 4 weeks, balances not updated → <b>30</b>",
+    'score.ejemplo_completo_titulo': "Here's what it'd look like",
+    'score.ejemplo_completo': 'If your 5 areas landed exactly on these examples (50, 50, 85, 80, and 30), your Score would be <b>59</b> -- the average of all five.',
     'score.premios_titulo': 'And there are rewards',
     'score.premios_texto': "As your Score goes up, you unlock new characters for Freaky -- once you reach one, it's yours for good, even if your score drops afterward. Other characters unlock by inviting friends.",
     'flujo.liquido_disponible': 'Available now',
@@ -10185,14 +10202,15 @@ async function abrirScore(){
       <div class="mensaje">${t('score.sin_datos_general')}</div>
       <h2>${t('score.desglose_titulo')}</h2>
       <div class="aviso">${t('score.explica_intro')}</div>
-      <div class="aviso"><b>${t('score.liquidez')}:</b> ${t('score.explica_liquidez')}</div>
-      <div class="aviso"><b>${t('score.endeudamiento')}:</b> ${t('score.explica_endeudamiento')}</div>
-      <div class="aviso"><b>${t('score.presupuesto')}:</b> ${t('score.explica_presupuesto')}</div>
-      <div class="aviso"><b>${t('score.tendencia')}:</b> ${t('score.explica_tendencia')}</div>
-      <div class="aviso"><b>${t('score.constancia')}:</b> ${t('score.constancia_explica')}</div>
+      <div class="aviso"><b>${t('score.liquidez')}</b> — ${t('score.explica_liquidez')}<span class="score-explica-ej">${t('score.ejemplo_liquidez')}</span></div>
+      <div class="aviso"><b>${t('score.endeudamiento')}</b> — ${t('score.explica_endeudamiento')}<span class="score-explica-ej">${t('score.ejemplo_endeudamiento')}</span></div>
+      <div class="aviso"><b>${t('score.presupuesto')}</b> — ${t('score.explica_presupuesto')}<span class="score-explica-ej">${t('score.ejemplo_presupuesto')}</span></div>
+      <div class="aviso"><b>${t('score.tendencia')}</b> — ${t('score.explica_tendencia')}<span class="score-explica-ej">${t('score.ejemplo_tendencia')}</span></div>
+      <div class="aviso"><b>${t('score.constancia')}</b> — ${t('score.constancia_explica')}<span class="score-explica-ej">${t('score.ejemplo_constancia')}</span></div>
+      <div class="aviso" style="border-left-color:var(--texto);"><b>${t('score.ejemplo_completo_titulo')}</b><span class="score-explica-ej">${t('score.ejemplo_completo')}</span></div>
       <h2>${t('score.premios_titulo')}</h2>
       <div class="aviso">${t('score.premios_texto')}</div>
-      <button type="button" class="btn-grande secundario" onclick="abrirSelectorAsesor('configuracion')">${t('config.cambiar_asesor_boton')}</button>
+      <button type="button" class="btn-grande secundario" onclick="abrirSelectorAsesor('score')">${t('config.cambiar_asesor_boton')}</button>
     `;
     return;
   }
@@ -12475,6 +12493,16 @@ async function abrirSelectorAsesor(origen){
   await precargarDesbloqueosAsesores();
   renderSelectorAsesor();
   mostrar('vista-elegir-asesor');
+  // Viniendo de la pantalla de Score, lo que importa ahí es "qué gano
+  // subiendo mi score" -- no tiene caso arrancar en avatar1 (uno de los 3
+  // que ya vienen por default) y hacer que baje a mano hasta los que sí se
+  // ganan con score. Sin animación (scrollIntoView sin "behavior") a
+  // propósito, para no pelear con quien tiene activado "reducir movimiento".
+  if(origen === 'score'){
+    const primeroPorScore = ASESORES.find(a => a.requiereScore);
+    const el = primeroPorScore && document.getElementById('asesor-tarjeta-' + primeroPorScore.id);
+    if(el) el.scrollIntoView({ block: 'start' });
+  }
 }
 
 function asesorEstaBloqueado(a){
@@ -12498,7 +12526,7 @@ function renderSelectorAsesor(){
       accion = `<div class="asesor-tarjeta-candado">${tf('referidos.requiere_n', a.requiereReferidos)}</div>`;
     }
     return `
-    <div class="asesor-tarjeta ${bloqueado ? 'bloqueada' : ''}">
+    <div class="asesor-tarjeta ${bloqueado ? 'bloqueada' : ''}" id="asesor-tarjeta-${a.id}">
       <img src="${a.carpeta}/avatar.png" alt="">
       <div class="asesor-tarjeta-titulo">${t('asesor.' + a.id + '.nombre')}</div>
       <div class="asesor-tarjeta-desc">${t('asesor.' + a.id + '.desc')}</div>
@@ -12536,7 +12564,12 @@ async function aplicarYGuardarAsesor(id){
 async function elegirAsesor(id){
   const ok = await aplicarYGuardarAsesor(id);
   if(!ok) return;
-  if(asesorSelectorOrigen === 'configuracion'){
+  // Antes de agregar 'score' aquí, cualquier origen que no fuera
+  // 'configuracion' caía al else y llamaba continuarTrasOnboarding() --
+  // correcto para el flujo real de onboarding/login, pero habría disparado
+  // esa lógica por error si se abría el selector desde Score (pantalla ya
+  // logueada, sin relación con el onboarding) sin agregarlo aquí explícito.
+  if(asesorSelectorOrigen === 'configuracion' || asesorSelectorOrigen === 'score'){
     mostrar('vista-config-general');
   } else {
     await continuarTrasOnboarding();
@@ -18458,8 +18491,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 173;
+const VERSION_APP_ACTUAL = 174;
 const CHANGELOG_APP = [
+  {
+    version: 174,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'El desglose del Score sin datos ahora es más corto y directo -- fórmula y ejemplo numérico por cada rubro, más un ejemplo completo de cómo se vería tu Score final. El botón para cambiar el aspecto de Freaky desde ahí ya abre directo en los personajes que se ganan subiendo el Score, no en los que vienen por default.'
+    ],
+    cambios_en: [
+      "The empty-data Score breakdown is now shorter and more direct -- a formula and a worked example for each area, plus one full example of what your final Score would look like. The button to change Freaky's look from there now opens straight to the characters you earn by raising your Score, not the default ones."
+    ]
+  },
   {
     version: 173,
     fecha: '2026-09-13',
