@@ -3975,6 +3975,7 @@ async function cerrarSesionPorInactividad(){
     mostrar('vista-login');
     return;
   }
+  limpiarBorradoresFinancieros();
   await sb.auth.signOut();
   location.reload();
 }
@@ -6798,6 +6799,15 @@ async function init(){
     // Ya se mostró vista-nueva-contrasena arriba — no navegar a ningún otro
     // lado, o el mostrar('vista-login') de más abajo se lo comería igual.
   } else if(session){
+    // Detecta que esta sesión es de una cuenta distinta a la última que se
+    // usó en este dispositivo/navegador (típico si alguien nunca llega a
+    // tocar "Cerrar sesión" y simplemente inicia con otra cuenta después) --
+    // sin esto, un borrador de formulario sin guardar de la cuenta anterior
+    // podía reaparecer solo dentro de la cuenta nueva (ver
+    // limpiarBorradoresFinancieros()).
+    const ultimoUserId = localStorage.getItem('ultimo_user_id_sesion');
+    if(ultimoUserId && ultimoUserId !== session.user.id) limpiarBorradoresFinancieros();
+    localStorage.setItem('ultimo_user_id_sesion', session.user.id);
     await entrarAlPanelConOnboarding();
   } else if(new URLSearchParams(location.search).get('demo') === '1'){
     await verMuestra();
@@ -8071,6 +8081,7 @@ async function guardarCambioContrasena(){
 async function cerrarSesion(){
   const ok = await mostrarConfirmacion(t('login.confirm_cerrar_sesion'));
   if(!ok) return;
+  limpiarBorradoresFinancieros();
   await sb.auth.signOut();
   location.reload();
 }
@@ -11722,6 +11733,23 @@ async function descartarBorradorGasto(){
 // (inputs/selects/checkboxes por id, sin chips ni sub-selección) no hace
 // falta reescribir la lógica de leer/aplicar campos cada vez. Usado por
 // Cuenta, Deuda, Bien y Acción (ver VISTAS_CON_BORRADOR).
+// Bug real reportado por el usuario: probó el onboarding con una cuenta
+// nueva en el mismo navegador donde antes había estado llenando (sin
+// guardar) el formulario de "Agregar deuda" de su cuenta real -- al abrir
+// "Agregar deuda" ya en la cuenta nueva, se recuperó ese borrador viejo
+// (saldo y día de corte reales incluidos), solo le cambió el nombre a la
+// tarjeta de prueba, y terminó guardada con el nombre de prueba pero los
+// números de la tarjeta real. Los borradores viven en localStorage, que NO
+// se limpia solo al cambiar de cuenta en el mismo dispositivo -- por eso
+// limpiarBorradoresFinancieros() se llama tanto al cerrar sesión (a mano o
+// por inactividad) como, por si alguien nunca llega a cerrar sesión y
+// simplemente inicia con otra cuenta después, al detectar que el user_id
+// de la sesión actual no es el mismo que la última vez (ver init()).
+function limpiarBorradoresFinancieros(){
+  Object.values(VISTAS_CON_BORRADOR).forEach(clave => localStorage.removeItem(clave));
+  localStorage.removeItem(BORRADOR_GASTO_KEY);
+}
+
 const VISTAS_CON_BORRADOR = {
   'vista-agregar-cuenta': 'borrador_cuenta',
   'vista-agregar-deuda': 'borrador_deuda',
@@ -18430,8 +18458,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 172;
+const VERSION_APP_ACTUAL = 173;
 const CHANGELOG_APP = [
+  {
+    version: 173,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'Corregido un caso real: si usabas dos cuentas de Money Freak en el mismo dispositivo, un borrador sin guardar de un formulario (Cuenta, Deuda, Bien, Acción o Gasto) de una cuenta podía reaparecer solo dentro de la otra. Ahora se limpian al cerrar sesión y al detectar que iniciaste con una cuenta distinta a la última.'
+    ],
+    cambios_en: [
+      'Fixed a real case: if you used two Money Freak accounts on the same device, an unsaved draft in a form (Account, Debt, Asset, Stock, or Expense) from one account could reappear inside the other. Drafts now clear on sign-out and when a different account signs in than last time.'
+    ]
+  },
   {
     version: 172,
     fecha: '2026-09-13',
