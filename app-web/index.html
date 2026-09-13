@@ -1025,6 +1025,46 @@
     background:none;border:none;color:var(--texto-tenue-2);
     font-size:16px;cursor:pointer;padding:0;flex:none;line-height:1;
   }
+  .panel-checklist-item.activo{background:var(--bg);}
+  .panel-checklist-item.activo .panel-checklist-flecha{transform:rotate(90deg);color:var(--texto);}
+
+  /* Panel "Freaky explica" dentro de cada paso pendiente (parte 236) --
+     mismo patrón visual que se probó primero en un mockup aparte. */
+  .pc-explica-envoltura{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s var(--ease-out);}
+  .pc-explica-envoltura.abierto{grid-template-rows:1fr;}
+  .pc-explica-interior{overflow:hidden;}
+  .pc-explica-panel{
+    margin:4px 2px 8px;padding:14px;border-radius:10px;background:var(--bg);
+    border:1px solid var(--borde);display:flex;gap:12px;
+  }
+  .pc-explica-avatar{
+    width:44px;height:44px;border-radius:50%;flex:none;overflow:hidden;
+    background:var(--superficie);border:1px solid var(--borde-fuerte);
+  }
+  .pc-explica-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+  .pc-explica-cuerpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px;}
+  .pc-explica-fila-audio{display:flex;align-items:center;gap:9px;}
+  .pc-explica-play{
+    width:26px;height:26px;border-radius:50%;border:1.5px solid var(--borde-fuerte);background:none;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--texto);padding:0;font-size:11px;
+  }
+  /* Cada barra trae su propio retraso/duración/altura como variables
+     inline, definidas en la MISMA regla que "animation" -- si el delay
+     viviera en una regla nth-child aparte con menos especificidad, la
+     regla ".reproduciendo" se lo pisaría a 0s y las barras se moverían
+     todas exactamente igual (bug real, encontrado y corregido en el
+     mockup antes de traer este patrón aquí). */
+  .pc-onda{display:flex;align-items:center;gap:2.5px;height:17px;flex:none;}
+  .pc-onda span{width:2.5px;border-radius:1px;background:var(--color-saludable);height:3px;}
+  .pc-explica-panel.reproduciendo .pc-onda span{animation:pc-vibrar var(--dur,0.7s) ease-in-out infinite;animation-delay:var(--d,0s);}
+  @keyframes pc-vibrar{0%,100%{height:3px;}50%{height:var(--amp,14px);}}
+  .pc-explica-estado{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--texto-tenue-2);}
+  .pc-explica-panel.reproduciendo .pc-explica-estado{color:var(--color-saludable);}
+  .pc-explica-texto{font-size:13.5px;line-height:1.55;color:var(--texto);}
+  .pc-explica-btn{
+    font-family:var(--sans);font-size:12.5px;font-weight:700;border-radius:7px;padding:8px 12px;
+    border:none;cursor:pointer;background:var(--acento);color:var(--acento-texto);
+  }
 
   .aviso-flotante-version{
     position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
@@ -4433,6 +4473,16 @@ const TRADUCCIONES = {
     'panel.checklist_ingreso': 'Registra un ingreso',
     'panel.checklist_gasto': 'Registra tu primer gasto',
     'panel.checklist_score': 'Descubre tu Score Money Freak',
+    'panel.checklist_cuenta_explicacion': 'Agrega tu cuenta de banco que más usas y su saldo. Eso nos va a servir para calcular tu patrimonio y descontar los gastos que hagas con esa cuenta.',
+    'panel.checklist_tarjeta_explicacion': 'En Deudas, si agregas tu tarjeta de crédito, te va a aparecer como opción a la hora de registrar un gasto. Esto me ayuda a calcular cuánto vas a deber cuando llegue tu fecha de pago, para meterlo en tu plan. También me sirve para calcular tu patrimonio completo, contando lo que debes.',
+    'panel.checklist_ingreso_explicacion': 'El ingreso puede ser tu sueldo que entra cada quincena, una renta mensual que te paguen, o cualquier dinero que entra a tus cuentas. Esto sirve para que yo pueda planear tu mes y decirte la mejor forma de manejarlo.',
+    'panel.checklist_gasto_explicacion': 'Si registras cada gasto que haces, puedo ayudarte a analizar dónde se va tu dinero, hacer un plan y lograr que rinda más.',
+    'panel.checklist_score_explicacion': 'Tu Score Money Freak es una calificación que resume tu salud financiera completa: deudas, ahorro y gasto, en un solo número. Entra para conocer dónde consultarlo y los premios que puedes tener al mejorarlo.',
+    'panel.checklist_explica_inicial': 'Toca ▶ para escuchar a Freaky',
+    'panel.checklist_explica_hablando': 'Freaky está hablando…',
+    'panel.checklist_explica_fin': 'Toca ▶ para escucharlo de nuevo',
+    'panel.checklist_explica_ir': 'Vamos a hacerlo →',
+    'panel.checklist_explica_play_aria': 'Reproducir explicación',
     'panel.insight_categoria_dominante': 'El {0}% de tu gasto de este mes es en {1}.',
     'panel.insight_tasa_ahorro_positiva': 'Vas ahorrando el {0}% de tu ingreso este mes. Bien ahí.',
     'panel.insight_tasa_ahorro_negativa': 'Este mes has gastado {0}% más de lo que has ingresado.',
@@ -5476,6 +5526,16 @@ const TRADUCCIONES = {
     'panel.checklist_ingreso': 'Log an income',
     'panel.checklist_gasto': 'Log your first expense',
     'panel.checklist_score': 'Discover your Money Freak Score',
+    'panel.checklist_cuenta_explicacion': "Add the bank account you use most, and its balance. That's how we'll calculate your net worth and deduct any expenses you make from that account.",
+    'panel.checklist_tarjeta_explicacion': "In Debt, if you add your credit card, it'll show up as an option when you log an expense. This helps me calculate how much you'll owe when your payment date comes around, so I can factor it into your plan. It also helps me calculate your complete net worth, counting what you owe.",
+    'panel.checklist_ingreso_explicacion': "Your income can be your paycheck that comes in every two weeks, a monthly rent payment you receive, or any money that comes into your accounts. This helps me plan out your month and tell you the best way to manage it.",
+    'panel.checklist_gasto_explicacion': "If you log every expense you make, I can help you see where your money's going, build a plan, and make it stretch further.",
+    'panel.checklist_score_explicacion': "Your Money Freak Score is a rating that sums up your entire financial health: debt, savings, and spending, in one number. Check it out to see where to find yours and the rewards you can earn as you improve it.",
+    'panel.checklist_explica_inicial': 'Tap ▶ to hear Freaky',
+    'panel.checklist_explica_hablando': 'Freaky is talking…',
+    'panel.checklist_explica_fin': 'Tap ▶ to hear it again',
+    'panel.checklist_explica_ir': "Let's do it →",
+    'panel.checklist_explica_play_aria': 'Play explanation',
     'panel.insight_categoria_dominante': '{0}% of this month\'s spending is in {1}.',
     'panel.insight_tasa_ahorro_positiva': "You're saving {0}% of your income this month. Nice.",
     'panel.insight_tasa_ahorro_negativa': "This month you've spent {0}% more than you've earned.",
@@ -9794,14 +9854,14 @@ async function abrirPanel(){
     checklistOcultaAMano = ocultaHasta > Date.now();
   }catch(e){}
   const htmlChecklistPrimerosPasos = (modoDemo || checklistCompleta || checklistOcultaAMano) ? '' : (() => {
-    const pasos = [
-      { hecho: pasoCuenta, texto: t('panel.checklist_cuenta'), accion: "mostrar('vista-agregar-cuenta')" },
-      { hecho: pasoTarjeta, texto: t('panel.checklist_tarjeta'), accion: "mostrar('vista-agregar-deuda')" },
-      { hecho: pasoIngreso, texto: t('panel.checklist_ingreso'), accion: "mostrar('vista-agregar-ingreso')" },
-      { hecho: pasoGasto, texto: t('panel.checklist_gasto'), accion: 'abrirAgregarGasto()' },
-      { hecho: pasoScore, texto: t('panel.checklist_score'), accion: 'abrirScore()' },
+    pasosChecklistCache = [
+      { id: 'cuenta', hecho: pasoCuenta, texto: t('panel.checklist_cuenta') },
+      { id: 'tarjeta', hecho: pasoTarjeta, texto: t('panel.checklist_tarjeta') },
+      { id: 'ingreso', hecho: pasoIngreso, texto: t('panel.checklist_ingreso') },
+      { id: 'gasto', hecho: pasoGasto, texto: t('panel.checklist_gasto') },
+      { id: 'score', hecho: pasoScore, texto: t('panel.checklist_score') },
     ];
-    const hechos = pasos.filter(p => p.hecho).length;
+    const hechos = pasosChecklistCache.filter(p => p.hecho).length;
     return `
     <div class="panel-checklist-card">
       <div class="panel-checklist-header">
@@ -9809,14 +9869,9 @@ async function abrirPanel(){
         <span class="panel-checklist-contador">${tf('panel.checklist_contador', hechos)}</span>
         <button type="button" class="panel-checklist-cerrar" onclick="cerrarChecklistPrimerosPasos()" aria-label="${t('panel.checklist_cerrar_aria')}">×</button>
       </div>
-      <div class="panel-checklist-barra"><div class="panel-checklist-barra-relleno" style="width:${hechos / pasos.length * 100}%;"></div></div>
-      <div class="panel-checklist-items">
-        ${pasos.map(p => `<button type="button" class="panel-checklist-item ${p.hecho ? 'hecho' : ''}" onclick="${p.hecho ? '' : p.accion}">
-          <span class="panel-checklist-check">${p.hecho ? '✓' : ''}</span>
-          <span class="panel-checklist-texto">${p.texto}</span>
-          ${p.hecho ? '' : '<span class="panel-checklist-flecha">›</span>'}
-        </button>`).join('')}
-      </div>
+      <div class="panel-checklist-barra"><div class="panel-checklist-barra-relleno" style="width:${hechos / pasosChecklistCache.length * 100}%;"></div></div>
+      <div class="panel-checklist-items" id="lista-checklist-primeros-pasos">${htmlItemsChecklistPrimerosPasos(pasosChecklistCache)}</div>
+      <audio id="audio-checklist-explica" preload="none"></audio>
     </div>`;
   })();
 
@@ -9925,6 +9980,7 @@ async function abrirPanel(){
   inicializarRotacionInsights(insights);
   activarSwipeInsights(document.getElementById('panel-insights'));
   activarReordenPanelGrid();
+  inicializarAudioExplicaPasos();
 }
 
 // Cierra el checklist de "primeros pasos" por unos días (no para siempre --
@@ -9937,6 +9993,142 @@ function cerrarChecklistPrimerosPasos(){
   }catch(e){}
   const tarjeta = document.querySelector('.panel-checklist-card');
   if(tarjeta) tarjeta.remove();
+}
+
+// "Freaky explica" (parte 236) -- tocar un paso pendiente de "Primeros
+// pasos" ya no salta directo a la pantalla de agregarlo; primero abre un
+// panel donde Freaky lo explica en su voz real (audio grabado, un botón
+// ▶ manual -- nada de autoplay, para no pelear con los navegadores que lo
+// bloquean). El botón "Vamos a hacerlo" dentro del panel es el que de
+// verdad navega a la acción.
+let pasoExplicacionAbierto = null;
+let pasosChecklistCache = [];
+
+const EXPLICACION_PASOS_TEXTO = {
+  cuenta: 'panel.checklist_cuenta_explicacion',
+  tarjeta: 'panel.checklist_tarjeta_explicacion',
+  ingreso: 'panel.checklist_ingreso_explicacion',
+  gasto: 'panel.checklist_gasto_explicacion',
+  score: 'panel.checklist_score_explicacion',
+};
+const ACCION_CHECKLIST_PASO = {
+  cuenta: () => mostrar('vista-agregar-cuenta'),
+  tarjeta: () => mostrar('vista-agregar-deuda'),
+  ingreso: () => mostrar('vista-agregar-ingreso'),
+  gasto: () => abrirAgregarGasto(),
+  score: () => abrirScore(),
+};
+
+// 7 barras del ecualizador, cada una con su propio retraso/duración/pico
+// -- a mano, no en un patrón regular, para que se vea como un ecualizador
+// real y no como una ola sincronizada (mismo ajuste que se hizo primero
+// en el mockup, después de que el usuario reportara que las 7 se movían
+// exactamente igual).
+const BARRAS_ONDA_CHECKLIST = [
+  { d: -0.51, dur: 0.72, amp: 11 },
+  { d: -0.12, dur: 0.61, amp: 16 },
+  { d: -0.83, dur: 0.79, amp: 9 },
+  { d: -0.29, dur: 0.66, amp: 14 },
+  { d: -0.67, dur: 0.85, amp: 12 },
+  { d: -0.05, dur: 0.58, amp: 17 },
+  { d: -0.44, dur: 0.74, amp: 10 },
+];
+
+function rutaAudioExplicaPaso(id){
+  const idioma = document.documentElement.lang === 'en' ? 'en' : 'es';
+  return `assets/primeros-pasos-audio/${id}-${idioma}.mp3`;
+}
+
+function htmlItemsChecklistPrimerosPasos(pasos){
+  return pasos.map(p => {
+    const abierto = pasoExplicacionAbierto === p.id;
+    return `
+    <div>
+      <button type="button" class="panel-checklist-item ${p.hecho ? 'hecho' : ''} ${abierto ? 'activo' : ''}" onclick="${p.hecho ? '' : `toggleExplicacionPasoChecklist('${p.id}')`}">
+        <span class="panel-checklist-check">${p.hecho ? '✓' : ''}</span>
+        <span class="panel-checklist-texto">${p.texto}</span>
+        ${p.hecho ? '' : '<span class="panel-checklist-flecha">›</span>'}
+      </button>${p.hecho ? '' : `
+      <div class="pc-explica-envoltura ${abierto ? 'abierto' : ''}">
+        <div class="pc-explica-interior">
+          <div class="pc-explica-panel" id="pc-explica-panel-${p.id}">
+            <div class="pc-explica-avatar"><img src="${carpetaAsesorActual()}/avatar.png" alt=""></div>
+            <div class="pc-explica-cuerpo">
+              <div class="pc-explica-fila-audio">
+                <button type="button" class="pc-explica-play" id="pc-explica-play-${p.id}" onclick="alternarAudioExplicaPaso('${p.id}')" aria-label="${t('panel.checklist_explica_play_aria')}">▶</button>
+                <div class="pc-onda">${BARRAS_ONDA_CHECKLIST.map(b => `<span style="--d:${b.d}s;--dur:${b.dur}s;--amp:${b.amp}px;"></span>`).join('')}</div>
+                <span class="pc-explica-estado" id="pc-explica-estado-${p.id}">${t('panel.checklist_explica_inicial')}</span>
+              </div>
+              <div class="pc-explica-texto">${t(EXPLICACION_PASOS_TEXTO[p.id])}</div>
+              <div class="pc-explica-acciones">
+                <button type="button" class="pc-explica-btn" onclick="irAAccionChecklist('${p.id}')">${t('panel.checklist_explica_ir')}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`}
+    </div>`;
+  }).join('');
+}
+
+function toggleExplicacionPasoChecklist(id){
+  const audio = document.getElementById('audio-checklist-explica');
+  if(audio) audio.pause(); // cambiar de paso, o cerrar el que está abierto, siempre corta el audio en curso
+  pasoExplicacionAbierto = (pasoExplicacionAbierto === id) ? null : id;
+  const cont = document.getElementById('lista-checklist-primeros-pasos');
+  if(cont) cont.innerHTML = htmlItemsChecklistPrimerosPasos(pasosChecklistCache);
+}
+
+function alternarAudioExplicaPaso(id){
+  const audio = document.getElementById('audio-checklist-explica');
+  if(!audio) return;
+  if(audio.dataset.pasoId === id && !audio.paused){
+    audio.pause();
+    return;
+  }
+  if(audio.dataset.pasoId !== id || audio.ended){
+    audio.src = rutaAudioExplicaPaso(id);
+    audio.dataset.pasoId = id;
+  }
+  audio.play().catch(() => {}); // si el navegador bloquea el play, el botón se queda listo para reintentar a mano
+}
+
+function irAAccionChecklist(id){
+  const audio = document.getElementById('audio-checklist-explica');
+  if(audio) audio.pause();
+  const fn = ACCION_CHECKLIST_PASO[id];
+  if(fn) fn();
+}
+
+// Un único <audio> compartido para todo el checklist (mismo patrón que
+// #audio-intro-onb): sus eventos siempre apuntan al paso que esté sonando
+// ahora mismo (audio.dataset.pasoId), así que no hace falta re-enganchar
+// listeners cada vez que se abre un panel distinto -- solo una vez por
+// cada <audio> nuevo que se crea (el nodo se recrea entero cada vez que
+// abrirPanel() vuelve a pintar Inicio, por eso el guard con dataset).
+function inicializarAudioExplicaPasos(){
+  const audio = document.getElementById('audio-checklist-explica');
+  if(!audio || audio.dataset.enganchado) return;
+  audio.dataset.enganchado = '1';
+  const actualizarBoton = (reproduciendo) => {
+    const id = audio.dataset.pasoId;
+    const panel = document.getElementById('pc-explica-panel-' + id);
+    const boton = document.getElementById('pc-explica-play-' + id);
+    if(panel) panel.classList.toggle('reproduciendo', reproduciendo);
+    if(boton) boton.textContent = reproduciendo ? '❚❚' : '▶';
+  };
+  audio.addEventListener('play', () => {
+    actualizarBoton(true);
+    const estado = document.getElementById('pc-explica-estado-' + audio.dataset.pasoId);
+    if(estado) estado.textContent = t('panel.checklist_explica_hablando');
+  });
+  audio.addEventListener('pause', () => actualizarBoton(false));
+  audio.addEventListener('ended', () => {
+    actualizarBoton(false);
+    const estado = document.getElementById('pc-explica-estado-' + audio.dataset.pasoId);
+    if(estado) estado.textContent = t('panel.checklist_explica_fin');
+  });
+  audio.addEventListener('error', () => actualizarBoton(false));
 }
 
 let graficaScore = null;
@@ -18206,8 +18398,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 169;
+const VERSION_APP_ACTUAL = 170;
 const CHANGELOG_APP = [
+  {
+    version: 170,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'Los pasos pendientes de "Primeros pasos" ahora abren una explicación de Freaky (con su voz real) antes de llevarte a la pantalla -- qué es, para qué sirve y un ejemplo, con un botón para escucharla y otro para ir directo a hacerlo.'
+    ],
+    cambios_en: [
+      'Pending steps in "First steps" now open a spoken explanation from Freaky (real voice) before taking you to the screen -- what it is, what it is for, and an example, with a button to listen and another to jump straight to doing it.'
+    ]
+  },
   {
     version: 169,
     fecha: '2026-09-13',
