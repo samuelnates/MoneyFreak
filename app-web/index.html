@@ -4586,6 +4586,13 @@ const TRADUCCIONES = {
     'score.constancia': 'Constancia',
     'score.constancia_explica': 'Qué tan seguido registras gastos, actualizas saldos o abonas a una deuda, y qué tan al día tienes tus cuentas — de las últimas 4 semanas.',
     'score.ver_salud_completa': 'Ver salud financiera completa y editar umbrales ›',
+    'score.explica_intro': 'Es el promedio de estos 5 rubros. Apenas tengas datos para alguno, ese rubro empieza a contar solo -- no hace falta completarlos todos para ver un número.',
+    'score.explica_liquidez': 'Compara cuántos meses de gastos cubres con tu dinero disponible contra tu meta de colchón (6 meses por default, puedes cambiarla en Configuración). Si ya cubres tu meta completa, llega a 100.',
+    'score.explica_endeudamiento': 'Qué tan lejos estás del límite de deuda que consideramos riesgoso (50% de tus ingresos por default). Entre menos debas respecto a ese límite, más alto este número.',
+    'score.explica_presupuesto': 'Proyecta cuánto vas a terminar gastando este mes según tu ritmo actual, y lo compara contra lo que presupuestaste. Si vas a quedarte dentro, es 100; si te vas a pasar, baja.',
+    'score.explica_tendencia': 'Ve si tu patrimonio neto lleva varios meses seguidos subiendo o bajando. Entre más meses seguidos mejorando, más alto; sin una racha clara todavía, queda en 50.',
+    'score.premios_titulo': 'Y hay premios',
+    'score.premios_texto': 'Conforme tu Score sube, vas desbloqueando personajes nuevos para Freaky -- una vez que lo alcanzas, es tuyo para siempre, aunque el score baje después. Otros personajes se desbloquean invitando amigos.',
     'flujo.liquido_disponible': 'Disponible ahora',
     'flujo.sin_movimientos': 'Aún no tienes pagos ni aportaciones con fecha registrada. Agrega el día límite de pago en tus deudas, o el día de aportación en tus cuentas, para ver aquí tu flujo de efectivo del mes.',
     'flujo.sin_fecha': 'Sin fecha registrada',
@@ -5639,6 +5646,13 @@ const TRADUCCIONES = {
     'score.constancia': 'Consistency',
     'score.constancia_explica': 'How often you log expenses, update balances, or pay down a debt, and how current your accounts are — over the last 4 weeks.',
     'score.ver_salud_completa': 'See full financial health and edit thresholds ›',
+    'score.explica_intro': "It's the average of these 5 areas. As soon as you have data for one, that area starts counting on its own -- you don't need to fill in every single one to see a number.",
+    'score.explica_liquidez': 'Compares how many months of expenses you can cover with your available money against your cushion goal (6 months by default, you can change it in Settings). If you already cover your full goal, it hits 100.',
+    'score.explica_endeudamiento': 'How far you are from the debt ratio we consider risky (50% of your income by default). The less you owe relative to that ceiling, the higher this number.',
+    'score.explica_presupuesto': "Projects what you'll end up spending this month at your current pace, and compares it against what you budgeted. If you're on track to stay within budget, it's 100; if you're set to go over, it drops.",
+    'score.explica_tendencia': "Looks at whether your net worth has been rising or falling for several months in a row. The longer the improving streak, the higher; with no clear streak yet, it sits at 50.",
+    'score.premios_titulo': 'And there are rewards',
+    'score.premios_texto': "As your Score goes up, you unlock new characters for Freaky -- once you reach one, it's yours for good, even if your score drops afterward. Other characters unlock by inviting friends.",
     'flujo.liquido_disponible': 'Available now',
     'flujo.sin_movimientos': "You don't have any payments or contributions with a date yet. Add the due date on your debts, or the contribution day on your accounts, to see your cash flow here.",
     'flujo.sin_fecha': 'No date recorded',
@@ -10156,7 +10170,19 @@ async function abrirScore(){
   ]);
 
   if(score.general === null){
-    cont.innerHTML = `<div class="mensaje">${t('score.sin_datos_general')}</div>`;
+    cont.innerHTML = `
+      <div class="mensaje">${t('score.sin_datos_general')}</div>
+      <h2>${t('score.desglose_titulo')}</h2>
+      <div class="aviso">${t('score.explica_intro')}</div>
+      <div class="aviso"><b>${t('score.liquidez')}:</b> ${t('score.explica_liquidez')}</div>
+      <div class="aviso"><b>${t('score.endeudamiento')}:</b> ${t('score.explica_endeudamiento')}</div>
+      <div class="aviso"><b>${t('score.presupuesto')}:</b> ${t('score.explica_presupuesto')}</div>
+      <div class="aviso"><b>${t('score.tendencia')}:</b> ${t('score.explica_tendencia')}</div>
+      <div class="aviso"><b>${t('score.constancia')}:</b> ${t('score.constancia_explica')}</div>
+      <h2>${t('score.premios_titulo')}</h2>
+      <div class="aviso">${t('score.premios_texto')}</div>
+      <button type="button" class="btn-grande secundario" onclick="abrirSelectorAsesor('configuracion')">${t('config.cambiar_asesor_boton')}</button>
+    `;
     return;
   }
 
@@ -18404,8 +18430,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 171;
+const VERSION_APP_ACTUAL = 172;
 const CHANGELOG_APP = [
+  {
+    version: 172,
+    fecha: '2026-09-13',
+    cambios_es: [
+      'La pantalla de Score Money Freak ya no se queda vacía cuando todavía no hay suficientes datos (típico en onboarding) -- ahora explica cómo se calcula cada uno de los 5 rubros y qué premios (personajes nuevos para Freaky) se van desbloqueando conforme sube.'
+    ],
+    cambios_en: [
+      "The Money Freak Score screen no longer sits empty when there isn't enough data yet (common during onboarding) -- it now explains how each of the 5 areas is calculated and what rewards (new characters for Freaky) unlock as it goes up."
+    ]
+  },
   {
     version: 171,
     fecha: '2026-09-13',
