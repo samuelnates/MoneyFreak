@@ -1,0 +1,91 @@
+name: Android build
+
+# Igual que ios-build.yml: solo manual por ahora (botón "Run workflow" en
+# Actions), para no gastar minutos del runner en cada push mientras se
+# arma el pipeline. La publicación real a Play Console (paso final) se
+# salta sola si todavía no existe el secret de la cuenta de servicio --
+# el .aab firmado se sube de cualquier forma como artefacto descargable,
+# así que este workflow es útil incluso antes de tener Play Console listo.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar Java (Temurin 21, la que pide Gradle 8.14/AGP 8.13 de este proyecto)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Instalar dependencias
+        working-directory: app-nativa
+        run: npm ci
+
+      - name: Sincronizar el proyecto Android de Capacitor
+        working-directory: app-nativa
+        run: npx cap sync android
+
+      # --- Firma real: keystore.properties se escribe aquí mismo, nunca
+      # vive en el repo (ver build.gradle y .gitignore). El keystore en sí
+      # llega como secret en base64 y se decodifica a un archivo temporal
+      # fuera del checkout, apuntado por storeFile con ruta relativa.
+      - name: Escribir el keystore y sus credenciales
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app-nativa/money-freak-release.keystore
+          cat > app-nativa/android/keystore.properties << EOF
+          storeFile=../../money-freak-release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Compilar el .aab firmado (bundleRelease)
+        working-directory: app-nativa/android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Subir el .aab como artefacto descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoneyFreak-aab
+          path: app-nativa/android/app/build/outputs/bundle/release/*.aab
+
+      # --- Publicación automática a Play Console (canal de pruebas
+      # internas) -- se salta sola mientras no exista PLAY_SERVICE_ACCOUNT_JSON
+      # (se crea en Play Console: Configuración > Acceso a la API > cuenta
+      # de servicio, rol mínimo "Release manager"). No hace falta borrar
+      # este paso ni comentar nada para seguir usando el workflow solo
+      # como build firmado -- simplemente no corre hasta que el secret
+      # exista.
+      - name: Comprobar si ya hay cuenta de servicio de Play Console
+        id: play_listo
+        run: |
+          if [ -n "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publicar en Play Console (pruebas internas)
+        if: steps.play_listo.outputs.listo == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.miscuentaspro.app
+          releaseFiles: app-nativa/android/app/build/outputs/bundle/release/*.aab
+          track: internal
+          status: draft

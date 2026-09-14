@@ -38,6 +38,7 @@ ios/App/App/public/
 *.mobileprovision
 *.cer
 *.p8
+android/keystore.properties
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
