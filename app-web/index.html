@@ -10078,7 +10078,11 @@ const BARRAS_ONDA_CHECKLIST = [
 
 function rutaAudioExplicaPaso(id){
   const idioma = document.documentElement.lang === 'en' ? 'en' : 'es';
-  return `assets/primeros-pasos-audio/${id}-${idioma}.mp3`;
+  // asesorActual trae el objeto completo de ASESORES (obtenerAsesorPorId lo
+  // busca ahí mismo, sin copiarlo) -- así que su campo `voz` ya viene listo
+  // para leer aquí sin tener que volver a resolverlo.
+  const sufijoVoz = asesorActual?.voz === 'f' ? '-f' : '';
+  return `assets/primeros-pasos-audio/${id}-${idioma}${sufijoVoz}.mp3`;
 }
 
 function htmlItemsChecklistPrimerosPasos(pasos){
@@ -12326,14 +12330,19 @@ function agregarBurbujaChat(rol, textoEscapado, mostrarHora, destino, accion, ac
 // (el usuario solo confirmó "escalonados, ej. 40/60/75/90" para 4
 // personajes; al llegar el arte real resultaron 5, así que se ajustaron los
 // números y el orden -- fácil de recalibrar después si no convence).
+// `voz: 'f'` en los 3 personajes que se ven claramente como mujeres (La
+// Estratega, La Catrina, La Abuela Inversionista) -- pedido explícito del
+// usuario ("me recomendaron ponerle voz de mujer a los avatares mujeres").
+// El resto (masculinos, o animales/robot/alien sin género claro) se queda
+// sin este campo y usa la voz de siempre -- ver rutaAudioExplicaPaso().
 const ASESORES = [
   { id: 'avatar1', carpeta: 'assets/asesores/avatar1' },
-  { id: 'avatar2', carpeta: 'assets/asesores/avatar2' },
+  { id: 'avatar2', carpeta: 'assets/asesores/avatar2', voz: 'f' },           // La estratega
   { id: 'avatar3', carpeta: 'assets/asesores/avatar3' },
   { id: 'avatar4', carpeta: 'assets/asesores/avatar4', requiereReferidos: 1 },
   { id: 'avatar5', carpeta: 'assets/asesores/avatar5', requiereReferidos: 3 },
-  { id: 'avatar6', carpeta: 'assets/asesores/avatar6', requiereReferidos: 5 },
-  { id: 'avatar7', carpeta: 'assets/asesores/avatar7', requiereScore: 35 },   // La abuela inversionista
+  { id: 'avatar6', carpeta: 'assets/asesores/avatar6', requiereReferidos: 5, voz: 'f' }, // La Catrina
+  { id: 'avatar7', carpeta: 'assets/asesores/avatar7', requiereScore: 35, voz: 'f' },    // La abuela inversionista
   { id: 'avatar9', carpeta: 'assets/asesores/avatar9', requiereScore: 50 },   // El perro con suerte
   { id: 'avatar10', carpeta: 'assets/asesores/avatar10', requiereScore: 65 }, // El contador (robot)
   { id: 'avatar11', carpeta: 'assets/asesores/avatar11', requiereScore: 80 }, // El alien dorado
@@ -18491,8 +18500,18 @@ async function compartirBalance(){
 // última que vieron y se muestran juntas. Cada vez que se hace un cambio
 // visible para el usuario: sube VERSION_APP_ACTUAL en 1 y agrega una entrada
 // nueva aquí arriba (la más reciente primero no es necesario, se ordena sola).
-const VERSION_APP_ACTUAL = 174;
+const VERSION_APP_ACTUAL = 175;
 const CHANGELOG_APP = [
+  {
+    version: 175,
+    fecha: '2026-09-14',
+    cambios_es: [
+      'Las explicaciones habladas de "Primeros pasos" ahora suenan con voz de mujer cuando tu Freaky es La Estratega, La Catrina o La Abuela Inversionista -- con cualquier otro personaje, sigue la voz de siempre.'
+    ],
+    cambios_en: [
+      'The spoken "First steps" explanations now use a woman\'s voice when your Freaky is The Strategist, La Catrina, or the Investor Grandma -- with any other character, it stays the same voice as before.'
+    ]
+  },
   {
     version: 174,
     fecha: '2026-09-13',
