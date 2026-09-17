@@ -48,7 +48,7 @@ jobs:
         run: |
           echo -n "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app-nativa/money-freak-release.keystore
           cat > app-nativa/android/keystore.properties << EOF
-          storeFile=../../money-freak-release.keystore
+          storeFile=../money-freak-release.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
