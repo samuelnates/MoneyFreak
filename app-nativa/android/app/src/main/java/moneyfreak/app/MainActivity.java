@@ -1,4 +1,4 @@
-package com.miscuentaspro.app;
+package moneyfreak.app;
 
 import com.getcapacitor.BridgeActivity;
 

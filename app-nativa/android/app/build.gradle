@@ -14,10 +14,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.miscuentaspro.app"
+    namespace = "moneyfreak.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.miscuentaspro.app"
+        applicationId "moneyfreak.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
