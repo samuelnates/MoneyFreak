@@ -1,0 +1,10 @@
+{
+  "name": "DUELO · Apuestas 1 vs 1",
+  "short_name": "DUELO",
+  "start_url": "./#/inicio",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "lang": "es-MX",
+  "icons": []
+}
