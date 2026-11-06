@@ -24,6 +24,30 @@ function toast(msg, tipo = 'ok') {
   setTimeout(() => t.remove(), 3000);
 }
 
+// Diálogo propio (confirm/prompt nativos no funcionan en todos los contenedores
+// y se ven fuera de marca). Devuelve una Promise: true/false o el texto.
+function preguntar(mensaje, { ok = 'Confirmar', peligro = false, campo = null } = {}) {
+  return new Promise((resolver) => {
+    const fondo = document.createElement('div');
+    fondo.className = 'modal-fondo';
+    fondo.innerHTML = `<div class="modal tarjeta" role="dialog" aria-modal="true">
+      <p>${esc(mensaje)}</p>
+      ${campo !== null ? `<label class="campo-monto">$<input id="modal-campo" type="number" inputmode="decimal" value="${esc(campo)}"></label>` : ''}
+      <div class="fila-btn">
+        <button class="btn btn-secundario" data-r="no">Volver</button>
+        <button class="btn ${peligro ? 'btn-peligro' : 'btn-primario'}" data-r="si">${esc(ok)}</button>
+      </div></div>`;
+    const cerrar = (v) => { fondo.remove(); resolver(v); };
+    fondo.addEventListener('click', (e) => {
+      const r = e.target.closest('[data-r]')?.dataset.r;
+      if (r === 'si') cerrar(campo !== null ? fondo.querySelector('#modal-campo').value : true);
+      else if (r === 'no' || e.target === fondo) cerrar(campo !== null ? null : false);
+    });
+    document.body.appendChild(fondo);
+    (fondo.querySelector('#modal-campo') || fondo.querySelector('[data-r="si"]')).focus();
+  });
+}
+
 // Ejecuta una operación del motor; si falla muestra el motivo.
 function operar(fn, msgOk) {
   try {
@@ -419,7 +443,7 @@ $app.addEventListener('click', async (ev) => {
       break;
     }
     case 'aceptar': if (operar(() => M.aceptarReto(estado, id, yoId), '¡Reto aceptado! Que gane el mejor.')) render(); break;
-    case 'cancelar': if (confirm('¿Cancelar el reto? Recuperas tu dinero completo.') && operar(() => M.cancelarReto(estado, id, yoId), 'Reto cancelado')) render(); break;
+    case 'cancelar': if (await preguntar('¿Cancelar el reto? Recuperas tu dinero completo.', { ok: 'Cancelar reto', peligro: true }) && operar(() => M.cancelarReto(estado, id, yoId), 'Reto cancelado')) render(); break;
     case 'compartir': {
       const r = estado.retos[id]; const e = estado.eventos[r.eventoId];
       const url = `${location.origin}${location.pathname}#/reto/${id}`;
@@ -434,7 +458,7 @@ $app.addEventListener('click', async (ev) => {
       if (MARCA.modoDinero !== 'demo') return toast('Pagos reales aún no habilitados', 'error');
       operar(() => M.depositar(estado, yoId, 50000), 'Agregamos $500 en fichas demo'); render(); break;
     case 'retirar': {
-      const monto = prompt('¿Cuánto quieres retirar? (demo)', '100');
+      const monto = await preguntar('¿Cuánto quieres retirar? (demo)', { ok: 'Retirar', campo: '100' });
       if (monto && operar(() => M.retirar(estado, yoId, M.aCentavos(monto)), 'Retiro registrado (demo)')) render();
       break;
     }
@@ -442,7 +466,7 @@ $app.addEventListener('click', async (ev) => {
     case 'resolver': {
       const e = estado.eventos[id];
       const txt = v === 'anulado' ? 'ANULAR (se devuelve todo)' : `ganó ${e.opciones[+v]}`;
-      if (!confirm(`Confirmar: ${e.titulo} → ${txt}. Esto no se puede deshacer.`)) break;
+      if (!(await preguntar(`${e.titulo} → ${txt}. Esto paga a los ganadores y no se puede deshacer.`, { ok: 'Resolver' }))) break;
       const res = operar(() => M.resolverEvento(estado, id, v === 'anulado' ? 'anulado' : +v));
       if (res) { toast(`${res.liquidados} liquidados, ${res.reembolsados} reembolsados · comisión ${M.fmt(res.comisionTotal)}`); render(); }
       break;
@@ -452,7 +476,7 @@ $app.addEventListener('click', async (ev) => {
     case 'nueva-cuenta': yoId = null; A.sesion.set(null); ir('/bienvenida'); break;
     case 'salir': yoId = null; A.sesion.set(null); ir('/bienvenida'); break;
     case 'reiniciar':
-      if (confirm('Esto borra todas las cuentas y retos demo de este dispositivo.')) { A.reiniciar(); location.hash = ''; location.reload(); }
+      if (await preguntar('Esto borra todas las cuentas y retos demo de este dispositivo.', { ok: 'Borrar todo', peligro: true })) { A.reiniciar(); location.hash = ''; location.reload(); }
       break;
   }
 });

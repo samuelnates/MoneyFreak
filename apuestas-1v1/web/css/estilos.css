@@ -23,6 +23,11 @@
     --sombra: 0 6px 18px rgb(15 23 42 / .08); color-scheme: light;
   }
 }
+:root[data-theme="light"] {
+  --bg: #f4f6f9; --superficie: #ffffff; --superficie-2: #eef1f5; --borde: #dde3ea;
+  --texto: #0b0f14; --texto-2: #5b6778; --acento: #00b85c; --acento-texto: #ffffff;
+  --sombra: 0 6px 18px rgb(15 23 42 / .08); color-scheme: light;
+}
 
 * { box-sizing: border-box; margin: 0; }
 html, body { background: var(--bg); color: var(--texto); }
@@ -173,6 +178,12 @@ a.tarjeta:active, button.tarjeta:active { transform: scale(.985); }
 .lema { font-size: 18px; }
 .como { list-style: none; padding: 0; display: grid; gap: 6px; color: var(--texto-2); text-align: left; max-width: 340px; margin: 8px auto 0; }
 .como b { color: var(--acento); }
+
+/* Diálogo */
+.modal-fondo { position: fixed; inset: 0; z-index: 20; display: grid; place-items: end center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: rgb(0 0 0 / .55); }
+.modal { width: 100%; max-width: 480px; display: grid; gap: 14px; box-shadow: var(--sombra); }
+.modal p { font-size: 17px; font-weight: 600; }
+.btn-peligro { background: var(--peligro); color: #fff; }
 
 /* Toast */
 .toast { position: fixed; left: 50%; bottom: calc(var(--nav-alto) + 20px); transform: translateX(-50%); z-index: 10; max-width: calc(100% - 32px);
