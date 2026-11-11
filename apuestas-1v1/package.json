@@ -1,0 +1,9 @@
+{
+  "name": "apuestas-1v1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "dev": "npx --yes serve web -l 5173"
+  }
+}
